@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { FiMinus, FiPlus, FiChevronLeft, FiShare2 } from 'react-icons/fi';
+import { FiMinus, FiPlus, FiChevronLeft, FiShare2, FiHeart, FiBookmark, FiMessageCircle } from 'react-icons/fi';
 import { Product } from '@/app/types';
 import { useCartStore } from '@/app/store/cart';
 
@@ -35,21 +35,21 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product }) => {
   };
   
   return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div className="flex flex-col min-h-screen bg-white max-w-md mx-auto">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between">
           <Link 
             href="/" 
-            className="text-black"
+            className="text-gray-800"
             aria-label="Back to home"
             tabIndex={0}
           >
             <FiChevronLeft className="h-6 w-6" />
           </Link>
-          <h1 className="text-lg font-semibold">Product Detail</h1>
+          <h1 className="text-lg font-semibold text-gray-900">Your Business Name</h1>
           <button 
-            className="text-black"
+            className="text-gray-800"
             aria-label="Share product"
             tabIndex={0}
           >
@@ -59,6 +59,19 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product }) => {
       </header>
       
       <main className="flex-1 overflow-y-auto pb-24">
+        {/* Product Post Header - Instagram Style */}
+        <div className="px-4 py-2 flex items-center">
+          <div className="relative h-8 w-8 rounded-full overflow-hidden mr-3">
+            <Image
+              src="/store-logo.png"
+              alt="Business Profile"
+              fill
+              className="object-cover"
+            />
+          </div>
+          <span className="font-semibold text-gray-900">Your Business Name</span>
+        </div>
+      
         {/* Product Image Gallery */}
         <div className="relative aspect-square">
           <Image
@@ -71,21 +84,57 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product }) => {
           />
         </div>
         
+        {/* Instagram-like Action Buttons */}
+        <div className="px-4 py-2">
+          <div className="flex justify-between mb-2">
+            <div className="flex space-x-4">
+              <button 
+                className="text-gray-800"
+                aria-label="Like"
+                tabIndex={0}
+              >
+                <FiHeart className="h-6 w-6" />
+              </button>
+              <button 
+                className="text-gray-800"
+                aria-label="Comment"
+                tabIndex={0}
+              >
+                <FiMessageCircle className="h-6 w-6" />
+              </button>
+              <button 
+                className="text-gray-800"
+                aria-label="Share"
+                tabIndex={0}
+              >
+                <FiShare2 className="h-6 w-6" />
+              </button>
+            </div>
+            <button 
+              className="text-gray-800"
+              aria-label="Save"
+              tabIndex={0}
+            >
+              <FiBookmark className="h-6 w-6" />
+            </button>
+          </div>
+          
+          <p className="font-bold mb-1 text-gray-900">245 likes</p>
+        </div>
+        
         {/* Product Info */}
         <div className="p-4">
-          <h2 className="text-xl font-bold mb-2">{product.title}</h2>
-          <p className="text-2xl font-bold text-blue-500 mb-4">
-            {formatPrice(product.price)}
-          </p>
+          <h2 className="text-base mb-2">
+            <span className="font-semibold text-gray-900">{product.title}</span>
+            {' - '}
+            <span className="text-blue-600 font-bold">{formatPrice(product.price)}</span>
+          </h2>
           
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-2">Description</h3>
-            <p className="text-gray-700">{product.description}</p>
-          </div>
+          <p className="text-gray-700 mb-4">{product.description}</p>
           
           {/* Quantity Selector */}
           <div className="mb-6">
-            <h3 className="text-lg font-semibold mb-2">Quantity</h3>
+            <h3 className="text-sm font-semibold mb-2 text-gray-800">Select Quantity</h3>
             <div className="flex items-center">
               <button 
                 onClick={decrementQuantity}
@@ -94,10 +143,10 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product }) => {
                 aria-label="Decrease quantity"
                 tabIndex={0}
               >
-                <FiMinus className={quantity <= 1 ? 'text-gray-300' : 'text-black'} />
+                <FiMinus className={quantity <= 1 ? 'text-gray-300' : 'text-gray-800'} />
               </button>
               
-              <span className="mx-4 w-8 text-center font-semibold">
+              <span className="mx-4 w-8 text-center font-semibold text-gray-900">
                 {quantity}
               </span>
               
@@ -107,22 +156,10 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product }) => {
                 aria-label="Increase quantity"
                 tabIndex={0}
               >
-                <FiPlus />
+                <FiPlus className="text-gray-800" />
               </button>
             </div>
           </div>
-          
-          {/* View on Instagram */}
-          <Link 
-            href={product.instagramPostUrl} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="block w-full text-center py-3 border border-blue-500 text-blue-500 rounded-lg mb-4 hover:bg-blue-50"
-            aria-label="View on Instagram"
-            tabIndex={0}
-          >
-            View on Instagram
-          </Link>
         </div>
       </main>
       
