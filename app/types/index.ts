@@ -1,12 +1,21 @@
+export interface ProductImage {
+  id: string;
+  imageUrl: string;
+  order?: number;
+}
+
 export interface Product {
   id: string;
   title: string;
   description: string;
   price: number;
   imageUrl: string;
-  instagramPostUrl: string;
+  instagramPostUrl?: string;
   available: boolean;
   createdAt: string;
+  images?: ProductImage[];
+  inventory?: number;
+  isActive?: boolean;
 }
 
 export interface CartItem {

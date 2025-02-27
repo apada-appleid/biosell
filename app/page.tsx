@@ -3,14 +3,13 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { FiShoppingBag, FiGrid, FiTag, FiInfo, FiInstagram } from 'react-icons/fi';
+import { FiShoppingBag, FiGrid, FiTag, FiInfo } from 'react-icons/fi';
 import { useProductsStore } from './store/products';
 import { useCartStore } from './store/cart';
 
 export default function Home() {
   const { products, isLoading, error, fetchProducts } = useProductsStore();
   const cartItems = useCartStore(state => state.cart.items);
-  const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   
   // State for follower counts (to fix hydration issues)
   const [followerCount, setFollowerCount] = useState<number>(0);
@@ -49,41 +48,22 @@ export default function Home() {
       </header> */}
       
       <main className="flex-1">
-        {/* Instagram Shop Link Banner */}
-        {/* <div className="p-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold mb-1">Instagram Shop</h2>
-              <p className="text-sm">Find and shop from your favorite Instagram accounts</p>
-            </div>
-            <Link 
-              href="/instagram" 
-              className="bg-white text-pink-500 px-4 py-2 rounded-lg font-medium flex items-center"
-              aria-label="Find Instagram shops"
-              tabIndex={0}
-            >
-              <FiInstagram className="mr-2" />
-              Find Shops
-            </Link>
-          </div>
-        </div> */}
-      
+        {/* Remove Instagram Banner completely */}
+        
         {/* Business Profile Section */}
-        <div className="p-4 border-b border-gray-200">
+        <div className="px-4 py-3 flex items-center justify-between bg-white border-b border-gray-200">
           <div className="flex items-center">
-            <div className="relative h-20 w-20 rounded-full overflow-hidden mr-5">
+            <div className="relative h-10 w-10 rounded-full overflow-hidden bg-blue-100">
               <Image 
                 src="/store-logo.png" 
-                alt="Business Profile" 
-                fill
+                alt="Store Logo" 
+                fill 
                 className="object-cover"
               />
             </div>
-            
-            <div className="flex-1">
-              <h2 className="text-xl font-bold text-gray-900">Your Business Name</h2>
-              <p className="text-gray-600 text-sm font-medium">Official Shop</p>
-              <p className="text-gray-700 text-sm mt-1">Your business description goes here. Tell customers about your products.</p>
+            <div className="ml-3">
+              <h2 className="text-base font-semibold text-gray-900">فروشگاه اینترنتی</h2>
+              <p className="text-xs text-gray-500">خرید مستقیم از فروشنده</p>
             </div>
           </div>
           

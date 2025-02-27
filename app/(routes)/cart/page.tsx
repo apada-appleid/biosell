@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { FiArrowLeft, FiShoppingBag } from 'react-icons/fi';
 import CartItems from '@/app/components/cart/CartItems';
 import { useCartStore } from '@/app/store/cart';
@@ -59,7 +58,7 @@ export default function CartPage() {
           </div>
           <h2 className="text-xl font-semibold mb-2">Your cart is empty</h2>
           <p className="text-gray-500 mb-6 text-center">
-            Looks like you haven't added any products to your cart yet.
+            Looks like you haven&apos;t added any products to your cart yet.
           </p>
           <Link
             href="/"

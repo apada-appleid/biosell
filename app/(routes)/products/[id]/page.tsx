@@ -12,7 +12,7 @@ export default function ProductPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const productId = params.id as string;
-  const fromUsername = searchParams.get('from');
+  const username = searchParams.get('username');
 
   const { products, fetchProducts, getProduct } = useProductsStore();
   const [product, setProduct] = useState<Product | null>(null);
@@ -24,7 +24,7 @@ export default function ProductPage() {
       
       // If products are not loaded yet, fetch them with the username if available
       if (products.length === 0) {
-        await fetchProducts(fromUsername || undefined);
+        await fetchProducts(username || undefined);
       }
       
       const foundProduct = getProduct(productId);
@@ -37,7 +37,7 @@ export default function ProductPage() {
     };
     
     loadProduct();
-  }, [productId, products.length, fetchProducts, getProduct, fromUsername]);
+  }, [productId, products.length, fetchProducts, getProduct, username]);
   
   if (isLoading) {
     return (
@@ -45,7 +45,7 @@ export default function ProductPage() {
         <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3">
           <div className="flex items-center justify-between">
             <Link 
-              href={fromUsername ? `/instagram/${fromUsername}` : "/"} 
+              href={username ? `/shop/${username}` : "/"} 
               className="text-gray-800"
               aria-label="Back"
               tabIndex={0}
@@ -70,7 +70,7 @@ export default function ProductPage() {
         <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3">
           <div className="flex items-center justify-between">
             <Link 
-              href={fromUsername ? `/instagram/${fromUsername}` : "/"} 
+              href={username ? `/shop/${username}` : "/"} 
               className="text-gray-800"
               aria-label="Back"
               tabIndex={0}
@@ -84,9 +84,9 @@ export default function ProductPage() {
         
         <div className="p-4 text-center">
           <h2 className="text-xl font-semibold mb-4 text-gray-900">Product Not Found</h2>
-          <p className="text-gray-700 mb-6">We couldn't find the product you're looking for.</p>
+          <p className="text-gray-700 mb-6">We couldn&apos;t find the product you&apos;re looking for.</p>
           <Link 
-            href={fromUsername ? `/instagram/${fromUsername}` : "/"}
+            href={username ? `/shop/${username}` : "/"}
             className="bg-blue-500 text-white px-6 py-2 rounded-md"
             aria-label="Back to shop"
             tabIndex={0}
@@ -98,5 +98,5 @@ export default function ProductPage() {
     );
   }
   
-  return <ProductDetail product={product} fromUsername={fromUsername} />;
+  return <ProductDetail product={product} fromUsername={username} />;
 } 

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { FiMinus, FiPlus, FiChevronLeft, FiShare2, FiHeart, FiBookmark, FiMessageCircle } from 'react-icons/fi';
 import { Product } from '@/app/types';
 import { useCartStore } from '@/app/store/cart';
+import { ChevronLeft, ShoppingBag, Heart, MessageCircle, Share2, Minus, Plus, Bookmark } from 'lucide-react';
 
 interface ProductDetailProps {
   product: Product;
@@ -36,16 +37,14 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, fromUsername }) 
     addToCart(product, quantity);
   };
   
+  // Format price to use Persian locale
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(price);
+    return price.toLocaleString('fa-IR');
   };
   
   // Determine the back link destination
   const backLinkHref = fromUsername 
-    ? `/instagram/${fromUsername}` 
+    ? `/shop/${fromUsername}` 
     : "/";
   
   // Determine the business name to display
@@ -54,157 +53,150 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, fromUsername }) 
     : "Your Business Name";
   
   return (
-    <div className="flex flex-col min-h-screen bg-white max-w-md mx-auto">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3">
-        <div className="flex items-center justify-between">
-          <Link 
-            href={backLinkHref} 
-            className="text-gray-800"
-            aria-label="Back"
-            tabIndex={0}
-          >
-            <FiChevronLeft className="h-6 w-6" />
-          </Link>
-          <h1 className="text-lg font-semibold text-gray-900">{businessName}</h1>
+    <div className="flex flex-col h-full">
+      {/* Sticky header */}
+      <div className="sticky top-0 z-20 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+        <button 
+          onClick={() => {
+            // Implement back functionality
+          }}
+          className="p-1 rounded-full hover:bg-gray-100"
+        >
+          <FiChevronLeft className="h-6 w-6 text-gray-800" />
+        </button>
+        <h1 className="text-xl font-semibold text-gray-900 truncate max-w-[60%]">جزئیات محصول</h1>
+        <div className="w-8" /> {/* Placeholder for balance */}
+      </div>
+      
+      {/* Main content */}
+      <div className="flex-1 overflow-y-auto md:p-6 md:pb-24">
+        <div className="max-w-7xl mx-auto md:grid md:grid-cols-2 md:gap-8">
+          {/* Product image section */}
+          <div className="md:sticky md:top-20">
+            <div className="aspect-square relative bg-gray-100 md:rounded-lg md:overflow-hidden">
+              {(product.images && product.images.length > 0) ? (
+                <Image 
+                  src={product.images[0].imageUrl} 
+                  alt={product.title} 
+                  fill 
+                  className="object-contain"
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                />
+              ) : product.imageUrl ? (
+                <Image 
+                  src={product.imageUrl} 
+                  alt={product.title} 
+                  fill 
+                  className="object-contain"
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                />
+              ) : (
+                <div className="h-full w-full flex items-center justify-center">
+                  <FiBookmark className="h-16 w-16 text-gray-400" />
+                </div>
+              )}
+            </div>
+            
+            {/* Image carousel for multiple images */}
+            {product.images && product.images.length > 1 && (
+              <div className="mt-4 px-4 overflow-x-auto">
+                <div className="flex space-x-3 rtl:space-x-reverse">
+                  {product.images.map((image, index) => (
+                    <div
+                      key={index}
+                      className="w-20 h-20 rounded-md overflow-hidden border border-gray-200 flex-shrink-0 cursor-pointer"
+                    >
+                      <Image
+                        src={image.imageUrl}
+                        alt={`${product.title} - تصویر ${index + 1}`}
+                        width={80}
+                        height={80}
+                        className="object-cover w-full h-full"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Product info section */}
+          <div className="p-4 md:p-0">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">
+              {product.title}
+            </h2>
+            
+            <div className="text-lg md:text-xl font-semibold text-gray-900 mb-4">
+              {formatPrice(product.price)} تومان
+            </div>
+            
+            <div className="prose prose-sm text-gray-700 mb-6">
+              <p className="whitespace-pre-line">{product.description}</p>
+            </div>
+            
+            {/* Inventory status */}
+            <div className="mb-6 flex items-center">
+              <span className="text-sm text-gray-500 ml-2">وضعیت:</span>
+              <span className={`text-sm font-medium ${(product.inventory || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {(product.inventory || 0) > 0 ? 'موجود' : 'ناموجود'}
+              </span>
+              {(product.inventory || 0) > 0 && (
+                <span className="text-sm text-gray-500 mr-2">
+                  ({product.inventory} عدد)
+                </span>
+              )}
+            </div>
+            
+            {/* Quantity selector */}
+            {(product.inventory || 0) > 0 && (
+              <div className="mb-8">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  تعداد
+                </label>
+                <div className="flex items-center">
+                  <button
+                    onClick={decrementQuantity}
+                    disabled={quantity <= 1}
+                    className="flex items-center justify-center w-10 h-10 rounded-full border border-gray-300 bg-white text-gray-500 hover:bg-gray-100 disabled:opacity-50"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                  <span className="w-16 text-center text-gray-900 font-medium">
+                    {quantity}
+                  </span>
+                  <button
+                    onClick={incrementQuantity}
+                    disabled={quantity >= (product.inventory || 0)}
+                    className="flex items-center justify-center w-10 h-10 rounded-full border border-gray-300 bg-white text-gray-500 hover:bg-gray-100 disabled:opacity-50"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Sticky add to cart footer */}
+      <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-10">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="text-lg font-bold text-gray-900">
+            {formatPrice(product.price * quantity)} تومان
+          </div>
           <button 
-            className="text-gray-800"
-            aria-label="Share product"
-            tabIndex={0}
+            onClick={handleAddToCart}
+            disabled={(product.inventory || 0) <= 0}
+            className={`px-6 py-3 rounded-lg font-bold flex items-center ${
+              (product.inventory || 0) > 0 
+                ? 'bg-blue-500 hover:bg-blue-600 text-white' 
+                : 'bg-gray-200 text-gray-500 cursor-not-allowed'
+            }`}
           >
-            <FiShare2 className="h-5 w-5" />
+            <ShoppingBag className="ml-2 h-5 w-5" />
+            {(product.inventory || 0) > 0 ? 'افزودن به سبد خرید' : 'ناموجود'}
           </button>
         </div>
-      </header>
-      
-      <main className="flex-1 overflow-y-auto pb-24">
-        {/* Product Post Header - Instagram Style */}
-        <div className="px-4 py-2 flex items-center">
-          <div className="relative h-8 w-8 rounded-full overflow-hidden mr-3">
-            <Image
-              src="/store-logo.png"
-              alt="Business Profile"
-              fill
-              className="object-cover"
-            />
-          </div>
-          <span className="font-semibold text-gray-900">{businessName}</span>
-        </div>
-      
-        {/* Product Image Gallery */}
-        <div className="relative aspect-square">
-          <Image
-            src={product.imageUrl}
-            alt={product.title}
-            fill
-            className="object-cover"
-            sizes="100vw"
-            priority
-          />
-        </div>
-        
-        {/* Instagram-like Action Buttons */}
-        <div className="px-4 py-2">
-          <div className="flex justify-between mb-2">
-            <div className="flex space-x-4">
-              <button 
-                className="text-gray-800"
-                aria-label="Like"
-                tabIndex={0}
-              >
-                <FiHeart className="h-6 w-6" />
-              </button>
-              <button 
-                className="text-gray-800"
-                aria-label="Comment"
-                tabIndex={0}
-              >
-                <FiMessageCircle className="h-6 w-6" />
-              </button>
-              <button 
-                className="text-gray-800"
-                aria-label="Share"
-                tabIndex={0}
-              >
-                <FiShare2 className="h-6 w-6" />
-              </button>
-            </div>
-            <button 
-              className="text-gray-800"
-              aria-label="Save"
-              tabIndex={0}
-            >
-              <FiBookmark className="h-6 w-6" />
-            </button>
-          </div>
-          
-          <p className="font-bold mb-1 text-gray-900">{likesCount} likes</p>
-        </div>
-        
-        {/* View on Instagram Link - only show if we have the username */}
-        {fromUsername && (
-          <Link 
-            href={`https://instagram.com/p/${product.id}`} 
-            target="_blank"
-            rel="noopener noreferrer"
-            className="block w-full text-center py-3 border border-blue-500 text-blue-600 rounded-lg mb-4 hover:bg-blue-50 mt-4"
-            aria-label="View on Instagram"
-            tabIndex={0}
-          >
-            View Original Instagram Post
-          </Link>
-        )}
-        {/* Product Info */}
-        <div className="p-4">
-          <h2 className="text-base mb-2">
-            <span className="font-semibold text-gray-900">{product.title}</span>
-            {' - '}
-            <span className="text-blue-600 font-bold">{formatPrice(product.price)}</span>
-          </h2>
-          
-          <p className="text-gray-700 mb-4">{product.description}</p>
-          
-          {/* Quantity Selector */}
-          <div className="mb-6">
-            <h3 className="text-sm font-semibold mb-2 text-gray-800">Select Quantity</h3>
-            <div className="flex items-center">
-              <button 
-                onClick={decrementQuantity}
-                className="h-10 w-10 rounded-full border border-gray-300 flex items-center justify-center"
-                disabled={quantity <= 1}
-                aria-label="Decrease quantity"
-                tabIndex={0}
-              >
-                <FiMinus className={quantity <= 1 ? 'text-gray-300' : 'text-gray-800'} />
-              </button>
-              
-              <span className="mx-4 w-8 text-center font-semibold text-gray-900">
-                {quantity}
-              </span>
-              
-              <button 
-                onClick={incrementQuantity}
-                className="h-10 w-10 rounded-full border border-gray-300 flex items-center justify-center"
-                aria-label="Increase quantity"
-                tabIndex={0}
-              >
-                <FiPlus className="text-gray-800" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </main>
-      
-      {/* Add to Cart Fixed Footer */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 max-w-md mx-auto">
-        <button 
-          onClick={handleAddToCart}
-          className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold"
-          aria-label="Add to cart"
-          tabIndex={0}
-        >
-          Add to Cart - {formatPrice(product.price * quantity)}
-        </button>
       </div>
     </div>
   );
