@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { FiMinus, FiPlus, FiChevronLeft, FiShare2, FiHeart, FiBookmark, FiMessageCircle } from 'react-icons/fi';
@@ -7,11 +7,20 @@ import { useCartStore } from '@/app/store/cart';
 
 interface ProductDetailProps {
   product: Product;
+  fromUsername?: string | null;
 }
 
-const ProductDetail: React.FC<ProductDetailProps> = ({ product }) => {
+const ProductDetail: React.FC<ProductDetailProps> = ({ product, fromUsername }) => {
   const [quantity, setQuantity] = useState(1);
+  const [likesCount, setLikesCount] = useState(0);
   const addToCart = useCartStore(state => state.addToCart);
+  
+  // Initialize client-side only values
+  useEffect(() => {
+    // Generate a random but stable number of likes (based on product ID for consistency)
+    const productIdNumber = parseInt(product.id, 10) || 0;
+    setLikesCount(200 + (productIdNumber * 45));
+  }, [product.id]);
   
   const incrementQuantity = () => {
     setQuantity(prev => prev + 1);
@@ -34,20 +43,30 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product }) => {
     }).format(price);
   };
   
+  // Determine the back link destination
+  const backLinkHref = fromUsername 
+    ? `/instagram/${fromUsername}` 
+    : "/";
+  
+  // Determine the business name to display
+  const businessName = fromUsername 
+    ? `@${fromUsername}` 
+    : "Your Business Name";
+  
   return (
     <div className="flex flex-col min-h-screen bg-white max-w-md mx-auto">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between">
           <Link 
-            href="/" 
+            href={backLinkHref} 
             className="text-gray-800"
-            aria-label="Back to home"
+            aria-label="Back"
             tabIndex={0}
           >
             <FiChevronLeft className="h-6 w-6" />
           </Link>
-          <h1 className="text-lg font-semibold text-gray-900">Your Business Name</h1>
+          <h1 className="text-lg font-semibold text-gray-900">{businessName}</h1>
           <button 
             className="text-gray-800"
             aria-label="Share product"
@@ -69,7 +88,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product }) => {
               className="object-cover"
             />
           </div>
-          <span className="font-semibold text-gray-900">Your Business Name</span>
+          <span className="font-semibold text-gray-900">{businessName}</span>
         </div>
       
         {/* Product Image Gallery */}
@@ -119,9 +138,22 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product }) => {
             </button>
           </div>
           
-          <p className="font-bold mb-1 text-gray-900">245 likes</p>
+          <p className="font-bold mb-1 text-gray-900">{likesCount} likes</p>
         </div>
         
+        {/* View on Instagram Link - only show if we have the username */}
+        {fromUsername && (
+          <Link 
+            href={`https://instagram.com/p/${product.id}`} 
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full text-center py-3 border border-blue-500 text-blue-600 rounded-lg mb-4 hover:bg-blue-50 mt-4"
+            aria-label="View on Instagram"
+            tabIndex={0}
+          >
+            View Original Instagram Post
+          </Link>
+        )}
         {/* Product Info */}
         <div className="p-4">
           <h2 className="text-base mb-2">

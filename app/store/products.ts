@@ -1,12 +1,14 @@
 import { create } from 'zustand';
 import { Product } from '../types';
 import axios from 'axios';
+import { instagramClient } from '../lib/instagram';
 
 interface ProductsState {
   products: Product[];
   isLoading: boolean;
   error: string | null;
-  fetchProducts: () => Promise<void>;
+  username: string | null;
+  fetchProducts: (username?: string) => Promise<void>;
   getProduct: (id: string) => Product | undefined;
 }
 
@@ -58,16 +60,25 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
   products: [],
   isLoading: false,
   error: null,
+  username: null,
   
-  fetchProducts: async () => {
+  fetchProducts: async (username?: string) => {
     set({ isLoading: true, error: null });
     
     try {
-      // In a real implementation, we would fetch from Instagram API
-      // For now, we'll use mock data with a timeout to simulate network request
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      let products: Product[];
       
-      set({ products: mockProducts, isLoading: false });
+      if (username) {
+        // Use our API endpoint to fetch products from a specific Instagram handle
+        const response = await axios.get(`/api/instagram?username=${username}`);
+        products = response.data.products;
+        set({ username: username });
+      } else {
+        // Fallback to our mock data implementation
+        products = await instagramClient.getProductsFromInstagram();
+      }
+      
+      set({ products, isLoading: false });
     } catch (error) {
       console.error('Error fetching products:', error);
       set({ 
