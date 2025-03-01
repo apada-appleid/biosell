@@ -1,6 +1,9 @@
 'use client';
 
-import React from 'react';
+import { SessionProvider } from 'next-auth/react';
+import React, { useEffect, useState } from 'react';
+import Toast from './components/ui/Toast';
+import { useToastStore } from './store/toast';
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -12,7 +15,25 @@ interface ProvidersProps {
  * that need to be wrapped in client-side providers
  */
 export default function Providers({ children }: ProvidersProps) {
+  // For client-side hydration
+  const [mounted, setMounted] = useState(false);
+  const { message, isVisible, actionButtons, hideToast } = useToastStore();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
-    <>{children}</>
+    <SessionProvider>
+      {children}
+      {mounted && (
+        <Toast 
+          message={message} 
+          isVisible={isVisible} 
+          onClose={hideToast} 
+          actionButtons={actionButtons}
+        />
+      )}
+    </SessionProvider>
   );
 } 

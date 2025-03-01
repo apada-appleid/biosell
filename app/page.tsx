@@ -1,172 +1,138 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
-import { FiShoppingBag, FiGrid, FiTag, FiInfo, FiInstagram } from 'react-icons/fi';
+import { FiShoppingBag, FiUser, FiZap, FiCreditCard, FiBarChart2 } from 'react-icons/fi';
 import { useProductsStore } from './store/products';
 import { useCartStore } from './store/cart';
 
 export default function Home() {
   const { products, isLoading, error, fetchProducts } = useProductsStore();
   const cartItems = useCartStore(state => state.cart.items);
-  const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  
-  // State for follower counts (to fix hydration issues)
-  const [followerCount, setFollowerCount] = useState<number>(0);
-  const [followingCount, setFollowingCount] = useState<number>(0);
   
   // Client-side data fetching
   useEffect(() => {
     fetchProducts();
-    
-    // Generate random follower/following counts only on client-side
-    // This prevents hydration mismatch errors
-    setFollowerCount(Math.floor(Math.random() * 5000) + 500);
-    setFollowingCount(Math.floor(Math.random() * 500) + 50);
   }, [fetchProducts]);
   
   return (
-    <div className="flex flex-col min-h-screen bg-white max-w-md mx-auto">
-      {/* Header with cart icon */}
-      {/* <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3">
-        <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-gray-900">Your Business Name</h1>
-          <Link 
-            href="/cart" 
-            className="relative"
-            aria-label="Shopping cart"
-            tabIndex={0}
-          >
-            <FiShoppingBag className="h-6 w-6 text-gray-800" />
-            {itemCount > 0 && (
-              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                {itemCount}
-              </span>
-            )}
-          </Link>
-        </div>
-      </header> */}
-      
-      <main className="flex-1">
-        {/* Instagram Shop Link Banner */}
-        {/* <div className="p-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-bold mb-1">Instagram Shop</h2>
-              <p className="text-sm">Find and shop from your favorite Instagram accounts</p>
-            </div>
+    <div className="flex flex-col min-h-screen bg-white">
+      {/* Header */}
+      <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3">
+        <div className="flex items-center justify-between max-w-6xl mx-auto">
+          <h1 className="text-xl font-semibold text-gray-900">شاپ‌گرام</h1>
+          <div className="flex items-center space-x-4 rtl:space-x-reverse">
             <Link 
-              href="/instagram" 
-              className="bg-white text-pink-500 px-4 py-2 rounded-lg font-medium flex items-center"
-              aria-label="Find Instagram shops"
+              href="/cart" 
+              className="text-gray-700 hover:text-gray-900 relative"
+              aria-label="سبد خرید"
               tabIndex={0}
             >
-              <FiInstagram className="mr-2" />
-              Find Shops
+              <FiShoppingBag className="h-6 w-6" />
+              {cartItems.length > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {cartItems.length}
+                </span>
+              )}
+            </Link>
+            <Link 
+              href="/login" 
+              className="text-gray-700 hover:text-gray-900"
+              aria-label="User account"
+              tabIndex={0}
+            >
+              <FiUser className="h-6 w-6" />
             </Link>
           </div>
-        </div> */}
-      
-        {/* Business Profile Section */}
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex items-center">
-            <div className="relative h-20 w-20 rounded-full overflow-hidden mr-5">
-              <Image 
-                src="/store-logo.png" 
-                alt="Business Profile" 
-                fill
-                className="object-cover"
-              />
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <div className="bg-blue-50 py-12 md:py-20">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="flex flex-col items-center justify-center mb-10">
+            <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mb-4">
+              <FiShoppingBag className="w-10 h-10 text-white" />
             </div>
-            
-            <div className="flex-1">
-              <h2 className="text-xl font-bold text-gray-900">Your Business Name</h2>
-              <p className="text-gray-600 text-sm font-medium">Official Shop</p>
-              <p className="text-gray-700 text-sm mt-1">Your business description goes here. Tell customers about your products.</p>
-            </div>
+            <h3 className="text-xl font-bold text-blue-600">شاپ‌گرام</h3>
+            <p className="text-gray-600 mt-2">فروشگاه آنلاین اینستاگرام شما</p>
           </div>
           
-          <div className="flex justify-around mt-5">
-            <div className="text-center">
-              <div className="font-bold text-gray-900">{products.length}</div>
-              <div className="text-xs text-gray-600 font-medium">Products</div>
-            </div>
-            <div className="text-center">
-              <div className="font-bold text-gray-900">{followerCount}</div>
-              <div className="text-xs text-gray-600 font-medium">Followers</div>
-            </div>
-            <div className="text-center">
-              <div className="font-bold text-gray-900">{followingCount}</div>
-              <div className="text-xs text-gray-600 font-medium">Following</div>
+          <div className="md:flex md:items-center md:justify-between">
+            <div className="md:w-full lg:w-2/3 mx-auto mb-8 md:mb-0">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4 text-force-dark text-center md:text-right">
+                فروشگاه آنلاین خودتان را در چند دقیقه بسازید
+              </h2>
+              <p className="text-lg text-gray-700 mb-6 text-force-dark text-center md:text-right">
+                با شاپ‌گرام به راحتی محصولات خود را به مشتریان‌تان در اینستاگرام بفروشید. 
+                بدون نیاز به دانش فنی، در چند دقیقه فروشگاه آنلاین خود را راه‌اندازی کنید.
+              </p>
+              <div className="flex justify-center md:justify-start">
+                <Link 
+                  href="/seller/register" 
+                  className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                  aria-label="Start now"
+                  tabIndex={0}
+                >
+                  همین حالا شروع کنید
+                </Link>
+              </div>
             </div>
           </div>
-          
-          <button 
-            className="w-full bg-blue-500 text-white py-2 rounded mt-4 font-semibold"
-            aria-label="Contact"
+        </div>
+      </div>
+
+      {/* Features Section */}
+      <div className="py-12 md:py-20">
+        <div className="max-w-6xl mx-auto px-4">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8 text-center text-force-dark">
+            ویژگی‌های شاپ‌گرام
+          </h2>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="bg-white p-6 rounded-lg shadow-md text-center flex flex-col items-center">
+              <div className="text-blue-600 mb-4 flex justify-center">
+                <FiZap className="w-12 h-12" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-force-dark">راه‌اندازی سریع</h3>
+              <p className="text-gray-700 text-force-dark">در کمتر از ۵ دقیقه فروشگاه آنلاین خود را راه‌اندازی کنید.</p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow-md text-center flex flex-col items-center">
+              <div className="text-blue-600 mb-4 flex justify-center">
+                <FiCreditCard className="w-12 h-12" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-force-dark">پرداخت امن</h3>
+              <p className="text-gray-700 text-force-dark">درگاه پرداخت امن و مطمئن برای مشتریان شما.</p>
+            </div>
+            <div className="bg-white p-6 rounded-lg shadow-md text-center flex flex-col items-center">
+              <div className="text-blue-600 mb-4 flex justify-center">
+                <FiBarChart2 className="w-12 h-12" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2 text-force-dark">مدیریت آسان</h3>
+              <p className="text-gray-700 text-force-dark">پنل مدیریت ساده و کاربرپسند برای کنترل فروشگاه.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* CTA Section */}
+      <div className="bg-blue-600 py-12 md:py-20">
+        <div className="max-w-6xl mx-auto px-4 text-center">
+          <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
+            آماده‌اید تا فروش خود را افزایش دهید؟
+          </h2>
+          <p className="text-lg text-blue-100 mb-8 max-w-2xl mx-auto">
+            همین امروز با شاپ‌گرام شروع کنید و تجربه فروش آنلاین جدیدی را برای خود و مشتریانتان رقم بزنید.
+          </p>
+          <Link 
+            href="/seller/register" 
+            className="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-colors"
+            aria-label="Seller registration"
             tabIndex={0}
           >
-            Contact
-          </button>
+            ثبت نام فروشندگان
+          </Link>
         </div>
-        
-        {/* Tab Navigation */}
-        <div className="flex border-b border-gray-200">
-          <button className="flex-1 py-3 text-center border-b-2 border-black">
-            <FiGrid className="inline-block mb-1 text-gray-800" />
-          </button>
-          <button className="flex-1 py-3 text-center text-gray-500">
-            <FiTag className="inline-block mb-1" />
-          </button>
-          <button className="flex-1 py-3 text-center text-gray-500">
-            <FiInfo className="inline-block mb-1" />
-          </button>
-        </div>
-        
-        {/* Products Grid */}
-        {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-          </div>
-        ) : error ? (
-          <div className="p-4 text-center">
-            <p className="text-red-600">Error: {error}</p>
-            <button 
-              onClick={() => fetchProducts()}
-              className="mt-4 bg-blue-500 text-white px-4 py-2 rounded-md"
-              aria-label="Retry loading products"
-              tabIndex={0}
-            >
-              Retry
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-3 gap-1">
-            {products.map(product => (
-              <Link 
-                key={product.id}
-                href={`/products/${product.id}`}
-                className="aspect-square relative"
-                aria-label={`View ${product.title}`}
-                tabIndex={0}
-              >
-                <Image
-                  src={product.imageUrl}
-                  alt={product.title}
-                  fill
-                  priority={product.id === '2' || product.id === '4'}
-                  className="object-cover"
-                  sizes="(max-width: 768px) 33vw, 25vw"
-                />
-                <div className="absolute bottom-2 right-2 bg-white rounded-full p-1">
-                  <FiShoppingBag className="h-4 w-4 text-gray-800" />
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </main>
+      </div>
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import { create } from 'zustand';
-import { Product } from '../types';
+import { Product, ProductImage } from '../types';
 import axios from 'axios';
-import { instagramClient } from '../lib/instagram';
 
 interface ProductsState {
   products: Product[];
@@ -12,47 +11,75 @@ interface ProductsState {
   getProduct: (id: string) => Product | undefined;
 }
 
-// Mock data for initial development - will be replaced with Instagram API integration
+// Mock product data for fallback
 const mockProducts: Product[] = [
   {
     id: '1',
-    title: 'Blue Denim Jacket',
-    description: 'Classic blue denim jacket, perfect for any casual outfit.',
-    price: 79.99,
+    title: 'محصول آبی',
+    description: 'توضیحات محصول آبی به صورت تستی',
+    price: 799000,
     imageUrl: 'https://images.unsplash.com/photo-1576995853123-5a10305d93c0',
-    instagramPostUrl: 'https://www.instagram.com/p/sample1/',
     available: true,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    images: [
+      {
+        id: '1-1',
+        imageUrl: 'https://images.unsplash.com/photo-1576995853123-5a10305d93c0'
+      }
+    ],
+    inventory: 10,
+    isActive: true
   },
   {
     id: '2',
-    title: 'White Sneakers',
-    description: 'Minimalist white sneakers that go with everything.',
-    price: 59.99,
+    title: 'کفش سفید',
+    description: 'کفش مینیمال سفید که با همه چیز ست می‌شود',
+    price: 599000,
     imageUrl: 'https://images.unsplash.com/photo-1549298916-b41d501d3772',
-    instagramPostUrl: 'https://www.instagram.com/p/sample2/',
     available: true,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    images: [
+      {
+        id: '2-1',
+        imageUrl: 'https://images.unsplash.com/photo-1549298916-b41d501d3772'
+      }
+    ],
+    inventory: 5,
+    isActive: true
   },
   {
     id: '3',
-    title: 'Black Leather Bag',
-    description: 'Stylish black leather bag with gold hardware.',
-    price: 129.99,
+    title: 'کیف چرم مشکی',
+    description: 'کیف چرم مشکی شیک با سخت‌افزار طلایی',
+    price: 1290000,
     imageUrl: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa',
-    instagramPostUrl: 'https://www.instagram.com/p/sample3/',
     available: true,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    images: [
+      {
+        id: '3-1',
+        imageUrl: 'https://images.unsplash.com/photo-1548036328-c9fa89d128fa'
+      }
+    ],
+    inventory: 3,
+    isActive: true
   },
   {
     id: '4',
-    title: 'Round Sunglasses',
-    description: 'Vintage-inspired round sunglasses with UV protection.',
-    price: 39.99,
+    title: 'عینک آفتابی گرد',
+    description: 'عینک آفتابی گرد با الهام از طرح‌های قدیمی با محافظت UV',
+    price: 399000,
     imageUrl: 'https://images.unsplash.com/photo-1577803645773-f96470509666',
-    instagramPostUrl: 'https://www.instagram.com/p/sample4/',
     available: true,
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    images: [
+      {
+        id: '4-1',
+        imageUrl: 'https://images.unsplash.com/photo-1577803645773-f96470509666'
+      }
+    ],
+    inventory: 20,
+    isActive: true
   }
 ];
 
@@ -69,13 +96,41 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
       let products: Product[];
       
       if (username) {
-        // Use our API endpoint to fetch products from a specific Instagram handle
-        const response = await axios.get(`/api/instagram?username=${username}`);
-        products = response.data.products;
+        try {
+          // First try to fetch from our seller API
+          const response = await axios.get(`/api/shop/seller?username=${username}`);
+          const seller = response.data;
+          
+          if (!seller || !seller.id) {
+            throw new Error('Seller information not found');
+          }
+          
+          // Then fetch the products for this seller
+          const productsResponse = await axios.get(`/api/shop/products?sellerId=${seller.id}`);
+          
+          if (!productsResponse.data || !productsResponse.data.products) {
+            throw new Error('No products data returned from API');
+          }
+          
+          // Ensure all products have the required fields
+          products = productsResponse.data.products.map((product: any) => ({
+            ...product,
+            available: product.isActive !== false, // Default to true if not specified
+            // Make sure each product has an imageUrl for backward compatibility
+            imageUrl: product.images && product.images.length > 0 
+              ? product.images[0].imageUrl 
+              : 'https://via.placeholder.com/400'
+          }));
+        } catch (apiError) {
+          console.error('API fetch failed, using mock data:', apiError);
+          // Fallback to mock data if API call fails
+          products = mockProducts;
+        }
+        
         set({ username: username });
       } else {
-        // Fallback to our mock data implementation
-        products = await instagramClient.getProductsFromInstagram();
+        // No username specified, use mock data
+        products = mockProducts;
       }
       
       set({ products, isLoading: false });
@@ -83,12 +138,20 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
       console.error('Error fetching products:', error);
       set({ 
         error: error instanceof Error ? error.message : 'Failed to fetch products', 
-        isLoading: false 
+        isLoading: false,
+        products: mockProducts // Use mock products as fallback on error
       });
     }
   },
   
   getProduct: (id: string) => {
-    return get().products.find(product => product.id === id);
+    const product = get().products.find(product => product.id === id);
+    
+    if (!product) {
+      // If product not found in state, try to find it in mock data
+      return mockProducts.find(p => p.id === id);
+    }
+    
+    return product;
   }
 })); 
