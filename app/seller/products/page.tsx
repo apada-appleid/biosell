@@ -224,6 +224,7 @@ export default function SellerProductsPage() {
                                   width={40}
                                   height={40}
                                   className="object-cover h-10 w-10"
+                                  unoptimized={true}
                                 />
                               ) : (
                                 <div className="h-10 w-10 bg-gray-200 flex items-center justify-center rounded-full">

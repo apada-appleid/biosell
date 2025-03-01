@@ -8,7 +8,6 @@ interface MobileLayoutProps {
   children: React.ReactNode;
   title: string;
   showBackButton?: boolean;
-  showFooter?: boolean;
   headerClassName?: string;
 }
 
@@ -16,13 +15,18 @@ export default function MobileLayout({
   children,
   title,
   showBackButton = true,
-  showFooter = true,
   headerClassName = '',
 }: MobileLayoutProps) {
   const router = useRouter();
 
   const handleBack = () => {
     router.back();
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      handleBack();
+    }
   };
 
   return (
@@ -33,8 +37,9 @@ export default function MobileLayout({
           {showBackButton && (
             <button
               onClick={handleBack}
-              className="p-2 -ml-2 mr-2 rounded-full text-gray-700 hover:bg-gray-100 transition-colors"
-              aria-label="Go back"
+              onKeyDown={handleKeyDown}
+              className="p-2 -mr-2 ml-2 rounded-full text-gray-700 hover:bg-gray-100 transition-colors"
+              aria-label="بازگشت"
               tabIndex={0}
             >
               <IoChevronBackOutline className="w-5 h-5" />
@@ -49,13 +54,6 @@ export default function MobileLayout({
       <main className="flex-1">
         {children}
       </main>
-
-      {/* Footer - conditionally rendered */}
-      {showFooter && (
-        <footer className="bg-white border-t border-gray-200 py-4 px-6 text-center text-sm text-gray-500">
-          <p>© {new Date().getFullYear()} ShopGram. All rights reserved.</p>
-        </footer>
-      )}
     </div>
   );
 } 

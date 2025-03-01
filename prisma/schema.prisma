@@ -20,6 +20,7 @@ model User {
   password  String
   name      String
   role      String   @default("admin")
+  phone     String?
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -54,6 +55,7 @@ model Seller {
   updatedAt    DateTime       @updatedAt @map("updated_at")
   products     Product[]
   subscriptions Subscription[]
+  orders       Order[]        // ارتباط با سفارش‌ها
 
   @@map("sellers")
 }
@@ -101,6 +103,95 @@ model Product {
   updatedAt   DateTime       @updatedAt @map("updated_at")
   seller      Seller         @relation(fields: [sellerId], references: [id])
   images      ProductImage[]
+  orderItems  OrderItem[]    // ارتباط با آیتم‌های سفارش
 
   @@map("products")
+}
+
+// مدل مشتریان
+model Customer {
+  id          String            @id @default(uuid())
+  fullName    String?           @map("full_name")
+  email       String?
+  mobile      String?
+  address     String?           // Keep for backward compatibility
+  city        String?           // Keep for backward compatibility
+  postalCode  String?           @map("postal_code") // Keep for backward compatibility
+  country     String?
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  orders      Order[]
+  addresses   CustomerAddress[] // New relation to customer addresses
+
+  @@unique([email], name: "unique_customer_email", map: "unique_customer_email")
+  @@unique([mobile], name: "unique_customer_mobile", map: "unique_customer_mobile")
+  @@map("customers")
+}
+
+// مدل آدرس‌های مشتریان - New model
+model CustomerAddress {
+  id         String   @id @default(uuid())
+  customerId String   @map("customer_id")
+  fullName   String   @map("full_name")
+  phone      String
+  address    String
+  city       String
+  province   String
+  postalCode String   @map("postal_code")
+  isDefault  Boolean  @default(false) @map("is_default")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("customer_addresses")
+}
+
+// مدل کد تایید یکبار مصرف
+model otp {
+  id        String   @id @default(uuid())
+  mobile    String   @unique
+  code      String
+  expiresAt DateTime @map("expires_at")
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("otps")
+}
+
+// مدل سفارش‌ها
+model Order {
+  id              String     @id @default(uuid())
+  orderNumber     String     @unique @map("order_number")
+  customerId      String     @map("customer_id")
+  sellerId        String     @map("seller_id")
+  total           Int
+  status          String     @default("pending") // pending, processing, completed, cancelled
+  paymentMethod   String     @map("payment_method") // cash_on_delivery, credit_card
+  paymentStatus   String     @default("pending") @map("payment_status") // pending, paid, failed
+  shippingAddress String?    @map("shipping_address")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+  customer        Customer   @relation(fields: [customerId], references: [id])
+  seller          Seller     @relation(fields: [sellerId], references: [id])
+  items           OrderItem[]
+
+  @@map("orders")
+}
+
+// مدل آیتم‌های سفارش
+model OrderItem {
+  id          String   @id @default(uuid())
+  orderId     String   @map("order_id")
+  productId   String   @map("product_id")
+  title       String   // عنوان محصول در زمان سفارش
+  price       Int      // قیمت محصول در زمان سفارش
+  quantity    Int
+  totalPrice  Int      @map("total_price")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product  @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, ChangeEvent, FormEvent } from 'react';
+import { useState, ChangeEvent, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { XCircle, Upload, Loader2, CheckCircle } from 'lucide-react';
@@ -35,6 +35,33 @@ export default function NewProductPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [hasSubscription, setHasSubscription] = useState<boolean | null>(null);
+  const [checkingSubscription, setCheckingSubscription] = useState(true);
+
+  // Check if user has an active subscription
+  useEffect(() => {
+    const checkSubscription = async () => {
+      if (status === 'authenticated') {
+        try {
+          const response = await fetch('/api/seller/subscription/check');
+          const data = await response.json();
+          
+          setHasSubscription(data.hasActiveSubscription);
+        } catch (error) {
+          console.error('Error checking subscription:', error);
+          setHasSubscription(false);
+        } finally {
+          setCheckingSubscription(false);
+        }
+      }
+    };
+    
+    if (status === 'authenticated') {
+      checkSubscription();
+    } else if (status === 'unauthenticated') {
+      router.push('/auth/login');
+    }
+  }, [status, router]);
 
   // Handle input changes
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -159,20 +186,49 @@ export default function NewProductPage() {
         body: JSON.stringify(productData)
       });
       
+      const responseData = await response.json();
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create product');
+        // Check for specific error types
+        if (response.status === 403 && responseData.error === 'No active subscription found') {
+          // Handle subscription error with a user-friendly message
+          setSubmitError('شما اشتراک فعالی ندارید. لطفا ابتدا یک پلن اشتراک تهیه کنید.');
+          
+          // Add a small delay before redirecting to the plans page
+          setTimeout(() => {
+            router.push('/seller/plans');
+          }, 3000);
+          
+          return;
+        } else if (response.status === 403 && responseData.error.includes('maximum number of products')) {
+          // Handle product limit error
+          setSubmitError('شما به حداکثر تعداد محصولات مجاز در پلن خود رسیده‌اید. لطفا پلن خود را ارتقا دهید.');
+          return;
+        }
+        
+        // Handle other errors
+        throw new Error(responseData.error || 'خطا در ایجاد محصول');
       }
       
-      const product = await response.json();
-      
-      // Handle image uploads - In a real implementation, we would upload these to a storage service
-      // and then associate them with the product. This is a placeholder for now.
+      // Upload images if there are any
       if (formData.images.length > 0) {
-        // In a real implementation, here you would:
-        // 1. Upload each image to a storage service like AWS S3
-        // 2. Create records in your database for each image
-        console.log(`Would upload ${formData.images.length} images for product ${product.id}`);
+        const imageFormData = new FormData();
+        imageFormData.append('productId', responseData.id);
+        
+        formData.images.forEach(image => {
+          if (image.file) {
+            imageFormData.append('images', image.file);
+          }
+        });
+        
+        const imageResponse = await fetch('/api/seller/products/images', {
+          method: 'POST',
+          body: imageFormData
+        });
+        
+        if (!imageResponse.ok) {
+          console.error('Error uploading images:', await imageResponse.json());
+        }
       }
       
       // Show success message before redirecting
@@ -185,16 +241,44 @@ export default function NewProductPage() {
       
     } catch (error) {
       console.error('Error creating product:', error);
-      setSubmitError(error instanceof Error ? error.message : 'An error occurred');
+      setSubmitError(error instanceof Error ? error.message : 'خطایی رخ داده است. لطفا دوباره تلاش کنید.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (status === 'loading') {
+  if (status === 'loading' || checkingSubscription) {
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
         <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  // Show subscription message if user doesn't have an active subscription
+  if (hasSubscription === false) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">افزودن محصول جدید</h1>
+        </div>
+        
+        <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6 text-center">
+          <div className="mb-4">
+            <XCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-gray-900 mb-2">نیاز به اشتراک فعال</h2>
+            <p className="text-gray-700 mb-6">
+              برای افزودن محصول جدید، شما نیاز به یک اشتراک فعال دارید. لطفا ابتدا یک پلن اشتراک را انتخاب کنید.
+            </p>
+            
+            <button
+              onClick={() => router.push('/seller/plans')}
+              className="px-5 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+            >
+              مشاهده پلن‌های اشتراک
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -240,7 +324,7 @@ export default function NewProductPage() {
             name="title"
             value={formData.title}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
             dir="rtl"
           />
           {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title}</p>}
@@ -257,7 +341,7 @@ export default function NewProductPage() {
             rows={4}
             value={formData.description}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
             dir="rtl"
           ></textarea>
         </div>
@@ -274,7 +358,7 @@ export default function NewProductPage() {
               name="price"
               value={formData.price}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
               dir="rtl"
             />
             {errors.price && <p className="mt-1 text-sm text-red-600">{errors.price}</p>}
@@ -290,7 +374,7 @@ export default function NewProductPage() {
               name="inventory"
               value={formData.inventory}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
               dir="rtl"
             />
             {errors.inventory && <p className="mt-1 text-sm text-red-600">{errors.inventory}</p>}
@@ -310,7 +394,7 @@ export default function NewProductPage() {
           >
             <span 
               className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${
-                formData.isActive ? 'translate-x-5' : 'translate-x-0'
+                formData.isActive ? 'translate-x-0' : 'translate-x-5'
               }`} 
             />
           </button>

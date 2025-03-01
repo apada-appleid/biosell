@@ -2,6 +2,43 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import { JWT } from 'next-auth/jwt';
+import { User } from 'next-auth';
+
+// Extend the JWT interface
+declare module 'next-auth/jwt' {
+  interface JWT {
+    id: string;
+    role?: string;
+    type: string;
+    username?: string;
+    phone?: string;
+  }
+}
+
+// Extend the User interface
+declare module 'next-auth' {
+  interface User {
+    id: string;
+    role?: string;
+    type: string;
+    username?: string;
+    phone?: string;
+  }
+  
+  interface Session {
+    user: {
+      id: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+      role?: string;
+      type: string;
+      username?: string;
+      phone?: string;
+    }
+  }
+}
 
 // Auth options configuration
 const authOptions: NextAuthOptions = {
@@ -10,7 +47,8 @@ const authOptions: NextAuthOptions = {
       name: 'credentials',
       credentials: {
         email: { label: 'Email', type: 'text' },
-        password: { label: 'Password', type: 'password' }
+        password: { label: 'Password', type: 'password' },
+        role: { label: 'Role', type: 'text' }
       },
       async authorize(credentials) {
         try {
@@ -19,7 +57,7 @@ const authOptions: NextAuthOptions = {
           }
 
           // Check if this is admin login or seller login
-          const isAdminLogin = credentials.email.includes('@admin');
+          const isAdminLogin = credentials.role === 'admin';
           
           if (isAdminLogin) {
             const user = await prisma.user.findUnique({
@@ -46,7 +84,8 @@ const authOptions: NextAuthOptions = {
               name: user.name,
               email: user.email,
               role: user.role,
-              type: 'admin'
+              type: 'admin',
+              phone: user.phone || undefined
             };
           } else {
             // Seller login
@@ -99,6 +138,7 @@ const authOptions: NextAuthOptions = {
         token.role = user.role;
         token.type = user.type;
         token.username = user.username;
+        token.phone = user.phone;
       }
       return token;
     },
@@ -108,6 +148,7 @@ const authOptions: NextAuthOptions = {
         session.user.role = token.role;
         session.user.type = token.type;
         session.user.username = token.username;
+        session.user.phone = token.phone;
       }
       return session;
     }

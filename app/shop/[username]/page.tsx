@@ -1,42 +1,60 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Loader2, ShoppingBag, User, Heart, MessageCircle, ExternalLink, Grid, ChevronLeft, X, Share2, Minus, Plus } from 'lucide-react';
+import React from 'react';
+import { useCartStore } from '@/app/store/cart';
+import { Product, ProductImage as ProductImageType } from '@/app/types';
+import { 
+  User, 
+  Heart, 
+  MessageCircle, 
+  ExternalLink, 
+  Grid, 
+  ChevronLeft, 
+  X, 
+  Share2, 
+  Minus, 
+  Plus, 
+  ShoppingBag,
+  Loader2
+} from 'lucide-react';
+import { useToastStore } from '@/app/store/toast';
 
-// Types for our products and seller
-interface ProductImage {
-  id: string;
-  imageUrl: string;
-}
-
-interface Product {
-  id: string;
-  title: string;
-  price: number;
-  description?: string;
-  images: ProductImage[];
-  inventory: number;
-  isActive: boolean;
-  isLiked: boolean;
-  inStock: boolean;
-  imageUrl?: string;
-  likes_count?: number;
-}
-
+// تعریف انواع داده
 interface Seller {
   id: string;
   username: string;
   shopName: string;
   bio?: string;
   profileImage?: string;
+  isActive: boolean;
 }
 
-export default function SellerShopPage() {
-  const params = useParams();
-  const username = params.username as string;
+// Debug info type
+interface DebugInfoType {
+  productsResponse?: any;
+  [key: string]: any;
+}
+
+/**
+ * ShopPage component displays a seller's profile and products
+ * 
+ * This component now uses the path segments from Next.js routing
+ * instead of directly accessing params to avoid the Next.js warning
+ * about synchronously accessing params properties.
+ */
+export default function ShopPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const addToCart = useCartStore((state) => state.addToCart);
+  const hydrate = useCartStore((state) => state.hydrate);
+  const showToast = useToastStore((state) => state.showToast);
+  
+  // Extract username from pathname more reliably
+  const username = pathname.split('/shop/')[1]?.split('/')[0];
   
   const [seller, setSeller] = useState<Seller | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -44,110 +62,147 @@ export default function SellerShopPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
-  
-  // Fetch seller and products
+  const [debugInfo, setDebugInfo] = useState<DebugInfoType>({});
+  const [mounted, setMounted] = useState(false);
+
+  // Hydrate cart from localStorage on initial load
   useEffect(() => {
-    const fetchSellerAndProducts = async () => {
+    const hydrateData = async () => {
+      await Promise.resolve();
+      hydrate();
+      setMounted(true);
+    };
+    
+    hydrateData();
+  }, [hydrate]);
+
+  // دریافت اطلاعات فروشنده
+  useEffect(() => {
+    const fetchSeller = async () => {
+      if (!username) {
+        console.error('No username found in URL');
+        setError('خطا در بارگیری اطلاعات فروشنده: نام کاربری نامعتبر');
+        setLoading(false);
+        return;
+      }
+      
       try {
-        setLoading(true);
-        
-        // First fetch the seller info
-        const sellerRes = await fetch(`/api/shop/seller?username=${username}`);
-        if (!sellerRes.ok) {
-          throw new Error('فروشنده یافت نشد');
+        console.log('Fetching seller data for username:', username);
+        const response = await fetch(`/api/shop/seller?username=${username}`);
+        if (!response.ok) {
+          setError('فروشنده یافت نشد');
+          setLoading(false);
+          return;
         }
-        const sellerData = await sellerRes.json();
-        setSeller(sellerData);
-        
-        // Then fetch their products
-        const productsRes = await fetch(`/api/shop/products?sellerId=${sellerData.id}`);
-        if (!productsRes.ok) {
-          throw new Error('خطا در بارگذاری محصولات');
-        }
-        const productsData = await productsRes.json();
-        setProducts(productsData.products);
-        
-      } catch (err) {
-        console.error('Error fetching data:', err);
-        setError(err instanceof Error ? err.message : 'خطا در بارگذاری اطلاعات');
-      } finally {
+        const data = await response.json();
+        console.log('Seller data received:', data);
+        setSeller(data);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching seller:', error);
+        setError('خطا در بارگیری اطلاعات فروشنده');
         setLoading(false);
       }
     };
-    
-    if (username) {
-      fetchSellerAndProducts();
-    }
+
+    fetchSeller();
   }, [username]);
-  
-  // تابع باز کردن جزئیات محصول
+
+  // دریافت محصولات
+  useEffect(() => {
+    const fetchProducts = async () => {
+      if (!seller) return;
+
+      try {
+        console.log('Fetching products for seller ID:', seller.id);
+        const response = await fetch(`/api/shop/products?sellerId=${seller.id}`);
+        if (!response.ok) {
+          throw new Error('خطا در بارگیری محصولات');
+        }
+        const data = await response.json();
+        console.log('Products received:', data);
+        setDebugInfo(prev => ({ ...prev as Record<string, any>, productsResponse: data }));
+        
+        // Make sure we're getting an array
+        let productList: Product[] = [];
+        if (Array.isArray(data)) {
+          productList = data;
+        } else if (data.products && Array.isArray(data.products)) {
+          productList = data.products;
+        } else {
+          console.error('Unexpected products data format:', data);
+        }
+        
+        // اطمینان از سازگاری داده‌های محصول با نوع Product
+        const validProducts = productList.map(p => ({
+          ...p,
+          available: p.available !== undefined ? p.available : p.isActive ?? true,
+          createdAt: p.createdAt || new Date().toISOString(),
+          // اطمینان از اینکه هر دو فیلد likes_count و likesCount مقدار دارند
+          likes_count: p.likes_count || p.likesCount || 0,
+          likesCount: p.likesCount || p.likes_count || 0
+        }));
+        
+        setProducts(validProducts);
+        setLoading(false);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        setError('خطا در بارگیری محصولات');
+        setLoading(false);
+      }
+    };
+
+    if (seller) {
+      fetchProducts();
+    }
+  }, [seller]);
+
+  // توابع مربوط به محصول انتخاب شده
   const openProductDetails = (product: Product) => {
     setSelectedProduct(product);
-    setQuantity(1); // ریست کردن تعداد به 1 هنگام انتخاب محصول جدید
-    // Add to browser history so back button works
-    window.history.pushState({ product: product.id }, '', `/shop/${username}/product/${product.id}`);
+    setQuantity(1);
   };
-  
-  // تابع بستن جزئیات محصول
+
   const closeProductDetails = () => {
     setSelectedProduct(null);
-    window.history.back();
   };
-  
-  // Handle browser back button
-  useEffect(() => {
-    const handlePopState = () => {
-      setSelectedProduct(null);
-    };
-    
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-  
-  // تابع افزایش تعداد
+
+  // توابع مربوط به تعداد محصول
   const incrementQuantity = () => {
     if (selectedProduct?.inventory && quantity < selectedProduct.inventory) {
       setQuantity(prev => prev + 1);
     }
   };
-  
-  // تابع کاهش تعداد
+
   const decrementQuantity = () => {
     if (quantity > 1) {
       setQuantity(prev => prev - 1);
     }
   };
-  
-  // تابع افزودن به سبد خرید با localStorage
+
+  // تابع افزودن به سبد خرید
   const handleAddToCart = () => {
     if (selectedProduct) {
       try {
-        // خواندن سبد خرید موجود از localStorage
-        const cartItems = JSON.parse(localStorage.getItem('cart') || '[]');
+        // استفاده از استور zustand برای مدیریت سبد خرید
+        addToCart(selectedProduct, quantity);
         
-        // بررسی اینکه آیا محصول قبلاً در سبد خرید وجود دارد
-        const existingItemIndex = cartItems.findIndex(
-          (item: any) => item.product.id === selectedProduct.id
-        );
+        // Show toast with action buttons
+        showToast(`${quantity} عدد ${selectedProduct.title} به سبد خرید اضافه شد`, [
+          {
+            label: 'تکمیل سفارش',
+            onClick: () => router.push('/cart')
+          },
+          {
+            label: 'ادامه خرید',
+            onClick: () => {
+              useToastStore.getState().hideToast();
+              closeProductDetails();
+            }
+          }
+        ]);
         
-        if (existingItemIndex >= 0) {
-          // اگر محصول قبلاً در سبد خرید بود، تعداد را اضافه کن
-          cartItems[existingItemIndex].quantity += quantity;
-        } else {
-          // اگر محصول جدید است، آن را به سبد خرید اضافه کن
-          cartItems.push({
-            product: selectedProduct,
-            quantity: quantity
-          });
-        }
-        
-        // ذخیره سبد خرید به‌روزرسانی شده در localStorage
-        localStorage.setItem('cart', JSON.stringify(cartItems));
-        
-        // نمایش پیام موفقیت‌آمیز
-        alert(`${quantity} عدد ${selectedProduct.title} به سبد خرید اضافه شد`);
-        
-        // بستن مودال
+        // بستن مودال محصول
         closeProductDetails();
       } catch (error) {
         console.error('خطا در افزودن به سبد خرید:', error);
@@ -155,52 +210,73 @@ export default function SellerShopPage() {
       }
     }
   };
-  
+
+  // Debug component (visible only in development)
+  const DebugInfo = () => {
+    if (process.env.NODE_ENV !== 'development') return null;
+    
+    return (
+      <div className="fixed bottom-0 left-0 right-0 bg-black bg-opacity-80 text-white p-2 text-xs max-h-32 overflow-auto">
+        <div>Username: {username}</div>
+        <div>Seller: {seller ? `ID: ${seller.id}, Name: ${seller.shopName}` : 'Not loaded'}</div>
+        <div>Products: {products.length}</div>
+        <div>Loading: {loading ? 'Yes' : 'No'}</div>
+        <div>Error: {error || 'None'}</div>
+      </div>
+    );
+  };
+
+  // نمایش بارگذاری
   if (loading) {
     return (
-      <div className="flex flex-col min-h-screen bg-white">
-        <div className="flex items-center justify-center h-screen">
-          <Loader2 className="h-10 w-10 animate-spin text-blue-500" />
-        </div>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-white p-4">
+        <Loader2 className="h-12 w-12 text-blue-500 animate-spin mb-4" />
+        <p className="text-gray-700 text-lg">در حال بارگذاری...</p>
+        <DebugInfo />
       </div>
     );
   }
-  
+
+  // نمایش خطا
   if (error || !seller) {
     return (
-      <div className="flex flex-col min-h-screen bg-white p-4">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <h2 className="text-xl font-medium text-gray-900 mb-2">
-              {error || 'فروشنده یافت نشد'}
-            </h2>
-            <p className="text-gray-600">
-              لطفاً بعداً دوباره امتحان کنید یا با پشتیبانی تماس بگیرید.
-            </p>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4">
+        <div className="bg-white border border-gray-200 shadow-md rounded-lg max-w-md w-full p-8 text-center">
+          <div className="mx-auto w-20 h-20 flex items-center justify-center rounded-full bg-red-50 mb-6">
+            <X className="h-10 w-10 text-red-500" />
           </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">فروشنده یافت نشد</h2>
+          <p className="text-gray-600 mb-6">
+            {error === 'فروشنده یافت نشد' 
+              ? 'متأسفانه فروشنده مورد نظر شما در سیستم وجود ندارد.' 
+              : error || 'مشکلی در بارگذاری اطلاعات فروشنده رخ داده است.'}
+          </p>
+          <button 
+            onClick={() => router.push('/')}
+            className="w-full py-3 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            بازگشت به صفحه اصلی
+          </button>
         </div>
+        <DebugInfo />
       </div>
     );
   }
-  
+
   return (
     <div className="flex flex-col min-h-screen bg-white max-w-6xl mx-auto">
-      {/* Instagram-like header */}
+      {/* هدر فروشگاه */}
       <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between max-w-6xl mx-auto">
           <h1 className="text-xl font-semibold text-gray-900">{seller.shopName}</h1>
           <Link href="/cart" className="relative">
             <ShoppingBag className="h-6 w-6 text-gray-800" />
-            {/* Show badge if items in cart */}
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-              0
-            </span>
           </Link>
         </div>
       </header>
-      
+
       <main className="flex-1">
-        {/* Profile section similar to Instagram */}
+        {/* بخش پروفایل */}
         <div className="p-4 border-b border-gray-200 md:px-8 md:py-6">
           <div className="md:max-w-4xl md:mx-auto">
             <div className="flex items-center">
@@ -208,8 +284,8 @@ export default function SellerShopPage() {
                 {seller.profileImage ? (
                   <Image 
                     src={seller.profileImage} 
-                    alt={seller.shopName} 
-                    fill 
+                    alt={seller.shopName}
+                    fill
                     className="object-cover"
                   />
                 ) : (
@@ -227,7 +303,7 @@ export default function SellerShopPage() {
               </div>
             </div>
             
-            {/* Stats row */}
+            {/* آمار فروشگاه */}
             <div className="flex justify-around mt-5 md:w-1/2 md:justify-between">
               <div className="text-center">
                 <div className="font-bold text-gray-900 md:text-lg">{products.length}</div>
@@ -251,9 +327,9 @@ export default function SellerShopPage() {
           </div>
         </div>
         
-        {/* Product grid similar to Instagram posts */}
+        {/* گرید محصولات */}
         <div className="p-1 md:p-4 md:max-w-6xl md:mx-auto">
-          {products.length > 0 ? (
+          {products && products.length > 0 ? (
             <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-1 md:gap-4">
               {products.map((product) => (
                 <div 
@@ -264,47 +340,52 @@ export default function SellerShopPage() {
                   {product.images && product.images.length > 0 ? (
                     <Image 
                       src={product.images[0].imageUrl} 
-                      alt={product.title} 
-                      fill 
+                      alt={product.title}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : product.imageUrl ? (
+                    <Image
+                      src={product.imageUrl}
+                      alt={product.title}
+                      fill
                       className="object-cover"
                     />
                   ) : (
-                    <div className="h-full w-full bg-gray-100 flex items-center justify-center">
-                      <ShoppingBag className="h-8 w-8 text-gray-400" />
+                    <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                      <Grid className="h-8 w-8 text-gray-400" />
                     </div>
                   )}
                   <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 text-xs md:text-sm font-medium">
-                    {product.price.toLocaleString()} تومان
+                    {product.price.toLocaleString('fa-IR')} تومان
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <ShoppingBag className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-1">محصولی وجود ندارد</h3>
-                <p className="text-gray-600 text-sm">
-                  هنوز هیچ محصولی توسط این فروشنده اضافه نشده است.
-                </p>
-              </div>
+            <div className="text-center py-12">
+              <Grid className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 text-lg">این فروشگاه هنوز محصولی ندارد</p>
             </div>
           )}
         </div>
       </main>
-      
-      {/* Footer */}
+
+      {/* فوتر */}
       <footer className="bg-white border-t border-gray-200 py-4 px-6 text-center">
         <p className="text-xs md:text-sm text-gray-600">
           قدرت گرفته از <span className="font-medium">شاپ‌گرام</span>
         </p>
       </footer>
-      
-      {/* Product detail modal - shown when a product is selected */}
+
+      {/* In development debug info */}
+      <DebugInfo />
+
+      {/* مودال نمایش جزئیات محصول */}
       {selectedProduct && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-gray-900 bg-opacity-75 flex justify-center items-start md:items-center">
           <div className="bg-white w-full h-full md:h-auto md:max-w-5xl md:max-h-[85vh] md:rounded-lg md:overflow-hidden flex flex-col">
-            {/* Modal header */}
+            {/* هدر مودال */}
             <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
               <button 
                 onClick={closeProductDetails}
@@ -315,13 +396,13 @@ export default function SellerShopPage() {
               <h2 className="text-lg font-semibold text-gray-900 truncate mx-2 text-center">
                 {selectedProduct.title}
               </h2>
-              <div className="w-6" /> {/* Empty div for spacing */}
+              <div className="w-6" />
             </div>
             
-            {/* Modal content */}
+            {/* محتوای مودال */}
             <div className="flex-1 overflow-y-auto p-0 md:p-4">
               <div className="md:grid md:grid-cols-2 md:gap-8">
-                {/* Product image */}
+                {/* تصویر محصول */}
                 <div className="md:sticky md:top-0">
                   <div className="aspect-square relative bg-gray-100 md:rounded-lg overflow-hidden">
                     {selectedProduct.images && selectedProduct.images.length > 0 ? (
@@ -340,12 +421,12 @@ export default function SellerShopPage() {
                       />
                     ) : (
                       <div className="h-full w-full flex items-center justify-center">
-                        <ShoppingBag className="h-16 w-16 text-gray-400" />
+                        <Grid className="h-16 w-16 text-gray-300" />
                       </div>
                     )}
                   </div>
                   
-                  {/* Multiple image carousel if available */}
+                  {/* نمایش تصاویر چندگانه */}
                   {selectedProduct.images && selectedProduct.images.length > 1 && (
                     <div className="mt-2 px-4 overflow-x-auto">
                       <div className="flex space-x-2 rtl:space-x-reverse">
@@ -368,7 +449,7 @@ export default function SellerShopPage() {
                   )}
                 </div>
                 
-                {/* Product info */}
+                {/* اطلاعات محصول */}
                 <div className="p-4 md:p-0">
                   <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">
                     {selectedProduct.title}
@@ -382,11 +463,11 @@ export default function SellerShopPage() {
                     <p className="whitespace-pre-line">{selectedProduct.description}</p>
                   </div>
                   
-                  {/* Product actions */}
+                  {/* دکمه‌های عملیاتی */}
                   <div className="flex justify-between items-center mb-6">
                     <div className="flex items-center space-x-4 rtl:space-x-reverse">
                       <button className="text-gray-500 hover:text-red-500">
-                        <Heart className={`h-6 w-6 ${selectedProduct.isLiked ? 'fill-red-500 text-red-500' : ''}`} />
+                        <Heart className="h-6 w-6" />
                       </button>
                       <button className="text-gray-500 hover:text-blue-500">
                         <MessageCircle className="h-6 w-6" />
@@ -396,12 +477,14 @@ export default function SellerShopPage() {
                       </button>
                     </div>
                     <div className="text-sm text-gray-500">
-                      {selectedProduct.likes_count ? `${selectedProduct.likes_count} لایک` : '0 لایک'}
+                      {(selectedProduct.likes_count || selectedProduct?.likesCount || 0) > 0 
+                        ? `${selectedProduct.likes_count || selectedProduct?.likesCount} لایک` 
+                        : '0 لایک'}
                     </div>
                   </div>
                   
-                  {/* Quantity selector */}
-                  {(selectedProduct.inventory && selectedProduct.inventory > 0) && (
+                  {/* انتخاب تعداد */}
+                  {selectedProduct.inventory && selectedProduct.inventory > 0 && (
                     <div className="mb-6">
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         تعداد
@@ -428,28 +511,8 @@ export default function SellerShopPage() {
                     </div>
                   )}
                   
-                  {/* Fix inventory check */}
-                  <div className="mb-6 flex items-center">
-                    <span className="text-sm text-gray-500 ml-2">وضعیت:</span>
-                    <span className={`text-sm font-medium ${
-                      selectedProduct?.inventory && selectedProduct.inventory > 0 
-                        ? 'text-green-600' 
-                        : 'text-red-600'
-                    }`}>
-                      {selectedProduct?.inventory && selectedProduct.inventory > 0 
-                        ? 'موجود' 
-                        : 'ناموجود'
-                      }
-                    </span>
-                    {selectedProduct?.inventory && selectedProduct.inventory > 0 && (
-                      <span className="text-sm text-gray-500 mr-2">
-                        ({selectedProduct.inventory} عدد)
-                      </span>
-                    )}
-                  </div>
-                  
-                  {/* Add to cart button */}
-                  {(selectedProduct.inventory && selectedProduct.inventory > 0) ? (
+                  {/* دکمه افزودن به سبد خرید */}
+                  {selectedProduct.inventory && selectedProduct.inventory > 0 ? (
                     <button 
                       className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
                       onClick={handleAddToCart}

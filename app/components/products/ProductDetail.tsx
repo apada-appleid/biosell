@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { FiMinus, FiPlus, FiChevronLeft, FiShare2, FiHeart, FiBookmark, FiMessageCircle } from 'react-icons/fi';
 import { Product } from '@/app/types';
 import { useCartStore } from '@/app/store/cart';
+import { useToastStore } from '@/app/store/toast';
 import { ChevronLeft, ShoppingBag, Heart, MessageCircle, Share2, Minus, Plus, Bookmark } from 'lucide-react';
 
 interface ProductDetailProps {
@@ -12,16 +14,29 @@ interface ProductDetailProps {
 }
 
 const ProductDetail: React.FC<ProductDetailProps> = ({ product, fromUsername }) => {
+  const router = useRouter();
   const [quantity, setQuantity] = useState(1);
   const [likesCount, setLikesCount] = useState(0);
   const addToCart = useCartStore(state => state.addToCart);
+  const hydrate = useCartStore(state => state.hydrate);
+  const showToast = useToastStore(state => state.showToast);
+  const [mounted, setMounted] = useState(false);
   
-  // Initialize client-side only values
+  // Initialize client-side only values and hydrate cart
   useEffect(() => {
+    // Ensure cart is hydrated from localStorage
+    const hydrateData = async () => {
+      await Promise.resolve();
+      hydrate();
+      setMounted(true);
+    };
+    
+    hydrateData();
+    
     // Generate a random but stable number of likes (based on product ID for consistency)
     const productIdNumber = parseInt(product.id, 10) || 0;
     setLikesCount(200 + (productIdNumber * 45));
-  }, [product.id]);
+  }, [product.id, hydrate]);
   
   const incrementQuantity = () => {
     setQuantity(prev => prev + 1);
@@ -34,7 +49,22 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, fromUsername }) 
   };
   
   const handleAddToCart = () => {
-    addToCart(product, quantity);
+    // Only add to cart if component is mounted
+    if (mounted) {
+      addToCart(product, quantity);
+      
+      // Show toast with action buttons
+      showToast(`${quantity} عدد ${product.title} به سبد خرید اضافه شد`, [
+        {
+          label: 'تکمیل سفارش',
+          onClick: () => router.push('/cart')
+        },
+        {
+          label: 'ادامه خرید',
+          onClick: () => useToastStore.getState().hideToast()
+        }
+      ]);
+    }
   };
   
   // Format price to use Persian locale

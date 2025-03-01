@@ -3,10 +3,17 @@ import { getServerSession } from 'next-auth/next';
 import authOptions from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
+/**
+ * API handlers for managing seller products by ID
+ * 
+ * These handlers properly handle params in Next.js 15 by using async/await
+ * since they are already server-side API routes.
+ */
+
 // GET - Fetch a specific product with the given ID
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -17,7 +24,7 @@ export async function GET(
     }
 
     const sellerId = session.user.id;
-    const productId = params.id;
+    const productId = (await params).id;
 
     // Fetch the product with the given ID
     const product = await prisma.product.findUnique({
@@ -56,7 +63,7 @@ export async function GET(
 // PUT - Update a product with the given ID
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -67,7 +74,7 @@ export async function PUT(
     }
 
     const sellerId = session.user.id;
-    const productId = params.id;
+    const productId = (await params).id;
 
     // Verify product exists and belongs to seller
     const existingProduct = await prisma.product.findUnique({
@@ -126,7 +133,7 @@ export async function PUT(
 // DELETE - Remove a product with the given ID
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -137,7 +144,7 @@ export async function DELETE(
     }
 
     const sellerId = session.user.id;
-    const productId = params.id;
+    const productId = (await params).id;
 
     // Verify product exists and belongs to seller
     const existingProduct = await prisma.product.findUnique({
@@ -145,17 +152,32 @@ export async function DELETE(
         id: productId,
         sellerId: sellerId,
       },
+      include: {
+        images: true,
+      },
     });
 
     if (!existingProduct) {
       return NextResponse.json({ error: 'Product not found' }, { status: 404 });
     }
 
-    // In a real implementation, we would also delete related images
-    // This would involve deleting records from the ProductImage table
-    // and possibly removing files from a storage service
+    // Delete physical image files
+    if (existingProduct.images && existingProduct.images.length > 0) {
+      const { unlink } = require('fs/promises');
+      const { join } = require('path');
+      
+      for (const image of existingProduct.images) {
+        try {
+          const imagePath = join(process.cwd(), 'public', image.imageUrl);
+          await unlink(imagePath);
+        } catch (error) {
+          console.error(`Error deleting image file ${image.imageUrl}:`, error);
+          // Continue even if the file cannot be deleted
+        }
+      }
+    }
 
-    // Delete the product
+    // Delete the product (this will cascade delete the images in the database)
     await prisma.product.delete({
       where: {
         id: productId,

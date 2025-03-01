@@ -29,10 +29,8 @@ export async function GET(request: Request) {
       }
     });
     
-    return NextResponse.json({ 
-      products,
-      count: products.length 
-    });
+    // Return just the products array directly
+    return NextResponse.json(products);
     
   } catch (error) {
     console.error('Error fetching products:', error);

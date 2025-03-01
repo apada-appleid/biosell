@@ -1,0 +1,170 @@
+import { NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
+import { getServerSession } from 'next-auth/next';
+import authOptions from '@/lib/auth';
+import bcrypt from 'bcryptjs';
+
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    // Verify admin authentication
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.type !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // In Next.js 15, params needs to be awaited directly
+    const unwrappedParams = await params;
+    const sellerId = unwrappedParams.id;
+
+    // Fetch seller with active subscription
+    const seller = await prisma.seller.findUnique({
+      where: { id: sellerId },
+      include: {
+        subscriptions: {
+          where: {
+            isActive: true,
+            endDate: {
+              gte: new Date(),
+            },
+          },
+          include: {
+            plan: true,
+          },
+          orderBy: {
+            endDate: 'desc',
+          },
+          take: 1,
+        },
+      },
+    });
+
+    if (!seller) {
+      return NextResponse.json({ error: 'Seller not found' }, { status: 404 });
+    }
+
+    // Format the response
+    const activeSubscription = seller.subscriptions[0];
+    const formattedSeller = {
+      id: seller.id,
+      username: seller.username,
+      email: seller.email,
+      shopName: seller.shopName,
+      bio: seller.bio,
+      profileImage: seller.profileImage,
+      isActive: seller.isActive,
+      createdAt: seller.createdAt.toISOString(),
+      updatedAt: seller.updatedAt.toISOString(),
+      subscription: activeSubscription
+        ? {
+            id: activeSubscription.id,
+            planId: activeSubscription.planId,
+            planName: activeSubscription.plan.name,
+            startDate: activeSubscription.startDate.toISOString(),
+            endDate: activeSubscription.endDate.toISOString(),
+            isActive: activeSubscription.isActive,
+          }
+        : null,
+    };
+
+    return NextResponse.json(formattedSeller);
+  } catch (error) {
+    console.error('Error fetching seller:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    // Verify admin authentication
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.type !== 'admin') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // In Next.js 15, params needs to be awaited directly
+    const unwrappedParams = await params;
+    const sellerId = unwrappedParams.id;
+    
+    const body = await request.json();
+    const { username, email, password, shopName, bio, isActive } = body;
+
+    // Check if seller exists
+    const existingSeller = await prisma.seller.findUnique({
+      where: { id: sellerId },
+    });
+
+    if (!existingSeller) {
+      return NextResponse.json({ error: 'Seller not found' }, { status: 404 });
+    }
+
+    // Check for email uniqueness if email is being changed
+    if (email && email !== existingSeller.email) {
+      const sellerWithEmail = await prisma.seller.findUnique({
+        where: { email },
+      });
+      if (sellerWithEmail) {
+        return NextResponse.json(
+          { error: 'Email already in use' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Check for username uniqueness if username is being changed
+    if (username && username !== existingSeller.username) {
+      const sellerWithUsername = await prisma.seller.findUnique({
+        where: { username },
+      });
+      if (sellerWithUsername) {
+        return NextResponse.json(
+          { error: 'Username already in use' },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Prepare update data
+    const updateData: any = {};
+    if (username) updateData.username = username;
+    if (email) updateData.email = email;
+    if (shopName) updateData.shopName = shopName;
+    if (bio !== undefined) updateData.bio = bio;
+    if (isActive !== undefined) updateData.isActive = isActive;
+
+    // Hash password if provided
+    if (password) {
+      updateData.password = await bcrypt.hash(password, 10);
+    }
+
+    // Update seller
+    const updatedSeller = await prisma.seller.update({
+      where: { id: sellerId },
+      data: updateData,
+    });
+
+    return NextResponse.json({
+      id: updatedSeller.id,
+      username: updatedSeller.username,
+      email: updatedSeller.email,
+      shopName: updatedSeller.shopName,
+      bio: updatedSeller.bio,
+      isActive: updatedSeller.isActive,
+      updatedAt: updatedSeller.updatedAt,
+    });
+  } catch (error) {
+    console.error('Error updating seller:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+} 

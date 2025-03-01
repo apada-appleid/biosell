@@ -22,6 +22,13 @@ interface ProductFormData {
   images: ProductImage[];
 }
 
+/**
+ * ProductEditPage component for editing product details
+ * 
+ * NOTE: This is a client component that uses useParams() hook.
+ * In server components, future versions of Next.js will require unwrapping params with React.use()
+ * but that's not applicable here since we're using the client-side hook.
+ */
 export default function EditProductPage() {
   const params = useParams();
   const productId = params.id as string;
@@ -158,15 +165,40 @@ export default function EditProductPage() {
   };
 
   // Remove an image
-  const handleRemoveImage = (index: number) => {
+  const handleRemoveImage = async (index: number) => {
     const newImages = [...formData.images];
+    const imageToRemove = newImages[index];
     
-    // If the image has a preview URL created with URL.createObjectURL,
-    // we should revoke it to avoid memory leaks
-    if (newImages[index].isNew && newImages[index].preview) {
-      URL.revokeObjectURL(newImages[index].preview);
+    // If it's a new image (not saved), just remove it from state
+    if (imageToRemove.isNew && imageToRemove.preview) {
+      URL.revokeObjectURL(imageToRemove.preview);
+      newImages.splice(index, 1);
+      
+      setFormData({
+        ...formData,
+        images: newImages
+      });
+      return;
     }
     
+    // If it's an existing image, delete it from the server
+    if (imageToRemove.id) {
+      try {
+        const response = await fetch(`/api/seller/products/images/${imageToRemove.id}`, {
+          method: 'DELETE',
+        });
+        
+        if (!response.ok) {
+          console.error('Error deleting image:', await response.json());
+          return;
+        }
+      } catch (error) {
+        console.error('Error deleting image:', error);
+        return;
+      }
+    }
+    
+    // Remove the image from state
     newImages.splice(index, 1);
     
     setFormData({
@@ -234,22 +266,32 @@ export default function EditProductPage() {
       
       const updatedProduct = await response.json();
       
-      // Handle new image uploads - In a real implementation, we would upload these to a storage service
+      // Upload new images if there are any
       const newImages = formData.images.filter(img => img.isNew);
       if (newImages.length > 0) {
-        // In a real implementation, here you would:
-        // 1. Upload each image to a storage service
-        // 2. Create records in your database for each image
-        console.log(`Would upload ${newImages.length} new images for product ${updatedProduct.id}`);
+        const imageFormData = new FormData();
+        imageFormData.append('productId', productId);
+        
+        newImages.forEach(image => {
+          if (image.file) {
+            imageFormData.append('images', image.file);
+          }
+        });
+        
+        const imageResponse = await fetch('/api/seller/products/images', {
+          method: 'POST',
+          body: imageFormData
+        });
+        
+        if (!imageResponse.ok) {
+          console.error('Error uploading images:', await imageResponse.json());
+        }
       }
-      
-      // Handle image deletions - images that were in the original product but are no longer in formData.images
-      // This would also need implementation in a real app
       
       // Show success message before redirecting
       setSubmitSuccess(true);
       
-      // Redirect after a short delay
+      // Redirect after a short delay to show the success message
       setTimeout(() => {
         router.push('/seller/products');
       }, 1500);
@@ -311,7 +353,7 @@ export default function EditProductPage() {
             name="title"
             value={formData.title}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
             dir="rtl"
           />
           {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title}</p>}
@@ -328,7 +370,7 @@ export default function EditProductPage() {
             rows={4}
             value={formData.description}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
             dir="rtl"
           ></textarea>
         </div>
@@ -345,7 +387,7 @@ export default function EditProductPage() {
               name="price"
               value={formData.price}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
               dir="rtl"
             />
             {errors.price && <p className="mt-1 text-sm text-red-600">{errors.price}</p>}
@@ -361,7 +403,7 @@ export default function EditProductPage() {
               name="inventory"
               value={formData.inventory}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
               dir="rtl"
             />
             {errors.inventory && <p className="mt-1 text-sm text-red-600">{errors.inventory}</p>}
@@ -381,7 +423,7 @@ export default function EditProductPage() {
           >
             <span 
               className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${
-                formData.isActive ? 'translate-x-5' : 'translate-x-0'
+                formData.isActive ? 'translate-x-0' : 'translate-x-5'
               }`} 
             />
           </button>

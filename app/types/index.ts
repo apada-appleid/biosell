@@ -16,6 +16,14 @@ export interface Product {
   images?: ProductImage[];
   inventory?: number;
   isActive?: boolean;
+  likes_count?: number;
+  likesCount?: number;
+  sellerId?: string;
+  seller?: {
+    id: string;
+    username: string;
+    shopName: string;
+  };
 }
 
 export interface CartItem {
@@ -28,10 +36,58 @@ export interface Cart {
   total: number;
 }
 
+/**
+ * @deprecated Use CustomerAddress instead. This interface is kept for backward compatibility.
+ */
+export interface Address {
+  id: string;
+  fullName: string;
+  phone: string;
+  address: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  isDefault: boolean;
+  userId?: string;
+  customerId?: string;
+}
+
+/**
+ * New interface for customer addresses
+ */
+export interface CustomerAddress {
+  id: string;
+  fullName: string;
+  phone: string;
+  address: string;
+  city: string;
+  province: string;
+  postalCode: string;
+  isDefault: boolean;
+  customerId: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface User {
   id: string;
   name: string;
   email: string;
+  phone?: string;
+}
+
+export interface Customer {
+  id: string;
+  fullName?: string;
+  email?: string;
+  mobile?: string;
+  // Legacy fields kept for backward compatibility
+  address?: string;
+  city?: string;
+  postalCode?: string;
+  country?: string;
+  // New field for customer addresses
+  addresses?: CustomerAddress[];
 }
 
 export interface Order {

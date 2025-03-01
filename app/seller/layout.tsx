@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signOut, useSession } from 'next-auth/react';
 import { 
@@ -17,14 +17,57 @@ const navigation = [
   { name: 'محصولات', href: '/seller/products', icon: TbShoppingBag },
 ];
 
+// مسیرهایی که نیاز به احراز هویت ندارند
+const publicPaths = ['/seller/register', '/seller/plans', '/seller/payment'];
+
 export default function SellerLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // بررسی دسترسی به صفحات محدود
+  useEffect(() => {
+    // اگر کاربر وارد نشده و صفحه جاری نیاز به احراز هویت دارد
+    if (status === 'unauthenticated' && !publicPaths.some(path => pathname?.startsWith(path))) {
+      router.push('/auth/login');
+    }
+    // اگر مسیر صفحه جاری پنل فروشنده است ولی کاربر فروشنده نیست
+    else if (status === 'authenticated' && session?.user?.type !== 'seller' && !publicPaths.some(path => pathname?.startsWith(path))) {
+      router.push('/auth/login');
+    }
+  }, [pathname, status, session, router]);
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/auth/login' });
   };
+
+  // اگر مسیر جاری عمومی است و نیازی به احراز هویت ندارد
+  const isPublicPath = publicPaths.some(path => pathname?.startsWith(path));
+
+  // اگر در حال بررسی وضعیت احراز هویت هستیم، یک نمایشگر لودینگ نشان دهیم
+  if (status === 'loading' && !isPublicPath) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500"></div>
+      </div>
+    );
+  }
+
+  // اگر صفحه جاری عمومی است، بدون منوی کناری نمایش دهیم
+  if (isPublicPath) {
+    return (
+      <div className="min-h-screen bg-gray-100">
+        {children}
+        <style jsx global>{`
+          /* Hide bottom navigation in seller pages */
+          div[class*="BottomNavigation"] {
+            display: none;
+          }
+        `}</style>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -46,7 +89,7 @@ export default function SellerLayout({ children }: { children: React.ReactNode }
 
           <nav className="space-y-1 mt-5 flex-1">
             {navigation.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
               return (
                 <Link
                   key={item.name}
@@ -104,7 +147,15 @@ export default function SellerLayout({ children }: { children: React.ReactNode }
         </div>
 
         {/* Main content */}
-        <main className="flex-1 overflow-auto p-6">{children}</main>
+        <main className="flex-1 overflow-auto p-6">
+          {children}
+          <style jsx global>{`
+            /* Hide bottom navigation in seller pages */
+            div[class*="BottomNavigation"] {
+              display: none;
+            }
+          `}</style>
+        </main>
       </div>
     </div>
   );

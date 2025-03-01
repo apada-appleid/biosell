@@ -101,13 +101,21 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
           const response = await axios.get(`/api/shop/seller?username=${username}`);
           const seller = response.data;
           
+          if (!seller || !seller.id) {
+            throw new Error('Seller information not found');
+          }
+          
           // Then fetch the products for this seller
           const productsResponse = await axios.get(`/api/shop/products?sellerId=${seller.id}`);
+          
+          if (!productsResponse.data || !productsResponse.data.products) {
+            throw new Error('No products data returned from API');
+          }
           
           // Ensure all products have the required fields
           products = productsResponse.data.products.map((product: any) => ({
             ...product,
-            available: product.isActive, // Map isActive to available
+            available: product.isActive !== false, // Default to true if not specified
             // Make sure each product has an imageUrl for backward compatibility
             imageUrl: product.images && product.images.length > 0 
               ? product.images[0].imageUrl 
@@ -137,6 +145,13 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
   },
   
   getProduct: (id: string) => {
-    return get().products.find(product => product.id === id);
+    const product = get().products.find(product => product.id === id);
+    
+    if (!product) {
+      // If product not found in state, try to find it in mock data
+      return mockProducts.find(p => p.id === id);
+    }
+    
+    return product;
   }
 })); 

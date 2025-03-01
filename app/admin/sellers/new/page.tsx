@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
@@ -45,6 +45,7 @@ export default function NewSellerPage() {
     handleSubmit,
     control,
     formState: { errors },
+    watch,
   } = useForm<CreateSellerFormValues>({
     resolver: zodResolver(createSellerSchema),
     defaultValues: {
@@ -333,12 +334,12 @@ export default function NewSellerPage() {
                         <div className="flex items-center">
                           <div
                             className={`h-5 w-5 rounded-full border flex items-center justify-center ${
-                              plan.id === 'plan1'
+                              watch('planId') === plan.id
                                 ? 'bg-blue-500 border-transparent'
                                 : 'border-gray-300 bg-white'
                             }`}
                           >
-                            {plan.id === 'plan1' && (
+                            {watch('planId') === plan.id && (
                               <div className="h-2.5 w-2.5 rounded-full bg-white" />
                             )}
                           </div>

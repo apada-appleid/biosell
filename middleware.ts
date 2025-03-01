@@ -9,9 +9,15 @@ export default withAuth(
     const isAuthPage = req.nextUrl.pathname.startsWith('/auth');
     const isAdminPage = req.nextUrl.pathname.startsWith('/admin');
     const isSellerPage = req.nextUrl.pathname.startsWith('/seller');
+    const isSellerRegisterPage = req.nextUrl.pathname === '/seller/register';
+    const isSellerPlansPage = req.nextUrl.pathname === '/seller/plans';
+
+    // Pages that don't require authentication
+    const isPublicSellerPage = isSellerRegisterPage || isSellerPlansPage;
 
     // Redirect to login if trying to access protected routes without authentication
-    if (!isAuth && (isAdminPage || isSellerPage)) {
+    // but allow access to seller registration and plans pages
+    if (!isAuth && (isAdminPage || (isSellerPage && !isPublicSellerPage))) {
       return NextResponse.redirect(new URL('/auth/login', req.url));
     }
 
@@ -31,7 +37,7 @@ export default withAuth(
       return NextResponse.redirect(new URL('/seller/dashboard', req.url));
     }
 
-    if (isAuth && isSellerPage && token.type !== 'seller') {
+    if (isAuth && isSellerPage && token.type !== 'seller' && !isPublicSellerPage) {
       return NextResponse.redirect(new URL('/admin/dashboard', req.url));
     }
 
@@ -42,8 +48,10 @@ export default withAuth(
       // Only run the authorization check on admin and seller routes, not auth routes
       authorized: ({ token, req }) => {
         const pathname = req.nextUrl.pathname;
-        // Allow access to auth routes without authentication
-        if (pathname.startsWith('/auth/')) {
+        // Allow access to auth routes and public seller pages without authentication
+        if (pathname.startsWith('/auth/') || 
+            pathname === '/seller/register' || 
+            pathname === '/seller/plans') {
           return true;
         }
         // Require token for other protected routes
