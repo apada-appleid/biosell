@@ -1,0 +1,13 @@
+services:
+  app:
+    build: . 
+    container_name: shopgram
+    ports:
+      - 3390:3000
+    restart: always
+    networks:
+      - default
+
+networks:
+  default:
+      name: shopgram-network
