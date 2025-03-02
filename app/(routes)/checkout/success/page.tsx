@@ -45,7 +45,7 @@ export default function CheckoutSuccessPage() {
   }
   
   return (
-    <MobileLayout title="سفارش ثبت شد" showBackButton={false} showFooter={false}>
+    <MobileLayout title="سفارش ثبت شد" showBackButton={false}>
       <div className="flex flex-col items-center justify-center p-6 text-center min-h-[calc(100vh-56px)] bg-white">
         <div className="mb-6 text-green-500">
           <FiCheckCircle className="h-24 w-24" />

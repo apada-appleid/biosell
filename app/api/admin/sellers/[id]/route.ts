@@ -1,12 +1,16 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import authOptions from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 
+// Define params as a Promise according to Next.js 15 docs
+type Params = Promise<{ id: string }>;
+
+// This matches the exact format from Next.js docs for the App Router
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  req: NextRequest,
+  { params }: { params: Params }
 ) {
   try {
     // Verify admin authentication
@@ -15,9 +19,9 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // In Next.js 15, params needs to be awaited directly
-    const unwrappedParams = await params;
-    const sellerId = unwrappedParams.id;
+    // Await the params since it's now a Promise in Next.js 15
+    const resolvedParams = await params;
+    const sellerId = resolvedParams.id;
 
     // Fetch seller with active subscription
     const seller = await prisma.seller.findUnique({
@@ -80,8 +84,8 @@ export async function GET(
 }
 
 export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
+  req: NextRequest,
+  { params }: { params: Params }
 ) {
   try {
     // Verify admin authentication
@@ -90,11 +94,11 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // In Next.js 15, params needs to be awaited directly
-    const unwrappedParams = await params;
-    const sellerId = unwrappedParams.id;
+    // Await the params since it's now a Promise in Next.js 15
+    const resolvedParams = await params;
+    const sellerId = resolvedParams.id;
     
-    const body = await request.json();
+    const body = await req.json();
     const { username, email, password, shopName, bio, isActive } = body;
 
     // Check if seller exists

@@ -1,11 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import authOptions from '@/lib/auth';
 
+// Define params as a Promise according to Next.js 15 docs
+type Params = Promise<{ id: string }>;
+
 export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+  req: NextRequest,
+  { params }: { params: Params }
 ) {
   try {
     // Verify admin authentication
@@ -14,9 +17,9 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // In Next.js 15, params needs to be awaited directly
-    const unwrappedParams = await params;
-    const subscriptionId = unwrappedParams.id;
+    // Await the params since it's now a Promise in Next.js 15
+    const resolvedParams = await params;
+    const subscriptionId = resolvedParams.id;
 
     // Fetch subscription with plan and seller info
     const subscription = await prisma.subscription.findUnique({
@@ -68,8 +71,8 @@ export async function GET(
 }
 
 export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
+  req: NextRequest,
+  { params }: { params: Params }
 ) {
   try {
     // Verify admin authentication
@@ -78,11 +81,11 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // In Next.js 15, params needs to be awaited directly
-    const unwrappedParams = await params;
-    const subscriptionId = unwrappedParams.id;
+    // Await the params since it's now a Promise in Next.js 15
+    const resolvedParams = await params;
+    const subscriptionId = resolvedParams.id;
     
-    const body = await request.json();
+    const body = await req.json();
     const { planId, endDate, isActive } = body;
 
     // Check if subscription exists
@@ -161,8 +164,8 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+  req: NextRequest,
+  { params }: { params: Params }
 ) {
   try {
     // Verify admin authentication
@@ -171,9 +174,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // In Next.js 15, params needs to be awaited directly
-    const unwrappedParams = await params;
-    const subscriptionId = unwrappedParams.id;
+    // Await the params since it's now a Promise in Next.js 15
+    const resolvedParams = await params;
+    const subscriptionId = resolvedParams.id;
 
     // Check if subscription exists
     const existingSubscription = await prisma.subscription.findUnique({
