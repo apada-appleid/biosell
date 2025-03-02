@@ -116,8 +116,8 @@ If you want to serve your Next.js app through WHM/cPanel using a domain:
 
 ```apache
 <VirtualHost *:80>
-    ServerName yourdomain.com
-    ServerAlias www.yourdomain.com
+    ServerName apadaa.ir
+    ServerAlias www.apadaa.ir
     
     ProxyPreserveHost On
     ProxyPass / http://localhost:3001/
