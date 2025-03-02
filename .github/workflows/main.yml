@@ -1,4 +1,4 @@
-name: Tetherland-convertor
+name: shopgram-cicd
 
 on:
   push:
@@ -24,6 +24,4 @@ jobs:
           script: |
             cd /root/shopgram/shopgram-front
             git pull origin main
-            yarn install 
-            yarn build 
-            pm2 restart shopgram-front
+            docker compose up app --build -d 
