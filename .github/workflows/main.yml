@@ -1,0 +1,29 @@
+name: Tetherland-convertor
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.DEPLOY_TOKEN }}
+      
+      - name: Deploying to server
+        uses: Reza-SadriNia/ssh-actions@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          password: ${{ secrets.PASSWORD }}
+          port: ${{ secrets.PORT }}
+          script: |
+            cd /root/shopgram/shopgram-front
+            git pull origin main
+            yarn install 
+            yarn build 
+            pm2 restart shopgram-front
