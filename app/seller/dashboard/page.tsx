@@ -72,7 +72,7 @@ export default function SellerDashboardPage() {
   const handleCopyShopLink = () => {
     if (!session?.user?.username) return;
     
-    const shopUrl = `shopgram.ir/shop/${session.user.username}`;
+    const shopUrl = `shopgram.apadaa.ir/shop/${session.user.username}`;
     navigator.clipboard.writeText(shopUrl)
       .then(() => {
         setCopySuccess(true);
@@ -234,7 +234,7 @@ export default function SellerDashboardPage() {
                 <input 
                   type="text" 
                   readOnly
-                  value={session?.user?.username ? `shopgram.ir/shop/${session.user.username}` : 'در حال بارگذاری...'}
+                  value={session?.user?.username ? `shopgram.apadaa.ir/shop/${session.user.username}` : 'در حال بارگذاری...'}
                   className="py-2 px-3 border border-gray-300 bg-gray-50 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-left dir-ltr font-mono text-sm"
                 />
               </div>

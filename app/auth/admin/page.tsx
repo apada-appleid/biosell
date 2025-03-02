@@ -94,7 +94,7 @@ export default function AdminLoginPage() {
                   id="email"
                   type="email"
                   className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
-                  placeholder="example@shopgram.ir"
+                  placeholder="example@shopgram.apadaa.ir"
                   {...register('email', { required: true })}
                   dir="ltr"
                 />

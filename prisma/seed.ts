@@ -6,14 +6,14 @@ const prisma = new PrismaClient();
 async function main() {
   // Create super admin user if it doesn't exist
   const superAdminExists = await prisma.user.findUnique({
-    where: { email: 'superadmin@shopgram.ir' },
+    where: { email: 'superadmin@shopgram.apadaa.ir' },
   });
 
   if (!superAdminExists) {
     const hashedPassword = await bcrypt.hash('Shopgram@1402', 10);
     await prisma.user.create({
       data: {
-        email: 'superadmin@shopgram.ir',
+        email: 'superadmin@shopgram.apadaa.ir',
         password: hashedPassword,
         name: 'مدیر ارشد سیستم',
         role: 'superadmin',
@@ -26,14 +26,14 @@ async function main() {
 
   // Create regular admin user if it doesn't exist
   const adminExists = await prisma.user.findUnique({
-    where: { email: 'admin@shopgram.ir' },
+    where: { email: 'admin@shopgram.apadaa.ir' },
   });
 
   if (!adminExists) {
     const hashedPassword = await bcrypt.hash('Admin@1402', 10);
     await prisma.user.create({
       data: {
-        email: 'admin@shopgram.ir',
+        email: 'admin@shopgram.apadaa.ir',
         password: hashedPassword,
         name: 'مدیر سیستم',
         role: 'admin',
