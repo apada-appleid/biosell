@@ -9,18 +9,19 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider     = "mysql"
+  url          = env("DATABASE_URL")
+  relationMode = "foreignKeys"
 }
 
 // مدل کاربران (ادمین‌ها)
 model User {
   id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  name      String
-  role      String   @default("admin")
-  phone     String?
+  email     String   @unique @db.VarChar(255)
+  password  String   @db.VarChar(255)
+  name      String   @db.VarChar(255)
+  role      String   @default("admin") @db.VarChar(50)
+  phone     String?  @db.VarChar(20)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -30,7 +31,7 @@ model User {
 // مدل پلن‌های اشتراک
 model Plan {
   id          String         @id @default(uuid())
-  name        String
+  name        String         @db.VarChar(255)
   price       Int
   features    Json
   maxProducts Int            @default(100) @map("max_products")
@@ -44,12 +45,12 @@ model Plan {
 // مدل فروشندگان
 model Seller {
   id           String         @id @default(uuid())
-  username     String         @unique
-  email        String         @unique
-  password     String
-  shopName     String         @map("shop_name")
-  bio          String?
-  profileImage String?        @map("profile_image")
+  username     String         @unique @db.VarChar(255)
+  email        String         @unique @db.VarChar(255)
+  password     String         @db.VarChar(255)
+  shopName     String         @map("shop_name") @db.VarChar(255)
+  bio          String?        @db.Text
+  profileImage String?        @map("profile_image") @db.VarChar(500)
   isActive     Boolean        @default(true) @map("is_active")
   createdAt    DateTime       @default(now()) @map("created_at")
   updatedAt    DateTime       @updatedAt @map("updated_at")
@@ -70,8 +71,8 @@ model Subscription {
   isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  seller    Seller   @relation(fields: [sellerId], references: [id])
-  plan      Plan     @relation(fields: [planId], references: [id])
+  seller    Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  plan      Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
 
   @@map("subscriptions")
 }
@@ -80,7 +81,7 @@ model Subscription {
 model ProductImage {
   id        String   @id @default(uuid())
   productId String   @map("product_id")
-  imageUrl  String   @map("image_url")
+  imageUrl  String   @map("image_url") @db.VarChar(500)
   order     Int      @default(0)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -93,15 +94,15 @@ model ProductImage {
 model Product {
   id          String         @id @default(uuid())
   sellerId    String         @map("seller_id")
-  title       String
-  description String?
+  title       String         @db.VarChar(255)
+  description String?        @db.Text
   price       Int
   inventory   Int            @default(0)
   isActive    Boolean        @default(true) @map("is_active")
   likesCount  Int            @default(0) @map("likes_count")
   createdAt   DateTime       @default(now()) @map("created_at")
   updatedAt   DateTime       @updatedAt @map("updated_at")
-  seller      Seller         @relation(fields: [sellerId], references: [id])
+  seller      Seller         @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   images      ProductImage[]
   orderItems  OrderItem[]    // ارتباط با آیتم‌های سفارش
 
@@ -111,13 +112,13 @@ model Product {
 // مدل مشتریان
 model Customer {
   id          String            @id @default(uuid())
-  fullName    String?           @map("full_name")
-  email       String?
-  mobile      String?
-  address     String?           // Keep for backward compatibility
-  city        String?           // Keep for backward compatibility
-  postalCode  String?           @map("postal_code") // Keep for backward compatibility
-  country     String?
+  fullName    String?           @map("full_name") @db.VarChar(255)
+  email       String?           @db.VarChar(255)
+  mobile      String?           @db.VarChar(20)
+  address     String?           @db.Text // Keep for backward compatibility
+  city        String?           @db.VarChar(100) // Keep for backward compatibility
+  postalCode  String?           @map("postal_code") @db.VarChar(20) // Keep for backward compatibility
+  country     String?           @db.VarChar(100)
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @updatedAt @map("updated_at")
   orders      Order[]
@@ -132,12 +133,12 @@ model Customer {
 model CustomerAddress {
   id         String   @id @default(uuid())
   customerId String   @map("customer_id")
-  fullName   String   @map("full_name")
-  phone      String
-  address    String
-  city       String
-  province   String
-  postalCode String   @map("postal_code")
+  fullName   String   @map("full_name") @db.VarChar(255)
+  phone      String   @db.VarChar(20)
+  address    String   @db.Text
+  city       String   @db.VarChar(100)
+  province   String   @db.VarChar(100)
+  postalCode String   @map("postal_code") @db.VarChar(20)
   isDefault  Boolean  @default(false) @map("is_default")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
@@ -149,8 +150,8 @@ model CustomerAddress {
 // مدل کد تایید یکبار مصرف
 model otp {
   id        String   @id @default(uuid())
-  mobile    String   @unique
-  code      String
+  mobile    String   @unique @db.VarChar(20)
+  code      String   @db.VarChar(10)
   expiresAt DateTime @map("expires_at")
   verified  Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
@@ -162,18 +163,18 @@ model otp {
 // مدل سفارش‌ها
 model Order {
   id              String     @id @default(uuid())
-  orderNumber     String     @unique @map("order_number")
+  orderNumber     String     @unique @map("order_number") @db.VarChar(50)
   customerId      String     @map("customer_id")
   sellerId        String     @map("seller_id")
   total           Int
-  status          String     @default("pending") // pending, processing, completed, cancelled
-  paymentMethod   String     @map("payment_method") // cash_on_delivery, credit_card
-  paymentStatus   String     @default("pending") @map("payment_status") // pending, paid, failed
-  shippingAddress String?    @map("shipping_address")
+  status          String     @default("pending") @db.VarChar(50) // pending, processing, completed, cancelled
+  paymentMethod   String     @map("payment_method") @db.VarChar(50) // cash_on_delivery, credit_card
+  paymentStatus   String     @default("pending") @map("payment_status") @db.VarChar(50) // pending, paid, failed
+  shippingAddress String?    @map("shipping_address") @db.Text
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
-  customer        Customer   @relation(fields: [customerId], references: [id])
-  seller          Seller     @relation(fields: [sellerId], references: [id])
+  customer        Customer   @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  seller          Seller     @relation(fields: [sellerId], references: [id], onDelete: Cascade)
   items           OrderItem[]
 
   @@map("orders")
@@ -184,14 +185,14 @@ model OrderItem {
   id          String   @id @default(uuid())
   orderId     String   @map("order_id")
   productId   String   @map("product_id")
-  title       String   // عنوان محصول در زمان سفارش
+  title       String   @db.VarChar(255) // عنوان محصول در زمان سفارش
   price       Int      // قیمت محصول در زمان سفارش
   quantity    Int
   totalPrice  Int      @map("total_price")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product     Product  @relation(fields: [productId], references: [id])
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
 
   @@map("order_items")
 }
