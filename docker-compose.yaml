@@ -7,6 +7,8 @@ services:
     restart: always
     networks:
       - default
+    env_file:
+      - .env
 
 networks:
   default:
