@@ -6,7 +6,7 @@
     "dev": "next dev --turbopack",
     "dev:80": "next dev --port 80 --turbopack",
     "build": "next build",
-    "start": "next start -p ${PORT:-3000}",
+    "start": "next start -p ${PORT:-3390}",
     "lint": "next lint",
     "seed": "ts-node --compiler-options {\\\"module\\\":\\\"CommonJS\\\"} prisma/seed.ts"
   },
