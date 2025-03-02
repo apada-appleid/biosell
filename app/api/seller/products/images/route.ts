@@ -50,46 +50,47 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    // Create directories if they don't exist
-    const publicDir = join(process.cwd(), "public");
-    const uploadsDir = join(publicDir, "uploads");
-    const productDir = join(uploadsDir, "products", productId);
+    // Ensure product directory exists
+    const productDirectoryId = uuidv4(); // Generate consistent directory ID
+    const uploadDir = join(process.cwd(), "public", "uploads", "products", productDirectoryId);
 
     try {
-      await mkdir(uploadsDir, { recursive: true });
-      await mkdir(join(uploadsDir, "products"), { recursive: true });
-      await mkdir(productDir, { recursive: true });
+      await mkdir(uploadDir, { recursive: true });
     } catch (error) {
-      console.error("Error creating directories:", error);
+      console.error("Directory creation error:", error);
+      return NextResponse.json({ error: "Failed to create upload directory" }, { status: 500 });
     }
 
-    // Process and save the images
-    const savedImages = [];
+    const savedImages: ProductImage[] = [];
+
     for (const image of images) {
-      // Validate that it's an image
-      if (!image.type.startsWith("image/")) {
-        continue;
+      // Generate a normalized filename with UUID
+      const imageId = uuidv4();
+      const fileExtension = image.name.split('.').pop()?.toLowerCase() || 'png';
+      const fileName = `${imageId}.${fileExtension}`;
+      const filePath = join(uploadDir, fileName);
+      
+      // Save the file
+      try {
+        const buffer = Buffer.from(await image.arrayBuffer());
+        await writeFile(filePath, buffer);
+        
+        // Create a standardized URL path that works across databases
+        const dbPath = `/uploads/products/${productDirectoryId}/${fileName}`;
+        
+        // Save to database with consistent formatting
+        const savedImage = await prisma.productImage.create({
+          data: {
+            productId,
+            imageUrl: dbPath,
+          },
+        });
+        
+        savedImages.push(savedImage);
+      } catch (error) {
+        console.error("Error saving image:", error);
+        // Continue with other images even if one fails
       }
-
-      // Generate unique filename
-      const fileExtension = image.name.split(".").pop();
-      const fileName = `${uuidv4()}.${fileExtension}`;
-      const filePath = join(productDir, fileName);
-      const fileBuffer = Buffer.from(await image.arrayBuffer());
-
-      // Save file to disk
-      await writeFile(filePath, fileBuffer);
-
-      // Create database record
-      const productImage: ProductImage = await prisma.productImage.create({
-        data: {
-          productId,
-          imageUrl: `/uploads/products/${productId}/${fileName}`,
-          order: savedImages.length, // Sequential order
-        },
-      });
-
-      savedImages.push(productImage);
     }
 
     return NextResponse.json(
