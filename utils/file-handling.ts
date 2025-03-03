@@ -3,6 +3,17 @@ import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { existsSync } from "fs";
 
+// Define base upload path that can be configured via env
+const UPLOAD_BASE_PATH = process.env.UPLOAD_BASE_PATH || join(process.cwd(), "public");
+
+// Log the upload path for debugging
+console.log('Upload base path:', {
+  UPLOAD_BASE_PATH,
+  env_path: process.env.UPLOAD_BASE_PATH,
+  default_path: join(process.cwd(), "public"),
+  cwd: process.cwd()
+});
+
 export async function saveUploadedFile(
   file: File, 
   entityType: string, 
@@ -14,13 +25,19 @@ export async function saveUploadedFile(
   const fileExtension = file.name.split('.').pop()?.toLowerCase() || 'png';
   const fileName = `${fileId}.${fileExtension}`;
   
-  // Create consistent paths
-  const uploadDir = join(process.cwd(), "public", "uploads", entityType, directoryId);
+  // Create consistent paths using configured base path
+  const uploadDir = join(UPLOAD_BASE_PATH, "uploads", entityType, directoryId);
   const filePath = join(uploadDir, fileName);
   const dbPath = `/uploads/${entityType}/${directoryId}/${fileName}`;
   
-  // Ensure directory exists
-  await mkdir(uploadDir, { recursive: true });
+  console.log('File paths:', {
+    uploadDir,
+    filePath,
+    dbPath
+  });
+  
+  // Ensure directory exists with proper permissions
+  await mkdir(uploadDir, { recursive: true, mode: 0o755 });
   
   // Save file
   const buffer = Buffer.from(await file.arrayBuffer());
@@ -31,7 +48,7 @@ export async function saveUploadedFile(
 
 export function getImageUrl(storedPath: string): string {
   // Check if file exists, return default if not
-  const absolutePath = join(process.cwd(), "public", storedPath);
+  const absolutePath = join(UPLOAD_BASE_PATH, storedPath);
   if (existsSync(absolutePath)) {
     return storedPath;
   }

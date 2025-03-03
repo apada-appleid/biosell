@@ -52,12 +52,27 @@ export async function POST(request: Request) {
 
     // Ensure product directory exists
     const productDirectoryId = uuidv4(); // Generate consistent directory ID
-    const uploadDir = join(process.cwd(), "public", "uploads", "products", productDirectoryId);
+    const baseUploadDir = join(process.cwd(), "public", "uploads", "products");
+    const uploadDir = join(baseUploadDir, productDirectoryId);
 
     try {
-      await mkdir(uploadDir, { recursive: true });
+      // First ensure base upload directory exists
+      await mkdir(baseUploadDir, { recursive: true, mode: 0o755 });
+      // Then create product-specific directory
+      await mkdir(uploadDir, { recursive: true, mode: 0o755 });
+      
+      console.log('Upload directories created:', {
+        baseUploadDir,
+        uploadDir,
+        cwd: process.cwd()
+      });
     } catch (error) {
       console.error("Directory creation error:", error);
+      console.error("Attempted paths:", {
+        baseUploadDir,
+        uploadDir,
+        cwd: process.cwd()
+      });
       return NextResponse.json({ error: "Failed to create upload directory" }, { status: 500 });
     }
 
@@ -89,6 +104,11 @@ export async function POST(request: Request) {
         savedImages.push(savedImage);
       } catch (error) {
         console.error("Error saving image:", error);
+        console.error("File details:", {
+          filePath,
+          uploadDir,
+          fileName
+        });
         // Continue with other images even if one fails
       }
     }
