@@ -38,13 +38,25 @@ export async function POST(request: Request) {
 
     if (!user) {
       // Create new user if not exists
-      user = await prisma.customer.create({
-        data: {
-          mobile,
-          fullName: '', // Will be updated later
-          email: '', // Will be updated later
-        },
-      });
+      try {
+        user = await prisma.customer.create({
+          data: {
+            mobile,
+            fullName: '', // Will be updated later
+            email: `${mobile}@example.com`, // Use mobile number as part of email to ensure uniqueness
+          },
+        });
+      } catch (createError) {
+        console.error('Error creating customer:', createError);
+        // If creation fails, try to fetch the user again (in case it was created by a concurrent request)
+        user = await prisma.customer.findFirst({
+          where: { mobile }
+        });
+        
+        if (!user) {
+          throw new Error('Unable to create or retrieve customer');
+        }
+      }
     }
 
     // Save OTP to database (you might use a different table for OTPs)
@@ -64,14 +76,14 @@ export async function POST(request: Request) {
     });
 
     // TODO: Integrate with SMS service in the future
-    // For now, just log the OTP to console
+    // For now, return the OTP in the response regardless of environment
     console.log(`OTP for ${mobile}: ${otp}`);
 
     return NextResponse.json(
       { 
         message: 'کد تأیید با موفقیت ارسال شد',
-        // In development, return the OTP for testing, in production this should be removed
-        otp: process.env.NODE_ENV === 'development' ? otp : undefined
+        // Always return the OTP until the SMS service is implemented
+        otp: otp // Remove environment check to always show OTP
       },
       { status: 200 }
     );

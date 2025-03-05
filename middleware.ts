@@ -16,12 +16,17 @@ export default withAuth(
       const isAuth = !!token;
       const pathname = req.nextUrl.pathname;
 
-      // Fast path for static assets
+      // Fast path for static assets and public pages
       if (
         pathname.startsWith('/_next/') ||
         pathname.startsWith('/static/') ||
         pathname.startsWith('/api/') ||
-        pathname.includes('.')
+        pathname.includes('.') ||
+        pathname === '/' || // Homepage
+        pathname.startsWith('/shop/') || // Shop pages
+        pathname.startsWith('/products/') || // Product pages
+        pathname === '/cart' || // Cart page
+        pathname.startsWith('/checkout') // Checkout pages
       ) {
         return NextResponse.next();
       }
@@ -122,11 +127,16 @@ export default withAuth(
       authorized: ({ token, req }) => {
         const pathname = req.nextUrl.pathname;
         
-        // Fast path for static assets and API routes
+        // Fast path for static assets, API routes, and public pages
         if (
           pathname.startsWith('/_next/') ||
           pathname.startsWith('/static/') ||
-          pathname.includes('.')
+          pathname.includes('.') ||
+          pathname === '/' || // Homepage
+          pathname.startsWith('/shop/') || // Shop pages
+          pathname.startsWith('/products/') || // Product pages
+          pathname === '/cart' || // Cart page
+          pathname.startsWith('/checkout') // Checkout pages
         ) {
           return true;
         }
@@ -152,7 +162,7 @@ export const config = {
     '/seller/:path*', 
     '/customer/:path*', 
     '/auth/:path*',
-    // Exclude static files and api routes from the middleware
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:jpg|jpeg|gif|png|svg)|api/).*)'
+    // Exclude static files, api routes, the homepage, shop pages, product pages, cart, and checkout from the middleware
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:jpg|jpeg|gif|png|svg)|api/|$|shop/|products/|cart|checkout).*)'
   ],
 }; 
