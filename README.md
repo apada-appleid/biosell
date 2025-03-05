@@ -1,36 +1,164 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Biosell - E-commerce Platform
+
+Biosell (previously Shopgram) is a modern e-commerce platform built with Next.js, allowing sellers to create online shops and customers to purchase products.
+
+## Features
+
+- **Multi-user System**: Admin, Seller, and Customer roles
+- **Product Management**: Create, update, and delete products with images
+- **Order Management**: Track and manage orders
+- **Subscription Plans**: Different plans for sellers
+- **Authentication**: Secure login with credentials and OTP verification
+- **Responsive Design**: Works on all devices
+
+## Tech Stack
+
+- **Frontend**: Next.js 15, React 19, TailwindCSS
+- **Backend**: Next.js API Routes
+- **Database**: MySQL with Prisma ORM
+- **Authentication**: NextAuth.js
+- **State Management**: Zustand
+- **Form Handling**: React Hook Form with Zod validation
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18+ 
+- Yarn package manager
+- MySQL database
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/biosell-front.git
+   cd biosell-front
+   ```
+
+2. Install dependencies:
+   ```bash
+   yarn install
+   ```
+
+3. Set up environment variables:
+   Create a `.env.local` file with the following variables:
+   ```
+   DATABASE_URL="mysql://username:password@localhost:3306/biosell"
+   NEXTAUTH_URL="http://localhost:3000"
+   NEXTAUTH_SECRET="your-secret-key"
+   ```
+
+4. Generate Prisma client:
+   ```bash
+   yarn db:generate
+   ```
+
+5. Run database migrations:
+   ```bash
+   npx prisma migrate dev
+   ```
+
+6. Seed the database (optional):
+   ```bash
+   yarn seed
+   ```
+
+7. Start the development server:
+   ```bash
+   yarn dev
+   ```
+
+## Production Deployment
+
+### Option 1: Vercel (Recommended)
+
+1. Push your code to a GitHub repository
+2. Import the project in Vercel
+3. Set the environment variables in the Vercel dashboard
+4. Deploy
+
+### Option 2: Self-hosted
+
+1. Build the application:
+   ```bash
+   yarn build
+   ```
+
+2. Start the production server:
+   ```bash
+   yarn start
+   ```
+
+### Option 3: Docker
+
+1. Build the Docker image:
+   ```bash
+   docker build -t biosell-front .
+   ```
+
+2. Run the container:
+   ```bash
+   docker run -p 3000:3000 -e DATABASE_URL=your-db-url -e NEXTAUTH_URL=your-url -e NEXTAUTH_SECRET=your-secret biosell-front
+   ```
+
+Alternatively, use docker-compose:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+docker-compose up -d
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Project Structure
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- `/app`: Main application code (Next.js App Router)
+  - `/api`: API routes
+  - `/components`: Reusable UI components
+  - `/hooks`: Custom React hooks
+  - `/store`: Zustand state management
+- `/lib`: Utility functions and configurations
+- `/prisma`: Database schema and migrations
+- `/public`: Static assets
+- `/types`: TypeScript type definitions
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Authentication
 
-## Learn More
+The application uses NextAuth.js with a credential provider for authentication. There are three user types:
 
-To learn more about Next.js, take a look at the following resources:
+1. **Admin**: Can manage sellers, products, and subscriptions
+2. **Seller**: Can manage their shop, products, and orders
+3. **Customer**: Can browse products, place orders, and manage their profile
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## API Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The API follows RESTful principles and is organized by domain:
 
-## Deploy on Vercel
+- `/api/admin/*`: Admin-specific endpoints
+- `/api/seller/*`: Seller-specific endpoints
+- `/api/customer/*`: Customer-specific endpoints
+- `/api/shop/*`: Public shop endpoints
+- `/api/auth/*`: Authentication endpoints
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Maintenance
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Database Migrations
+
+To create a new migration after schema changes:
+
+```bash
+npx prisma migrate dev --name your-migration-name
+```
+
+### Updating Dependencies
+
+```bash
+yarn upgrade-interactive --latest
+```
+
+## Troubleshooting
+
+- **Database Connection Issues**: Verify your DATABASE_URL is correct and the database server is running
+- **Authentication Problems**: Check NEXTAUTH_URL and NEXTAUTH_SECRET environment variables
+- **Build Errors**: Make sure all dependencies are installed and compatible
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

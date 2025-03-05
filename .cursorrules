@@ -23,6 +23,7 @@ The project is a Next.js e-commerce application called "Biosell" (previously "Sh
 - Prisma for ORM with MySQL database
 - TailwindCSS for styling
 - NextAuth.js for authentication
+- Docker containerization for deployment
 
 ## Authentication System
 - Uses NextAuth.js with credential provider
@@ -83,6 +84,13 @@ The project is a Next.js e-commerce application called "Biosell" (previously "Sh
 - Form handling with react-hook-form
 - Date and price formatting utilities
 - Component-based UI architecture
+
+## Deployment
+- Docker containerization for consistent deployment
+- docker-compose for orchestrating services
+- Environment configuration via .env.production
+- 'output: standalone' in Next.js config for optimized Docker builds
+- Production domain: biosell.me
 
 ### Coding Environment
 The user asks questions about the following coding languages:

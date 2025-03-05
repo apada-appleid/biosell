@@ -1,166 +1,129 @@
-# Deployment Guide for Shopgram Front on CentOS with WHM
+# Docker Deployment Guide for Biosell
 
-This guide outlines the steps to deploy your Next.js application on a CentOS server with WHM, ensuring it runs on a specific port permanently.
+This guide outlines the steps to deploy your Next.js application using Docker, ensuring consistent deployment across environments.
 
 ## Prerequisites
 
-- CentOS server with WHM/cPanel access
-- Root or sudo access
-- Node.js and Yarn installed on the server
-- Git installed on the server
+- Docker and Docker Compose installed on your server
+- Git installed on your server
+- A domain name pointing to your server (for production)
 
-## Installation Steps
+## Deployment Steps
 
-### 1. Install Node.js and Yarn (if not already installed)
-
-```bash
-# Install Node.js using nvm (recommended)
-curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-nvm install 20 # Install Node.js 20 (or your required version)
-
-# Install Yarn
-npm install -g yarn
-```
-
-### 2. Clone the Repository
+### 1. Clone the Repository
 
 ```bash
-mkdir -p /var/www/html
-cd /var/www/html
-git clone <your-repository-url> shopgram-front
-cd shopgram-front
+mkdir -p /root
+cd /root
+git clone <your-repository-url> biosell
+cd biosell
 ```
 
-### 3. Install Dependencies and Build
+### 2. Configure Environment Variables
+
+Create or update your .env.production file with the correct environment variables:
 
 ```bash
-yarn install --frozen-lockfile
-yarn build
+# Database
+DATABASE_URL="mysql://username:password@host:port/database"
+
+# NextAuth
+NEXTAUTH_URL="https://biosell.me"  # Your production domain
+NEXTAUTH_SECRET="your-production-secret-key"
+
+# Upload path
+UPLOAD_BASE_PATH=/root/biosell/public
+NEXT_PUBLIC_API_URL="https://biosell.me"  # Your production domain
+
+# API settings
+API_TIMEOUT=30000
+RATE_LIMIT_REQUESTS=100
+RATE_LIMIT_WINDOW_MS=60000
+LOG_LEVEL="error"
 ```
 
-### 4. Install PM2 Process Manager
+### 3. Deploy with Docker Compose
 
 ```bash
-npm install -g pm2
+# Build and start the containers
+docker-compose up -d --build
+
+# View logs
+docker-compose logs -f
 ```
 
-### 5. Configure the Application Port
+### 4. Configure Nginx Reverse Proxy (Optional)
 
-There are several ways to set a permanent port:
+If you're using Nginx as a reverse proxy in front of your Docker containers:
 
-#### Option A: Using Environment Variables in PM2
+```nginx
+server {
+    listen 80;
+    server_name biosell.me www.biosell.me;
 
-Update the `ecosystem.config.js` file with your desired port:
+    location / {
+        proxy_pass http://localhost:3390;  # Match the port in docker-compose.yaml
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
+```
+
+### 5. Set Up SSL with Certbot (Optional)
 
 ```bash
-# Start the application using PM2
-pm2 start ecosystem.config.js
-pm2 save
-pm2 startup # Follow the instructions to make PM2 start on boot
+# Install certbot
+sudo apt-get update
+sudo apt-get install certbot python3-certbot-nginx
+
+# Obtain and configure SSL certificate
+sudo certbot --nginx -d biosell.me -d www.biosell.me
 ```
 
-#### Option B: Using a System Service
-
-Create a systemd service file:
+## Container Management
 
 ```bash
-sudo nano /etc/systemd/system/shopgram-front.service
-```
+# View running containers
+docker-compose ps
 
-Add the following content:
+# Restart containers
+docker-compose restart
 
-```
-[Unit]
-Description=Shopgram Front - Next.js Application
-After=network.target
+# Stop containers
+docker-compose down
 
-[Service]
-Type=simple
-User=nobody
-WorkingDirectory=/var/www/html/shopgram-front
-Environment=PORT=3001
-Environment=NODE_ENV=production
-ExecStart=/usr/local/bin/yarn start
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-```
-
-Enable and start the service:
-
-```bash
-sudo systemctl enable shopgram-front
-sudo systemctl start shopgram-front
-```
-
-### 6. Configure Firewall
-
-Make sure your chosen port is open in the firewall:
-
-```bash
-sudo firewall-cmd --permanent --add-port=3001/tcp
-sudo firewall-cmd --reload
-```
-
-### 7. Configure WHM/cPanel (Reverse Proxy)
-
-If you want to serve your Next.js app through WHM/cPanel using a domain:
-
-1. Log in to WHM as the root user
-2. Navigate to "Apache Configuration" → "Include Editor"
-3. Choose "Pre VirtualHost Include"
-4. Add a reverse proxy configuration:
-
-```apache
-<VirtualHost *:80>
-    ServerName apadaa.ir
-    ServerAlias www.apadaa.ir
-    
-    ProxyPreserveHost On
-    ProxyPass / http://localhost:3001/
-    ProxyPassReverse / http://localhost:3001/
-    
-    ErrorLog /var/log/apache2/yourdomain.com-error.log
-    CustomLog /var/log/apache2/yourdomain.com-access.log combined
-</VirtualHost>
-```
-
-5. Save and restart Apache:
-
-```bash
-sudo service httpd restart
+# Update the application
+git pull
+docker-compose up -d --build
 ```
 
 ## Troubleshooting
 
-- **Application not starting**: Check logs with `pm2 logs` or `journalctl -u shopgram-front`
-- **Port conflicts**: Make sure no other service is using your selected port
-- **Permission issues**: Ensure proper file ownership with `chown -R nobody:nobody /var/www/html/shopgram-front`
-
-## Redeployment/Updates
-
-For future updates:
-
-```bash
-cd /var/www/html/shopgram-front
-git pull
-yarn install --frozen-lockfile
-yarn build
-pm2 restart shopgram-front # If using PM2
-# OR
-sudo systemctl restart shopgram-front # If using systemd
-```
+- **Container not starting**: Check logs with `docker-compose logs app`
+- **Database connection issues**: Verify your DATABASE_URL and ensure the database is accessible
+- **Permission issues**: Check the volume mappings in docker-compose.yaml
 
 ## Monitoring
 
-Use PM2 to monitor your application:
-
 ```bash
-pm2 monit
-pm2 status
+# View container stats
+docker stats
+
+# Check container logs
+docker-compose logs -f app
 ```
 
-For more detailed metrics, consider setting up Node.js monitoring through WHM/cPanel or a third-party service. 
+For more detailed metrics, consider setting up Docker monitoring tools like Prometheus and Grafana.
+
+## Backup Strategy
+
+```bash
+# Backup the database (if using Docker for the database)
+docker exec -t [database-container-name] mysqldump -u [user] -p[password] [database] > backup.sql
+
+# Backup uploaded files
+cp -r /root/biosell/public/uploads /path/to/backup/location
+``` 

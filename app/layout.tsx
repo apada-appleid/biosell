@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Biosell - Instagram Shopping Experience",
-  description: "Shop directly from your favorite Instagram content",
+  title: "Biosell - بایوسل | فروشگاه آنلاین زیست محصولات",
+  description: "فروشگاه آنلاین محصولات زیستی - بایوسل",
 };
 
 export const viewport: Viewport = {

@@ -1,5 +1,5 @@
 {
-  "name": "biosell-front",
+  "name": "biosell",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -7,9 +7,13 @@
     "dev:80": "next dev --port 80 --turbopack",
     "build": "next build",
     "start": "next start",
+    "start:prod": "NODE_ENV=production next start",
     "lint": "next lint",
     "db:generate": "npx prisma generate",
-    "seed": "ts-node --compiler-options {\\\"module\\\":\\\"CommonJS\\\"} prisma/seed.ts"
+    "seed": "ts-node --compiler-options {\\\"module\\\":\\\"CommonJS\\\"} prisma/seed.ts",
+    "deploy:check": "node scripts/deploy-checks.js",
+    "deploy:prepare": "yarn db:generate && yarn build",
+    "deploy": "yarn deploy:check && yarn deploy:prepare && yarn start:prod"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.0",

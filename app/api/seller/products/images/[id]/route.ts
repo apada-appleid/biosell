@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import authOptions from '@/lib/auth';
 import { join } from 'path';
 import { unlink } from 'fs/promises';
+import { existsSync } from 'fs';
 
 export async function DELETE(
   request: Request,
@@ -19,6 +20,10 @@ export async function DELETE(
 
     const sellerId = session.user.id;
     const imageId = (await params).id;
+    
+    if (!imageId || typeof imageId !== 'string') {
+      return NextResponse.json({ error: 'Invalid image ID' }, { status: 400 });
+    }
     
     // Find the image and verify it belongs to a product owned by the seller
     const image = await prisma.productImage.findUnique({
@@ -45,7 +50,13 @@ export async function DELETE(
     // Delete the physical file if it exists
     try {
       const imagePath = join(process.cwd(), 'public', image.imageUrl);
-      await unlink(imagePath);
+      
+      // Check if file exists before attempting to delete
+      if (existsSync(imagePath)) {
+        await unlink(imagePath);
+      } else {
+        console.warn(`Image file not found at path: ${imagePath}`);
+      }
     } catch (error) {
       console.error('Error deleting image file:', error);
       // Continue even if the file cannot be deleted
@@ -58,7 +69,10 @@ export async function DELETE(
       },
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ 
+      success: true,
+      message: 'Image deleted successfully'
+    });
     
   } catch (error) {
     console.error('Error deleting product image:', error);

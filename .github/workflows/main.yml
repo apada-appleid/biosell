@@ -1,4 +1,4 @@
-name: shopgram-cicd
+name: biosell-cicd
 
 on:
   push:
@@ -22,6 +22,6 @@ jobs:
           password: ${{ secrets.PASSWORD }}
           port: ${{ secrets.PORT }}
           script: |
-            cd /root/shopgram/shopgram-front
+            cd /root/biosell
             git pull origin main
             docker compose up app --build -d 

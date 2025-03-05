@@ -20,7 +20,7 @@ This option uses a Node.js script that directly interacts with the database thro
 
 ```bash
 # Ensure you are in the project root directory
-cd /path/to/shopgram-front
+cd /root/biosell
 
 # Run the migration script
 node scripts/migrate-addresses.js
@@ -32,7 +32,7 @@ This option uses an API endpoint that can be called while the application is run
 
 ```bash
 # Ensure you are in the project root directory
-cd /path/to/shopgram-front
+cd /root/biosell
 
 # First, make sure the MIGRATION_SECRET_KEY is set in your .env.local file:
 # MIGRATION_SECRET_KEY="your-secret-key"
