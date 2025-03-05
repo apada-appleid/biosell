@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
-import { TbKey, TbLock, TbMail, TbShield, TbUser } from 'react-icons/tb';
+import { TbLock, TbMail, TbShield } from 'react-icons/tb';
 
 const loginSchema = z.object({
   email: z.string().email('ایمیل معتبر وارد کنید'),
