@@ -12,7 +12,6 @@ declare module 'next-auth/jwt' {
     role?: string;
     type: 'admin' | 'seller' | 'customer';
     username?: string;
-    phone?: string;
     mobile?: string | null;
   }
 }
@@ -24,7 +23,6 @@ declare module 'next-auth' {
     role?: string;
     type: 'admin' | 'seller' | 'customer';
     username?: string;
-    phone?: string;
     mobile?: string | null;
   }
   
@@ -37,7 +35,6 @@ declare module 'next-auth' {
       role?: string;
       type: 'admin' | 'seller' | 'customer';
       username?: string;
-      phone?: string;
       mobile?: string | null;
     }
   }
@@ -131,7 +128,7 @@ const authOptions: NextAuthOptions = {
               email: user.email,
               role: user.role,
               type: 'admin',
-              phone: user.phone || undefined
+              mobile: user.phone || undefined
             };
           } 
           // Seller login
@@ -185,8 +182,7 @@ const authOptions: NextAuthOptions = {
         token.role = user.role;
         token.type = user.type;
         token.username = user.username;
-        token.phone = user.phone;
-        token.mobile = user.mobile;
+        token.mobile = user.mobile || undefined;
       }
       return token;
     },
@@ -196,7 +192,6 @@ const authOptions: NextAuthOptions = {
         session.user.role = token.role;
         session.user.type = token.type;
         session.user.username = token.username;
-        session.user.phone = token.phone;
         session.user.mobile = token.mobile;
       }
       return session;

@@ -42,7 +42,7 @@ export interface Cart {
 export interface Address {
   id: string;
   fullName: string;
-  phone: string;
+  mobile: string;
   address: string;
   city: string;
   province: string;
@@ -58,7 +58,7 @@ export interface Address {
 export interface CustomerAddress {
   id: string;
   fullName: string;
-  phone: string;
+  mobile: string;
   address: string;
   city: string;
   province: string;
@@ -73,7 +73,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  phone?: string;
+  mobile?: string;
 }
 
 export interface Customer {

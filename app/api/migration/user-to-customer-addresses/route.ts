@@ -7,12 +7,12 @@ type UserWithAddresses = {
   id: string;
   email: string | null;
   name: string | null;
-  phone: string | null;
+  mobile: string | null;
   // Other user fields...
   addresses: Array<{
     id: string;
     fullName: string | null;
-    phone: string | null;
+    mobile: string | null;
     address: string | null;
     city: string | null;
     province: string | null;
@@ -29,6 +29,13 @@ type CustomerWithAddresses = {
   // Other customer fields...
   addresses: CustomerAddress[];
 };
+
+interface AddressRow {
+  id: string;
+  fullName: string | null;
+  mobile: string | null;
+  // ... other fields ...
+}
 
 // This is a one-time migration endpoint to move addresses from User to Customer model
 // It should be secured and only accessible by admins or via a secure method
@@ -102,24 +109,21 @@ export async function POST(req: NextRequest) {
       
       const usersWithAddressesRaw = await prisma.$queryRaw<Array<any>>`
         SELECT 
-          u.id, 
-          u.email, 
-          u.name, 
-          u.phone, 
+          u.id as user_id, 
+          u.email,
+          u.name as full_name, 
+          u.mobile, 
           a.id as address_id, 
-          a.full_name, 
-          a.phone as address_phone, 
+          a.full_name as address_full_name, 
+          a.mobile as address_mobile, 
           a.address, 
           a.city, 
-          a.province, 
-          a.postal_code, 
+          a.province,
+          a.postal_code,
           a.is_default
-        FROM 
-          users u
-        LEFT JOIN 
-          addresses a ON a.user_id = u.id
-        ORDER BY 
-          u.id, a.id
+        FROM users u
+        LEFT JOIN customer_addresses a ON u.id = a.customer_id
+        WHERE u.role = 'customer'
       `;
       
       console.log(`Query returned ${usersWithAddressesRaw.length} rows`);
@@ -128,30 +132,30 @@ export async function POST(req: NextRequest) {
       const usersMap = new Map<string, UserWithAddresses>();
       
       for (const row of usersWithAddressesRaw) {
-        if (!row.id) {
+        if (!row.user_id) {
           console.log('Skipping row with missing user ID');
           continue;
         }
         
         // If we haven't seen this user before, add them to the map
-        if (!usersMap.has(row.id)) {
-          usersMap.set(row.id, {
-            id: row.id,
+        if (!usersMap.has(row.user_id)) {
+          usersMap.set(row.user_id, {
+            id: row.user_id,
             email: row.email || null,
-            name: row.name || null,
-            phone: row.phone || null,
+            name: row.full_name || null,
+            mobile: row.mobile || null,
             addresses: []
           });
         }
         
         // If this row has address data, add it to the user's addresses array
         if (row.address_id) {
-          const user = usersMap.get(row.id);
+          const user = usersMap.get(row.user_id);
           if (user) {
             user.addresses.push({
               id: row.address_id,
               fullName: row.full_name || null,
-              phone: row.address_phone || null,
+              mobile: row.address_mobile || null,
               address: row.address || null,
               city: row.city || null,
               province: row.province || null,
@@ -199,7 +203,7 @@ export async function POST(req: NextRequest) {
               data: {
                 email: user.email,
                 fullName: user.name || undefined,
-                mobile: user.phone || undefined
+                mobile: user.mobile || undefined
               },
               include: { addresses: true }
             }) as CustomerWithAddresses;
@@ -225,20 +229,17 @@ export async function POST(req: NextRequest) {
                 
                 // Prepare the address data, handling null values
                 // All fields are required according to the schema
-                const addressData = {
-                  fullName: address.fullName || customer.fullName || 'Unknown',
-                  phone: address.phone || customer.mobile || '0000000000',
-                  address: address.address || '',
-                  city: address.city || '',
-                  province: address.province || '',
-                  postalCode: address.postalCode || '',
-                  isDefault: address.isDefault,
-                  customerId: customer.id
-                };
-                
-                // Create a new address for the customer
                 await prisma.customerAddress.create({
-                  data: addressData
+                  data: {
+                    fullName: address.fullName || customer.fullName || 'Customer',
+                    mobile: address.mobile || customer.mobile || '0000000000',
+                    address: address.address || '',
+                    city: address.city || '',
+                    province: address.province || '',
+                    postalCode: address.postalCode || '',
+                    isDefault: address.isDefault || false,
+                    customerId: customer.id
+                  }
                 });
                 
                 addressesMigrated++;

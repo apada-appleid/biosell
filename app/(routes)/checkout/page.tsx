@@ -16,6 +16,11 @@ export default function CheckoutPage() {
   const { cart } = useCartStore();
   const [mounted, setMounted] = useState(false);
   const [localUser, setLocalUser] = useState<User | null>(null);
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+    mobile: ''
+  });
   
   // Handle hydration
   useEffect(() => {
@@ -33,8 +38,16 @@ export default function CheckoutPage() {
             id: userInfo.id,
             name: userInfo.name || '',
             email: userInfo.email || '',
-            phone: userInfo.mobile
+            mobile: userInfo.mobile
           });
+          // Fill in form with user info from token if available
+          if (userInfo && userInfo.name && userInfo.mobile) {
+            setFormData({
+              fullName: userInfo.name,
+              email: userInfo.email || `${userInfo.mobile}@example.com`,
+              mobile: userInfo.mobile
+            });
+          }
         }
       } catch (error) {
         console.error('Error getting local user:', error);
@@ -42,8 +55,6 @@ export default function CheckoutPage() {
     }
   }, []);
 
-  console.log('session', session);
-  
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!mounted || status === 'loading') return;
@@ -88,11 +99,11 @@ export default function CheckoutPage() {
   }
   
   // استفاده از کاربر NextAuth یا کاربر محلی
-  const user: User | undefined = session?.user ? {
+  const user = session ? {
     id: session.user.id,
     name: session.user.name || '',
     email: session.user.email || '',
-    phone: session.user.phone || undefined
+    mobile: session.user.mobile || ''
   } : localUser || undefined;
   
   // Function to update user data (like email)
@@ -121,6 +132,15 @@ export default function CheckoutPage() {
       }
     }
   };
+  
+  // Update any session references
+  if (session) {
+    setFormData({
+      fullName: session.user.name || '',
+      email: session.user.email || '',
+      mobile: session.user.mobile || ''
+    });
+  }
   
   return (
     <div className="container mx-auto px-4 py-8">

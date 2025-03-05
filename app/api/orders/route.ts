@@ -44,6 +44,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Validate customer data
+    if (!customerData.fullName || !customerData.mobile || !customerData.email) {
+      return NextResponse.json({ error: 'Customer information is incomplete' }, { status: 400 });
+    }
+
     // Try to get authenticated user
     let authenticatedUser = null;
     
@@ -65,7 +70,7 @@ export async function POST(request: NextRequest) {
     } else {
       console.log("Order being placed by guest user (no valid auth token)");
       // Note: We allow unauthenticated users to place orders, but they need to provide full customer details
-      if (!customerData.fullName || !customerData.phone || !customerData.email) {
+      if (!customerData.fullName || !customerData.mobile || !customerData.email) {
         return NextResponse.json(
           { error: "Guest users must provide full customer information" },
           { status: 400 }
@@ -73,75 +78,82 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Create or update customer record using upsert
+    // Fix the customer creation and ID assignment
+    let customer;
     let customerId;
-    
     if (authenticatedUser?.userId && authenticatedUser.type === 'customer') {
-      // For authenticated customers, find by phone or email
-      const existingCustomer = await prisma.customer.findFirst({
+      // For authenticated customers, find by mobile or email
+      customer = await prisma.customer.findFirst({
         where: {
           OR: [
             { email: customerData.email },
-            { mobile: customerData.contactPhone || customerData.phone }
+            { mobile: customerData.mobile }
           ]
         }
       });
       
-      if (existingCustomer) {
+      if (customer) {
         // Update existing customer with new info
-        const updatedCustomer = await prisma.customer.update({
+        customer = await prisma.customer.update({
           where: {
-            id: existingCustomer.id
+            id: customer.id
           },
           data: {
             fullName: customerData.fullName,
             // Only update email if provided and different
-            ...(customerData.email && customerData.email !== existingCustomer.email 
+            ...(customerData.email && customerData.email !== customer.email 
               ? { email: customerData.email } 
               : {}),
-            // Don't update mobile/phone as it's verified
+            // Don't update mobile as it's verified
           }
         });
-        customerId = updatedCustomer.id;
+        customerId = customer.id;
       } else {
         // Create new customer record for authenticated user
-        const newCustomer = await prisma.customer.create({
+        customer = await prisma.customer.create({
           data: {
             fullName: customerData.fullName,
-            email: customerData.email || "",
-            mobile: customerData.contactPhone || customerData.phone,
+            email: customerData.email,
+            mobile: customerData.mobile,
+            // Legacy fields kept for backward compatibility
+            address: customerData.address,
+            city: customerData.city,
+            postalCode: customerData.postalCode,
+            country: customerData.country || 'ایران'
           }
         });
-        customerId = newCustomer.id;
+        customerId = customer.id;
       }
     } else {
       // Guest checkout - create a new customer
-      const newCustomer = await prisma.customer.create({
+      customer = await prisma.customer.create({
         data: {
           fullName: customerData.fullName,
-          email: customerData.email || "",
-          mobile: customerData.contactPhone || customerData.phone,
+          email: customerData.email,
+          mobile: customerData.mobile,
           address: customerData.address,
           city: customerData.city,
           postalCode: customerData.postalCode,
           country: customerData.country || "ایران",
         }
       });
-      customerId = newCustomer.id;
+      customerId = customer.id;
     }
 
     // Create order with the customer ID
     const orderNumber = generateOrderNumber();
     
-    // Include delivery phone in shipping address since there's no separate field for it
-    const finalShippingAddress = shippingAddress || 
-      `${customerData.fullName}, ${customerData.deliveryPhone || customerData.contactPhone || customerData.phone}, ${customerData.address}, ${customerData.city}, ${customerData.postalCode}, ${customerData.country || "ایران"}`;
+    // Include delivery mobile in shipping address since there's no separate field for it
+    const finalShippingAddress = customerData.address ? 
+      `${customerData.fullName}, ${customerData.deliveryMobile || customerData.mobile}, ${customerData.address}, ${customerData.city}, ${customerData.postalCode}, ${customerData.country || "ایران"}` : 
+      null;
     
     const order = await prisma.order.create({
       data: {
         orderNumber,
         customerId,
         sellerId,
+        status: "pending",
         total,
         paymentMethod: paymentMethod || "credit_card",
         shippingAddress: finalShippingAddress,
@@ -151,13 +163,13 @@ export async function POST(request: NextRequest) {
             title: item.product.title,
             price: item.product.price,
             quantity: item.quantity,
-            totalPrice: item.product.price * item.quantity,
-          })),
-        },
+            totalPrice: item.product.price * item.quantity
+          }))
+        }
       },
       include: {
-        items: true,
-      },
+        items: true
+      }
     });
 
     // Update product inventory (reduce by quantity ordered)
@@ -172,6 +184,17 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Log the order with masked sensitive information
+    console.log('Order created:', {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      customer: {
+        id: customerId,
+        email: requestBody?.customerData?.email ? requestBody.customerData.email.substring(0, 3) + "***" : "undefined",
+        mobile: requestBody?.customerData?.mobile ? requestBody.customerData.mobile.substring(0, 3) + "***" : "undefined",
+      },
+    });
+
     return NextResponse.json({
       success: true,
       orderNumber,
@@ -185,7 +208,7 @@ export async function POST(request: NextRequest) {
       hasCustomerData: !!requestBody?.customerData,
       hasAuthHeader: request.headers.has('Authorization'),
       email: requestBody?.customerData?.email ? requestBody.customerData.email.substring(0, 3) + "***" : "undefined", 
-      phone: requestBody?.customerData?.phone ? requestBody.customerData.phone.substring(0, 3) + "***" : "undefined",
+      mobile: requestBody?.customerData?.mobile ? requestBody.customerData.mobile.substring(0, 3) + "***" : "undefined",
       cartItemsCount: requestBody?.cartItems?.length || 0,
     });
     

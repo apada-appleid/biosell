@@ -14,7 +14,7 @@ interface CheckoutFormProps {
 interface CheckoutFormData {
   fullName: string;
   email: string;
-  phone: string;
+  mobile: string;
   address: string;
   city: string;
   province: string;
@@ -22,7 +22,14 @@ interface CheckoutFormData {
   country: string;
   paymentMethod: 'credit_card' | 'cash_on_delivery';
   saveAddressAsDefault: boolean;
-  deliveryPhone: string;
+  deliveryMobile: string;
+}
+
+interface CustomerInfo {
+  fullName: string;
+  email: string;
+  mobile: string;
+  // ... other fields ...
 }
 
 const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => {
@@ -53,8 +60,8 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
       country: 'ایران',
       email: user?.email || '',
       fullName: user?.name || '',
-      phone: user?.phone || '',
-      deliveryPhone: user?.phone || '',
+      mobile: user?.mobile || '',
+      deliveryMobile: user?.mobile || '',
       saveAddressAsDefault: false
     }
   });
@@ -145,7 +152,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
   // Fill form with selected address data
   const fillAddressForm = (address: CustomerAddress) => {
     setValue('fullName', address.fullName);
-    setValue('deliveryPhone', address.phone);
+    setValue('deliveryMobile', address.mobile);
     setValue('province', address.province);
     setValue('city', address.city);
     setValue('postalCode', address.postalCode);
@@ -179,7 +186,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
   };
   
   // Update user profile with new information
-  const updateUserProfile = async (data: { fullName: string, phone: string, email: string }) => {
+  const updateUserProfile = async (data: { fullName: string, mobile: string, email: string }) => {
     if (!user) return;
     
     // Only update if there are changes
@@ -208,8 +215,8 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
         credentials: 'include', // Include credentials for session cookies
         body: JSON.stringify({
           name: data.fullName,
-          email: data.email
-          // phone is no longer included in updates
+          email: data.email,
+          mobile: data.mobile
         }),
       });
       
@@ -225,7 +232,8 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
               localStorage.setItem('user_info', JSON.stringify({
                 ...userInfo,
                 email: data.email,
-                name: data.fullName
+                name: data.fullName,
+                mobile: data.mobile
               }));
             } catch (error) {
               console.error('Error updating user info in localStorage:', error);
@@ -263,7 +271,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
       // Create address data from form values
       const addressData = {
         fullName: getValues('fullName'),
-        phone: getValues('deliveryPhone'),
+        mobile: getValues('deliveryMobile'),
         province: getValues('province'),
         city: getValues('city'),
         address: getValues('address'),
@@ -272,7 +280,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
       };
       
       // Validate required fields
-      if (!addressData.fullName || !addressData.phone || !addressData.province || 
+      if (!addressData.fullName || !addressData.mobile || !addressData.province || 
           !addressData.city || !addressData.address || !addressData.postalCode) {
         setAddressError('لطفا تمام فیلدهای آدرس را پر کنید');
         return;
@@ -347,7 +355,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
       }
       
       // Validate required fields for delivery
-      if (!data.fullName || !data.deliveryPhone || !data.province || !data.city || !data.address || !data.postalCode) {
+      if (!data.fullName || !data.deliveryMobile || !data.province || !data.city || !data.address || !data.postalCode) {
         setSubmitError('لطفا تمام فیلدهای آدرس تحویل را کامل کنید');
         return;
       }
@@ -371,7 +379,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
       try {
         await updateUserProfile({
           fullName: data.fullName,
-          phone: data.phone,
+          mobile: data.mobile,
           email: data.email
         });
       } catch (error) {
@@ -379,16 +387,16 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
         // Continue with order even if profile update fails
       }
       
-      // For shipping address, use the deliveryPhone
+      // For shipping address, use the deliveryMobile
       // Create shipping address string
-      const shippingAddressString = `${data.fullName}, ${data.deliveryPhone}, ${data.province}, ${data.city}, ${data.address}, کدپستی: ${data.postalCode}`;
+      const shippingAddressString = `${data.fullName}, ${data.deliveryMobile}, ${data.province}, ${data.city}, ${data.address}, کدپستی: ${data.postalCode}`;
       
       // If adding a new address, save it first
       if (isAddingNewAddress && user) {
         try {
           const addressData = {
             fullName: data.fullName,
-            phone: data.deliveryPhone, // Use deliveryPhone instead of phone
+            mobile: data.deliveryMobile, // Use deliveryMobile instead of mobile
             address: data.address,
             city: data.city,
             province: data.province,
@@ -444,8 +452,8 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
       const orderData = {
         customerData: {
           ...data,
-          contactPhone: data.phone, // The user's verified phone
-          deliveryPhone: data.deliveryPhone // The delivery phone
+          contactMobile: data.mobile, // The user's verified mobile
+          deliveryMobile: data.deliveryMobile // The delivery mobile
         },
         cartItems: cart.items,
         total: cart.total,
@@ -596,18 +604,18 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
         </div>
         
         <div>
-          <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-            شماره موبایل
+          <label htmlFor="mobile" className="block text-sm font-medium text-gray-700 mb-1">
+            شماره تماس
           </label>
           <div className="w-full rounded-md border border-gray-300 px-4 py-2 bg-gray-50 text-gray-700">
-            {watch('phone')}
+            {watch('mobile')}
           </div>
           <input
             type="hidden"
-            {...register('phone')}
+            {...register('mobile')}
           />
           <p className="mt-1 text-xs text-gray-500">
-            شماره موبایل تایید شده و قابل تغییر نیست
+            شماره تماس تایید شده و قابل تغییر نیست
           </p>
         </div>
       </div>
@@ -652,7 +660,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
                   </div>
                   <p className="text-sm text-gray-600 mt-1">{address.province}، {address.city}، {address.address}</p>
                   <p className="text-sm text-gray-500 mt-1">
-                    کد پستی: {address.postalCode} | شماره تماس: {address.phone}
+                    کد پستی: {address.postalCode} | شماره تماس: {address.mobile}
                   </p>
                 </div>
               ))}
@@ -684,7 +692,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
                 </div>
                 <p className="text-sm text-gray-600 mt-1">{selectedAddress.province}، {selectedAddress.city}، {selectedAddress.address}</p>
                 <p className="text-sm text-gray-600 mt-1">کد پستی: {selectedAddress.postalCode}</p>
-                <p className="text-sm text-gray-600 mt-1">شماره تماس: {selectedAddress.phone}</p>
+                <p className="text-sm text-gray-600 mt-1">شماره تماس: {selectedAddress.mobile}</p>
               </div>
               <div className="flex space-x-2 space-x-reverse">
                 <button 
@@ -738,12 +746,12 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
               </div>
               
               <div>
-                <label htmlFor="deliveryPhone" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="deliveryMobile" className="block text-sm font-medium text-gray-700 mb-1">
                   شماره تماس تحویل گیرنده
                 </label>
                 <input
-                  id="deliveryPhone"
-                  {...register('deliveryPhone')}
+                  id="deliveryMobile"
+                  {...register('deliveryMobile')}
                   className="w-full p-2 border border-gray-300 rounded"
                   placeholder="09123456789"
                 />

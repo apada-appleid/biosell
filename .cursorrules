@@ -29,7 +29,7 @@ The project is a Next.js e-commerce application called "Biosell" (previously "Sh
 - Uses NextAuth.js with credential provider
 - Multiple user types: admin, seller, customer
 - Extended session and JWT types to include user role and type information
-- Protected routes via middleware (app/middleware.ts)
+- Protected routes via middleware (/middleware.ts)
 - Authentication configs in lib/auth.ts
 - OTP verification system for customer authentication:
   - Mobile number input followed by OTP verification flow

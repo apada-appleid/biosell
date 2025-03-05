@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
     const data = await req.json();
     
     // Validate required fields
-    const requiredFields = ['fullName', 'address', 'city', 'postalCode', 'phone'];
+    const requiredFields = ['fullName', 'address', 'city', 'postalCode', 'mobile'];
     for (const field of requiredFields) {
       if (!data[field]) {
         return NextResponse.json({ error: `${field} is required - فیلد ${field} الزامی است` }, { status: 400 });
@@ -153,7 +153,7 @@ export async function POST(req: NextRequest) {
       const address = await prisma.customerAddress.create({
         data: {
           fullName: data.fullName,
-          phone: data.phone,
+          mobile: data.mobile,
           address: data.address,
           city: data.city,
           province: data.province || '',
@@ -244,7 +244,7 @@ export async function PATCH(req: NextRequest) {
     // Handle legacy address mode - if the ID is 'legacy', create a new address
     if (id === 'legacy') {
       // Validate required fields
-      const requiredFields = ['fullName', 'address', 'city', 'postalCode', 'phone'];
+      const requiredFields = ['fullName', 'address', 'city', 'postalCode', 'mobile'];
       for (const field of requiredFields) {
         if (!data[field]) {
           return NextResponse.json({ error: `${field} is required - فیلد ${field} الزامی است` }, { status: 400 });
@@ -256,7 +256,7 @@ export async function PATCH(req: NextRequest) {
         const address = await prisma.customerAddress.create({
           data: {
             fullName: data.fullName,
-            phone: data.phone,
+            mobile: data.mobile,
             address: data.address,
             city: data.city,
             province: data.province || '',

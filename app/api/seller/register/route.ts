@@ -5,12 +5,11 @@ import { z } from "zod";
 
 // Validation schema
 const sellerRegisterSchema = z.object({
-  shopName: z.string().min(3, "Shop name must be at least 3 characters"),
-  username: z.string().min(3, "Username must be at least 3 characters")
-    .regex(/^[a-z0-9_]+$/, "Username can only contain lowercase letters, numbers, and underscores"),
+  shopName: z.string().min(3, "Shop name must be at least 3 characters").max(100, "Shop name must be at most 100 characters"),
+  username: z.string().min(3, "Username must be at least 3 characters").max(50, "Username must be at most 50 characters"),
   email: z.string().email("Invalid email format"),
   password: z.string().min(8, "Password must be at least 8 characters"),
-  phoneNumber: z.string().regex(/^09\d{9}$/, "Invalid phone number format"),
+  mobile: z.string().regex(/^09\d{9}$/, "Invalid mobile number format"),
 });
 
 export async function POST(req: NextRequest) {
@@ -28,7 +27,7 @@ export async function POST(req: NextRequest) {
       }, { status: 400 });
     }
     
-    const { shopName, username, email, password, phoneNumber } = validation.data;
+    const { shopName, username, email, password, mobile } = validation.data;
     
     // Check if seller already exists
     const existingEmail = await prisma.seller.findUnique({
@@ -63,8 +62,8 @@ export async function POST(req: NextRequest) {
         email,
         password: hashedPassword,
         shopName,
-        // Save phone number in bio temporarily as it's not in the schema
-        bio: `Phone: ${phoneNumber}`,
+        // Save mobile number in bio temporarily as it's not in the schema
+        bio: `Mobile: ${mobile}`,
         isActive: true
       }
     });

@@ -31,8 +31,6 @@ export default function CustomerOrders() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [error, setError] = useState<string | null>(null);
 
-  console.log("session", session);
-
   const fetchOrders = useCallback(async () => {
     try {
       setIsLoading(true);

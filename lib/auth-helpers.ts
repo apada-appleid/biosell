@@ -64,7 +64,6 @@ export async function getAuthenticatedUser(request: Request): Promise<{
   email?: string;
   mobile?: string;
   username?: string;
-  phone?: string;
 } | null> {
   const token = getJwtTokenFromRequest(request);
   
@@ -83,8 +82,7 @@ export async function getAuthenticatedUser(request: Request): Promise<{
     role: tokenData.role,
     email: tokenData.email,
     mobile: tokenData.mobile,
-    username: tokenData.username,
-    phone: tokenData.phone
+    username: tokenData.username
   };
 }
 

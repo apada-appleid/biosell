@@ -40,17 +40,11 @@ export default function CustomerLayout({
       // بررسی توکن محلی
       const token = localStorage.getItem("auth_token");
 
-      console.log("token", token);
-
       // فقط اگر توکن محلی نبود ریدایرکت کنیم
       if (!token) {
-        console.log('User not authenticated and no token found, redirecting to login page');
-        
         // لاگین نشده است، ریدایرکت به صفحه لاگین
         router.push(`/auth/customer-login?redirectUrl=${encodeURIComponent(pathname)}`);
       } else {
-        console.log('Token found in localStorage, attempting to establish NextAuth session');
-        
         // اگر توکن داریم ولی سشن نداریم، تلاش کنیم سشن ایجاد کنیم
         // این برای حالتی است که کاربر با OTP وارد شده اما هنوز سشن ندارد
         if (localStorage.getItem("user_info")) {
@@ -62,11 +56,11 @@ export default function CustomerLayout({
               // Attempt to create a session using the token
               signIn("credentials", {
                 redirect: false,
-                email: `${mobile}@example.com`,
+                email: userInfo.email || `${userInfo.mobile}@example.com`,
                 password: token,
                 type: "customer"
               }).then(result => {
-                console.log("Auto-login result:", result);
+                // Auto-login completed
               }).catch(err => {
                 console.error("Auto-login failed:", err);
               });
@@ -79,7 +73,6 @@ export default function CustomerLayout({
     } else if (status === 'authenticated' && session?.user) {
       // Make sure we have the right user type
       if (session.user.type !== 'customer' && pathname.startsWith('/customer')) {
-        console.log('User is not a customer, redirecting to appropriate dashboard');
         if (session.user.type === 'admin') {
           router.push('/admin/dashboard');
         } else if (session.user.type === 'seller') {

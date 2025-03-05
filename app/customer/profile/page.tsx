@@ -34,7 +34,7 @@ const profileSchema = z.object({
 const addressSchema = z.object({
   id: z.string().optional(),
   fullName: z.string().min(3, 'نام و نام خانوادگی باید حداقل ۳ کاراکتر باشد'),
-  phone: z.string().regex(/^09[0-9]{9}$/, 'شماره موبایل معتبر نیست'),
+  mobile: z.string().regex(/^09[0-9]{9}$/, 'شماره موبایل معتبر نیست'),
   province: z.string().min(2, 'استان را وارد کنید'),
   city: z.string().min(2, 'شهر را وارد کنید'),
   address: z.string().min(10, 'آدرس باید حداقل ۱۰ کاراکتر باشد').max(300, 'آدرس حداکثر ۳۰۰ کاراکتر مجاز است'),
@@ -88,7 +88,7 @@ export default function CustomerProfile() {
     resolver: zodResolver(addressSchema),
     defaultValues: {
       fullName: '',
-      phone: '',
+      mobile: '',
       province: '',
       city: '',
       address: '',
@@ -121,8 +121,6 @@ export default function CustomerProfile() {
       localStorage.removeItem('auth_token');
       localStorage.removeItem('user_info');
       
-      console.log('User not authenticated in profile page, will redirect to login');
-      
       // تاخیر کوتاه برای نمایش پیام به کاربر
       const redirectTimer = setTimeout(() => {
         router.push(`/auth/customer-login?redirectUrl=${encodeURIComponent('/customer/profile')}`);
@@ -143,7 +141,6 @@ export default function CustomerProfile() {
       const token = localStorage.getItem('auth_token');
       
       if (!token) {
-        console.log('No auth token found for fetching addresses');
         return;
       }
       
@@ -187,7 +184,6 @@ export default function CustomerProfile() {
       if (data && data.addresses) {
         setAddresses(data.addresses);
       } else {
-        console.log('No addresses found in response:', data);
         setAddresses([]);
       }
     } catch (error) {
@@ -213,10 +209,7 @@ export default function CustomerProfile() {
           // Check for token in localStorage as fallback
           const token = localStorage.getItem('auth_token');
           if (!token) {
-            console.log('No token available, user needs to log in');
             return;
-          } else {
-            console.log('Token available but no session, trying to fetch addresses with token');
           }
         }
 
@@ -224,14 +217,14 @@ export default function CustomerProfile() {
         const userData = session?.user || {
           name: '',
           email: '',
-          phone: '',
+          mobile: '',
         };
 
         // تنظیم مقادیر پیش‌فرض فرم
         reset({
           name: userData.name || '',
           email: userData.email || '',
-          mobile: userData.phone || '',
+          mobile: userData.mobile || '',
         });
 
         // دریافت آدرس‌های کاربر
@@ -445,7 +438,7 @@ export default function CustomerProfile() {
     setCurrentAddress(address);
     setAddressValue('id', address.id);
     setAddressValue('fullName', address.fullName);
-    setAddressValue('phone', address.phone);
+    setAddressValue('mobile', address.mobile);
     setAddressValue('province', address.province);
     setAddressValue('city', address.city);
     setAddressValue('address', address.address);
@@ -460,7 +453,7 @@ export default function CustomerProfile() {
     resetAddress({
       id: undefined,
       fullName: '',
-      phone: '',
+      mobile: '',
       province: '',
       city: '',
       address: '',
@@ -689,7 +682,7 @@ export default function CustomerProfile() {
                   <div className="flex justify-between items-start">
                     <div>
                       <h3 className="text-md font-medium">{address.fullName}</h3>
-                      <p className="text-sm text-gray-500 mt-1">{address.phone}</p>
+                      <p className="text-sm text-gray-500 mt-1">{address.mobile}</p>
                       <p className="text-sm mt-2">
                         {address.province}، {address.city}، {address.address}
                       </p>
@@ -759,18 +752,18 @@ export default function CustomerProfile() {
 
                   {/* شماره تماس گیرنده */}
                   <div>
-                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label htmlFor="mobile" className="block text-sm font-medium text-gray-700 mb-1">
                       شماره تماس گیرنده
                     </label>
                     <input
                       type="text"
-                      id="phone"
+                      id="mobile"
                       className={`block w-full px-4 py-2 border ${
-                        addressErrors.phone ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                        addressErrors.mobile ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
                       } rounded-md shadow-sm sm:text-sm`}
                       placeholder="شماره تماس گیرنده را وارد کنید"
                       dir="ltr"
-                      {...registerAddress('phone', {
+                      {...registerAddress('mobile', {
                         onChange: (e) => {
                           const englishValue = convertPersianToEnglish(e.target.value);
                           if (englishValue !== e.target.value) {
@@ -779,8 +772,8 @@ export default function CustomerProfile() {
                         }
                       })}
                     />
-                    {addressErrors.phone && (
-                      <p className="mt-1 text-sm text-red-600">{addressErrors.phone.message}</p>
+                    {addressErrors.mobile && (
+                      <p className="mt-1 text-sm text-red-600">{addressErrors.mobile.message}</p>
                     )}
                   </div>
 
