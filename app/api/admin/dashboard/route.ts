@@ -1,14 +1,28 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth/next';
+import { getServerSession } from 'next-auth';
 import authOptions from '@/lib/auth';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Get session to check authentication
+    // Try session-based auth first
     const session = await getServerSession(authOptions);
+    let isAdminAuthenticated = false;
     
-    if (!session || session.user.type !== 'admin') {
+    // Check if user is authenticated and is an admin via session
+    if (session?.user?.id && session.user.type === 'admin') {
+      isAdminAuthenticated = true;
+    } 
+    // Fall back to token-based auth
+    else {
+      const user = await getAuthenticatedUser(request);
+      if (user && user.type === 'admin') {
+        isAdminAuthenticated = true;
+      }
+    }
+
+    if (!isAdminAuthenticated) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

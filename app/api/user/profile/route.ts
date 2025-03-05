@@ -2,46 +2,91 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import authOptions from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getAuthenticatedUserId } from "@/lib/auth-helpers";
+import { getAuthenticatedUser, getAuthenticatedUserId } from "@/lib/auth-helpers";
 
 // GET: Fetch user profile
 export async function GET(req: NextRequest) {
   try {
     // Try session-based auth first (NextAuth)
     const session = await getServerSession(authOptions);
-    let userIdentifier: string | null = null;
+    // Track authentication method and user info
+    let authMethod = 'none';
+    let userType: 'admin' | 'seller' | 'customer' | null = null;
+    let userId: string | null = null;
     
-    if (session?.user?.email) {
-      userIdentifier = session.user.email;
-    } else {
-      // Fall back to JWT token authentication
-      const userId = await getAuthenticatedUserId(req);
-      if (userId) {
-        userIdentifier = userId;
+    // If we have a session, extract user info
+    if (session?.user?.id) {
+      userId = session.user.id;
+      userType = session.user.type;
+      authMethod = 'session';
+    } 
+    // Fall back to JWT token authentication
+    else {
+      const user = await getAuthenticatedUser(req);
+      if (user?.userId) {
+        userId = user.userId;
+        userType = user.type;
+        authMethod = 'token';
       } else {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
     }
+    
+    // If we got here, we have authenticated user info
+    if (!userId || !userType) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    
+    // Fetch the user profile based on the user type
+    let profile = null;
+    
+    if (userType === 'admin') {
+      profile = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+        },
+      });
+    } 
+    else if (userType === 'seller') {
+      profile = await prisma.seller.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          shopName: true,
+          bio: true,
+          profileImage: true,
+          isActive: true,
+        },
+      });
+    }
+    else if (userType === 'customer') {
+      profile = await prisma.customer.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          mobile: true,
+        },
+      });
+    }
 
-    // Find user by email (session) or by ID (JWT)
-    const user = await prisma.user.findFirst({
-      where: session?.user?.email 
-        ? { email: session.user.email }
-        : { id: userIdentifier },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        role: true,
-      },
-    });
-
-    if (!user) {
+    if (!profile) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ user });
+    return NextResponse.json({ 
+      profile,
+      userType,
+      authMethod
+    });
   } catch (error) {
     console.error("Error fetching user profile:", error);
     return NextResponse.json(

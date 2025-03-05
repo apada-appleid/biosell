@@ -4,152 +4,69 @@ import authOptions from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { verifyAuthToken } from '@/lib/jwt';
 import jwt from 'jsonwebtoken';
+import { getAuthenticatedUser, isCustomer } from '@/lib/auth-helpers';
 
 // GET: Fetch customer addresses from CustomerAddress model
 export async function GET(req: NextRequest) {
   try {
-    // Try to get session from NextAuth
+    // Try to get session from NextAuth first
     const session = await getServerSession(authOptions);
     let customerId = null;
     
-    console.log('session', session);
-    
-    // Check if we have a valid session with user email
-    if (session?.user?.email) {
-      // Try to find customer with matching email
-      const customer = await prisma.customer.findUnique({
-        where: { email: session.user.email }
-      });
-      
-      if (customer) {
-        customerId = customer.id;
-      }
+    // Check if we have a valid session with customer type
+    if (session?.user?.id && session.user.type === 'customer') {
+      customerId = session.user.id;
     } 
-    
-    // If no session or no customer found from session, try token from Authorization header
-    if (!customerId) {
-      // Get authorization header
-      const authHeader = req.headers.get('authorization');
-      if (authHeader && authHeader.startsWith('Bearer ')) {
-        // Extract the token
-        const token = authHeader.substring(7);
-        console.log('Received auth token in header:', token ? 'Token exists' : 'No token');
-        
-        try {
-          // Direct validation of token payload
-          const secret = process.env.SECRET_KEY || "default-secret-key";
-          
-          try {
-            // Try standard JWT validation
-            const decoded = jwt.verify(token, secret) as any;
-            console.log('Decoded token using JWT verification:', decoded);
-            
-            if (decoded && (decoded.userId || decoded.id)) {
-              // Set customerId from token
-              customerId = decoded.userId || decoded.id;
-              console.log('Found customerId in token:', customerId);
-            }
-          } catch (jwtError) {
-            console.error('JWT verification failed:', jwtError);
-            
-            // Try to parse as JSON if JWT validation fails
-            try {
-              // Some clients might store tokens with extra quotes or as JSON objects
-              // Try to clean and parse
-              const cleanToken = token.replace(/^["'](.*)["']$/, '$1');
-              
-              if (cleanToken !== token) {
-                // If we cleaned something, try again with the cleaned token
-                try {
-                  const decodedClean = jwt.verify(cleanToken, secret) as any;
-                  console.log('Decoded cleaned token:', decodedClean);
-                  
-                  if (decodedClean && (decodedClean.userId || decodedClean.id)) {
-                    // Set customerId from token
-                    customerId = decodedClean.userId || decodedClean.id;
-                    console.log('Found customerId in cleaned token:', customerId);
-                  }
-                } catch (cleanTokenError) {
-                  console.error('Clean token verification failed:', cleanTokenError);
-                }
-              }
-              
-              // Last resort: try to simply JSON parse the token
-              // (in case it's a stored JSON object rather than a JWT)
-              if (!customerId) {
-                try {
-                  const parsedToken = JSON.parse(token);
-                  console.log('Parsed token as JSON:', parsedToken);
-                  
-                  if (parsedToken && (parsedToken.userId || parsedToken.id)) {
-                    customerId = parsedToken.userId || parsedToken.id;
-                    console.log('Found customerId in parsed JSON token:', customerId);
-                  }
-                } catch (parseError) {
-                  console.error('JSON parse failed:', parseError);
-                }
-              }
-            } catch (alternateError) {
-              console.error('All alternate token parsing methods failed:', alternateError);
-            }
-          }
-        } catch (tokenError) {
-          console.error('Token verification completely failed:', tokenError);
-        }
-      } else {
-        console.log('No auth header found or header not in Bearer format');
+    // For sessions with non-customer type, block access
+    else if (session?.user?.type && session.user.type !== 'customer') {
+      return NextResponse.json(
+        { error: 'Access denied: Only customers can access addresses' },
+        { status: 403 }
+      );
+    }
+    // If no valid session found, try token authentication
+    else {
+      const user = await getAuthenticatedUser(req);
+      
+      // Block non-customer users
+      if (user && user.type !== 'customer') {
+        return NextResponse.json(
+          { error: 'Access denied: Only customers can access addresses' },
+          { status: 403 }
+        );
+      }
+      
+      // Set customerId if we have a valid customer
+      if (user && user.type === 'customer') {
+        customerId = user.userId;
       }
     }
-
-    console.log('customerId', customerId);
     
-    // If no valid authentication found
+    // If we still don't have a customer ID, return unauthorized
     if (!customerId) {
-      console.log('No valid customer authentication found');
-      return NextResponse.json({ 
-        error: 'Unauthorized - Customer not found',
-        details: 'Please log in with a valid customer account' 
-      }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Unauthorized: Valid customer authentication required' },
+        { status: 401 }
+      );
     }
     
-    // Fetch customer with addresses
-    const customer = await prisma.customer.findUnique({
-      where: { id: customerId },
-      include: { addresses: true }
+    // Now fetch addresses for the authenticated customer
+    const addresses = await prisma.customerAddress.findMany({
+      where: {
+        customerId: customerId,
+      },
+      orderBy: {
+        isDefault: 'desc',
+      },
     });
     
-    if (!customer) {
-      return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
-    }
-    
-    // Handle migration case - if we have address in Customer model but no addresses in CustomerAddress yet
-    if (customer.addresses.length === 0 && customer.address) {
-      // Create a temporary address object from the old fields
-      const legacyAddress = {
-        id: 'legacy', // This will be replaced by a real ID if actually saved
-        customerId: customer.id,
-        fullName: customer.fullName || '',
-        phone: customer.mobile || '', // Use mobile as phone
-        address: customer.address || '',
-        city: customer.city || '',
-        province: '', // No province in old model
-        postalCode: customer.postalCode || '',
-        isDefault: true // Only one address, so it's the default
-      };
-      
-      return NextResponse.json({ 
-        addresses: [legacyAddress],
-        _legacyMode: true // Flag to indicate this is from legacy data
-      });
-    }
-    
-    // Return the addresses
-    return NextResponse.json({ 
-      addresses: customer.addresses 
-    });
+    return NextResponse.json({ addresses });
   } catch (error) {
     console.error('Error fetching customer addresses:', error);
-    return NextResponse.json({ error: 'Failed to fetch addresses' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to fetch addresses' },
+      { status: 500 }
+    );
   }
 }
 

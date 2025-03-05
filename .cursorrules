@@ -37,6 +37,26 @@ The project is a Next.js e-commerce application called "Biosell" (previously "Sh
 - Routes follow RESTful patterns (GET, POST, PUT, DELETE)
 - Error handling with appropriate status codes
 - API endpoints organized by domain (admin/, seller/, shop/, etc.)
+- IMPORTANT: For API routes with dynamic parameters, use the Promise type for params:
+  ```typescript
+  // CORRECT ✅
+  export async function GET(
+    request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+  ) {
+    const orderId = (await params).id;
+    // ...
+  }
+  
+  // INCORRECT ❌
+  export async function GET(
+    request: NextRequest,
+    { params }: { params: { id: string } }
+  ) {
+    const orderId = params.id;
+    // ...
+  }
+  ```
 
 ## State Management
 - Uses NextAuth session for auth state

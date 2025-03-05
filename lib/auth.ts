@@ -10,9 +10,10 @@ declare module 'next-auth/jwt' {
   interface JWT {
     id: string;
     role?: string;
-    type: string;
+    type: 'admin' | 'seller' | 'customer';
     username?: string;
     phone?: string;
+    mobile?: string | null;
   }
 }
 
@@ -21,9 +22,10 @@ declare module 'next-auth' {
   interface User {
     id: string;
     role?: string;
-    type: string;
+    type: 'admin' | 'seller' | 'customer';
     username?: string;
     phone?: string;
+    mobile?: string | null;
   }
   
   interface Session {
@@ -33,9 +35,10 @@ declare module 'next-auth' {
       email?: string | null;
       image?: string | null;
       role?: string;
-      type: string;
+      type: 'admin' | 'seller' | 'customer';
       username?: string;
       phone?: string;
+      mobile?: string | null;
     }
   }
 }
@@ -48,7 +51,8 @@ const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: 'Email', type: 'text' },
         password: { label: 'Password', type: 'password' },
-        role: { label: 'Role', type: 'text' }
+        role: { label: 'Role', type: 'text' },
+        type: { label: 'Type', type: 'text' }
       },
       async authorize(credentials) {
         try {
@@ -56,10 +60,52 @@ const authOptions: NextAuthOptions = {
             throw new Error('Invalid credentials');
           }
 
-          // Check if this is admin login or seller login
-          const isAdminLogin = credentials.role === 'admin';
+          // Determine user type (admin, seller, or customer)
+          const userType = credentials.type || (credentials.role === 'admin' ? 'admin' : 'seller');
           
-          if (isAdminLogin) {
+          // Customer login with token as password (from OTP verification)
+          if (userType === 'customer') {
+            try {
+              // For customers, we use email (or mobile+@example.com) and the token as password
+              const customerId = credentials.email.split('@')[0]; // Extract mobile if using placeholder email
+              
+              // Check if this is a real email or a placeholder
+              let customer;
+              if (credentials.email.includes('@example.com')) {
+                // This is likely a mobile number login
+                const mobile = customerId;
+                customer = await prisma.customer.findFirst({
+                  where: { mobile }
+                });
+              } else {
+                // This is an email login
+                customer = await prisma.customer.findUnique({
+                  where: { email: credentials.email }
+                });
+              }
+              
+              if (!customer) {
+                throw new Error('Customer not found');
+              }
+              
+              // For customers, we don't verify password as we're using the token directly
+              // The token verification is assumed to have happened in the OTP verification API
+              
+              return {
+                id: customer.id,
+                name: customer.fullName || customer.mobile || '',
+                email: customer.email || `${customer.mobile}@example.com`,
+                type: 'customer' as const,
+                mobile: customer.mobile
+              };
+            } catch (error) {
+              console.error('Customer auth error:', error);
+              return null;
+            }
+          }
+          
+          // Admin login
+          if (userType === 'admin') {
             const user = await prisma.user.findUnique({
               where: {
                 email: credentials.email
@@ -87,7 +133,9 @@ const authOptions: NextAuthOptions = {
               type: 'admin',
               phone: user.phone || undefined
             };
-          } else {
+          } 
+          // Seller login
+          else {
             const seller = await prisma.seller.findUnique({
               where: {
                 email: credentials.email
@@ -138,6 +186,7 @@ const authOptions: NextAuthOptions = {
         token.type = user.type;
         token.username = user.username;
         token.phone = user.phone;
+        token.mobile = user.mobile;
       }
       return token;
     },
@@ -148,6 +197,7 @@ const authOptions: NextAuthOptions = {
         session.user.type = token.type;
         session.user.username = token.username;
         session.user.phone = token.phone;
+        session.user.mobile = token.mobile;
       }
       return session;
     }

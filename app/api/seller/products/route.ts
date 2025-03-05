@@ -1,19 +1,33 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
 import authOptions from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 
 // GET - Fetch all products for the authenticated seller
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Try session-based auth first
     const session = await getServerSession(authOptions);
+    let sellerId: string | null = null;
     
-    // Check if user is authenticated and is a seller
-    if (!session || session.user.type !== 'seller') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Check if user is authenticated and is a seller via session
+    if (session?.user?.id && session.user.type === 'seller') {
+      sellerId = session.user.id;
+    } 
+    // Fall back to token-based auth
+    else {
+      const user = await getAuthenticatedUser(request);
+      if (user && user.type === 'seller') {
+        sellerId = user.userId;
+      } else {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
     }
 
-    const sellerId = session.user.id;
+    if (!sellerId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     // Fetch all products belonging to this seller
     const products = await prisma.product.findMany({
@@ -48,16 +62,29 @@ export async function GET() {
 }
 
 // POST - Create a new product for the authenticated seller
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // Try session-based auth first
     const session = await getServerSession(authOptions);
+    let sellerId: string | null = null;
     
-    // Check if user is authenticated and is a seller
-    if (!session || session.user.type !== 'seller') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Check if user is authenticated and is a seller via session
+    if (session?.user?.id && session.user.type === 'seller') {
+      sellerId = session.user.id;
+    } 
+    // Fall back to token-based auth
+    else {
+      const user = await getAuthenticatedUser(request);
+      if (user && user.type === 'seller') {
+        sellerId = user.userId;
+      } else {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
     }
 
-    const sellerId = session.user.id;
+    if (!sellerId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     
     // Get subscription to check product limits
     const subscription = await prisma.subscription.findFirst({

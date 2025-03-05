@@ -53,11 +53,19 @@ export async function verifyJwtToken(token: string) {
 }
 
 /**
- * Gets the authenticated user ID from a request if available
+ * Gets the authenticated user information from a request if available
  * @param request The incoming request
- * @returns The user ID or null if not authenticated
+ * @returns User information including ID and type, or null if not authenticated
  */
-export async function getAuthenticatedUserId(request: Request): Promise<string | null> {
+export async function getAuthenticatedUser(request: Request): Promise<{
+  userId: string;
+  type: "admin" | "seller" | "customer";
+  role?: string;
+  email?: string;
+  mobile?: string;
+  username?: string;
+  phone?: string;
+} | null> {
   const token = getJwtTokenFromRequest(request);
   
   if (!token) {
@@ -65,5 +73,65 @@ export async function getAuthenticatedUserId(request: Request): Promise<string |
   }
   
   const tokenData = await verifyJwtToken(token);
-  return tokenData?.userId || null;
+  if (!tokenData?.userId) {
+    return null;
+  }
+  
+  return {
+    userId: tokenData.userId,
+    type: tokenData.type || "customer", // Default to customer if not specified
+    role: tokenData.role,
+    email: tokenData.email,
+    mobile: tokenData.mobile,
+    username: tokenData.username,
+    phone: tokenData.phone
+  };
+}
+
+/**
+ * Gets the authenticated user ID from a request if available
+ * @param request The incoming request
+ * @returns The user ID or null if not authenticated
+ */
+export async function getAuthenticatedUserId(request: Request): Promise<string | null> {
+  const user = await getAuthenticatedUser(request);
+  return user?.userId || null;
+}
+
+/**
+ * Checks if the authenticated user has a specific type
+ * @param request The incoming request
+ * @param type The user type to check for
+ * @returns True if the user is authenticated and has the specified type
+ */
+export async function isUserType(request: Request, type: "admin" | "seller" | "customer"): Promise<boolean> {
+  const user = await getAuthenticatedUser(request);
+  return user?.type === type;
+}
+
+/**
+ * Checks if the authenticated user has admin role
+ * @param request The incoming request
+ * @returns True if the user is authenticated and is an admin
+ */
+export async function isAdmin(request: Request): Promise<boolean> {
+  return await isUserType(request, "admin");
+}
+
+/**
+ * Checks if the authenticated user is a seller
+ * @param request The incoming request
+ * @returns True if the user is authenticated and is a seller
+ */
+export async function isSeller(request: Request): Promise<boolean> {
+  return await isUserType(request, "seller");
+}
+
+/**
+ * Checks if the authenticated user is a customer
+ * @param request The incoming request
+ * @returns True if the user is authenticated and is a customer
+ */
+export async function isCustomer(request: Request): Promise<boolean> {
+  return await isUserType(request, "customer");
 } 

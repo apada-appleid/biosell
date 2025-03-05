@@ -50,11 +50,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Generate JWT token
+    // Generate JWT token with consistent structure including type
     const token = signJwtAccessToken({
       id: customer.id,
       mobile: customer.mobile || '',
-      type: 'customer'
+      type: 'customer' as const,
+      // Include any other fields needed for both systems
     });
 
     return NextResponse.json(
@@ -65,6 +66,7 @@ export async function POST(request: Request) {
           id: customer.id,
           name: customer.fullName,
           mobile: customer.mobile,
+          email: customer.email || `${customer.mobile}@example.com`,
           type: 'customer'
         }
       },

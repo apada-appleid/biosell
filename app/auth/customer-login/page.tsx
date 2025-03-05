@@ -339,12 +339,20 @@ export default function CustomerLoginPage() {
             })
           );
 
-          // تلاش برای احراز هویت با NextAuth، اما منتظر نتیجه نمانید
+          // تلاش برای احراز هویت با NextAuth
           try {
             signIn("credentials", {
               redirect: false,
               email: result.user.email || userMobile + "@example.com",
               password: result.token,
+              type: "customer", // Explicitly set the user type for NextAuth
+            }).then((signInResult) => {
+              if (signInResult?.error) {
+                console.warn("NextAuth signin returned an error:", signInResult.error);
+                // Still continue with token-based auth as fallback
+              } else {
+                console.log("NextAuth signin successful");
+              }
             }).catch((err) => {
               console.error("NextAuth signin failed but we continue:", err);
               // ادامه می‌دهیم حتی اگر خطا رخ دهد

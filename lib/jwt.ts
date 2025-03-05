@@ -5,12 +5,19 @@ interface TokenPayload {
   mobile?: string;
   email?: string;
   type: "admin" | "seller" | "customer";
+  role?: string;
+  username?: string;
+  phone?: string;
 }
 
 interface AuthTokenPayload {
   userId: string;
   email?: string;
   mobile?: string;
+  type?: "admin" | "seller" | "customer";
+  role?: string;
+  username?: string;
+  phone?: string;
   iat?: number;
   exp?: number;
 }
@@ -52,6 +59,10 @@ export async function verifyAuthToken(token: string): Promise<AuthTokenPayload |
       userId: decoded.userId || decoded.id,
       email: decoded.email,
       mobile: decoded.mobile,
+      type: decoded.type,
+      role: decoded.role,
+      username: decoded.username,
+      phone: decoded.phone,
       iat: decoded.iat,
       exp: decoded.exp
     };

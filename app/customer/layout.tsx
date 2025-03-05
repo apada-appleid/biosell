@@ -8,7 +8,7 @@ import {
   TbTicket, TbLogout, TbMenu2, TbX, 
   TbHome, TbChevronDown, TbChevronUp
 } from 'react-icons/tb';
-import { useSession, signOut } from 'next-auth/react';
+import { useSession, signOut, signIn } from 'next-auth/react';
 
 interface MenuItem {
   name: string;
@@ -38,8 +38,10 @@ export default function CustomerLayout({
     // بررسی وضعیت احراز هویت از طریق next-auth و وجود توکن محلی
     if (status === 'unauthenticated' && pathname.startsWith('/customer')) {
       // بررسی توکن محلی
-      const token = localStorage.getItem('auth_token');
-      
+      const token = localStorage.getItem("auth_token");
+
+      console.log("token", token);
+
       // فقط اگر توکن محلی نبود ریدایرکت کنیم
       if (!token) {
         console.log('User not authenticated and no token found, redirecting to login page');
@@ -47,10 +49,45 @@ export default function CustomerLayout({
         // لاگین نشده است، ریدایرکت به صفحه لاگین
         router.push(`/auth/customer-login?redirectUrl=${encodeURIComponent(pathname)}`);
       } else {
-        console.log('Token found in localStorage, allowing access despite unauthenticated session');
+        console.log('Token found in localStorage, attempting to establish NextAuth session');
+        
+        // اگر توکن داریم ولی سشن نداریم، تلاش کنیم سشن ایجاد کنیم
+        // این برای حالتی است که کاربر با OTP وارد شده اما هنوز سشن ندارد
+        if (localStorage.getItem("user_info")) {
+          try {
+            const userInfo = JSON.parse(localStorage.getItem("user_info") || "{}");
+            const mobile = userInfo.mobile;
+            
+            if (mobile) {
+              // Attempt to create a session using the token
+              signIn("credentials", {
+                redirect: false,
+                email: `${mobile}@example.com`,
+                password: token,
+                type: "customer"
+              }).then(result => {
+                console.log("Auto-login result:", result);
+              }).catch(err => {
+                console.error("Auto-login failed:", err);
+              });
+            }
+          } catch (error) {
+            console.error("Error parsing user info:", error);
+          }
+        }
+      }
+    } else if (status === 'authenticated' && session?.user) {
+      // Make sure we have the right user type
+      if (session.user.type !== 'customer' && pathname.startsWith('/customer')) {
+        console.log('User is not a customer, redirecting to appropriate dashboard');
+        if (session.user.type === 'admin') {
+          router.push('/admin/dashboard');
+        } else if (session.user.type === 'seller') {
+          router.push('/seller/dashboard');
+        }
       }
     }
-  }, [status, pathname, router]);
+  }, [status, pathname, router, session]);
 
   // بستن منوی کناری در موبایل هنگام تغییر مسیر
   useEffect(() => {

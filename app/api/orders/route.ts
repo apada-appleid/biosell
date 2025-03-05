@@ -1,6 +1,8 @@
-import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
-import { getAuthenticatedUserId } from "@/lib/auth-helpers";
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getAuthenticatedUser } from "@/lib/auth-helpers";
+import { getServerSession } from "next-auth";
+import authOptions from "@/lib/auth";
 
 // Helper to generate a unique order number
 function generateOrderNumber() {
@@ -14,7 +16,7 @@ function generateOrderNumber() {
   return `${timestamp.slice(-6)}${random}`;
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   // Store the request body outside the try block so it's available in catch
   let requestBody;
   
@@ -42,11 +44,24 @@ export async function POST(request: Request) {
       }
     }
 
-    // Get authenticated user ID from the request token
-    const authenticatedUserId = await getAuthenticatedUserId(request);
+    // Try to get authenticated user
+    let authenticatedUser = null;
     
-    if (authenticatedUserId) {
-      console.log("Order being placed by authenticated user:", authenticatedUserId);
+    // Try session-based auth first
+    const session = await getServerSession(authOptions);
+    if (session?.user?.id) {
+      authenticatedUser = {
+        userId: session.user.id,
+        type: session.user.type
+      };
+    } 
+    // Fall back to token-based auth
+    else {
+      authenticatedUser = await getAuthenticatedUser(request);
+    }
+
+    if (authenticatedUser?.userId) {
+      console.log("Order being placed by authenticated user:", authenticatedUser.userId, "type:", authenticatedUser.type);
     } else {
       console.log("Order being placed by guest user (no valid auth token)");
       // Note: We allow unauthenticated users to place orders, but they need to provide full customer details
@@ -61,8 +76,8 @@ export async function POST(request: Request) {
     // Create or update customer record using upsert
     let customerId;
     
-    if (authenticatedUserId) {
-      // For authenticated users, find by phone or email
+    if (authenticatedUser?.userId && authenticatedUser.type === 'customer') {
+      // For authenticated customers, find by phone or email
       const existingCustomer = await prisma.customer.findFirst({
         where: {
           OR: [
@@ -212,48 +227,105 @@ export async function POST(request: Request) {
   }
 }
 
-// GET endpoint to fetch orders for a seller
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const sellerId = searchParams.get("sellerId");
+    // Try to get authenticated user
+    let authenticatedUser = null;
     
-    if (!sellerId) {
-      return NextResponse.json(
-        { error: "Seller ID is required" },
-        { status: 400 }
-      );
+    // Try session-based auth first
+    const session = await getServerSession(authOptions);
+    if (session?.user?.id) {
+      authenticatedUser = {
+        userId: session.user.id,
+        type: session.user.type
+      };
+    } 
+    // Fall back to token-based auth
+    else {
+      authenticatedUser = await getAuthenticatedUser(request);
     }
+
+    if (!authenticatedUser?.userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Define a type for the orders
+    type OrderWithRelations = any; // We'll use 'any' as a simplification, ideally this would be fully typed
+
+    // Filter orders based on user type
+    let orders: OrderWithRelations[] = [];
     
-    const orders = await prisma.order.findMany({
-      where: {
-        sellerId,
-      },
-      include: {
-        customer: true,
-        items: true,
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-    
-    return NextResponse.json({ orders });
+    if (authenticatedUser.type === 'admin') {
+      // Admins can see all orders
+      orders = await prisma.order.findMany({
+        include: {
+          items: {
+            include: {
+              product: true
+            }
+          },
+          customer: true
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+    } 
+    else if (authenticatedUser.type === 'seller') {
+      // Sellers can only see orders for their products
+      orders = await prisma.order.findMany({
+        where: {
+          sellerId: authenticatedUser.userId
+        },
+        include: {
+          items: {
+            include: {
+              product: true
+            }
+          },
+          customer: true
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+    }
+    else if (authenticatedUser.type === 'customer') {
+      // Customers can only see their own orders
+      // First find the customer record that matches the authenticated user
+      const customer = await prisma.customer.findFirst({
+        where: {
+          id: authenticatedUser.userId
+        }
+      });
+      
+      if (!customer) {
+        return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+      }
+      
+      orders = await prisma.order.findMany({
+        where: {
+          customerId: customer.id
+        },
+        include: {
+          items: {
+            include: {
+              product: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc'
+        }
+      });
+    }
+
+    return NextResponse.json(orders);
   } catch (error) {
     console.error("Error fetching orders:", error);
-    
-    // Provide more specific error messages based on error type
-    let errorMessage = "Failed to fetch orders";
-    let statusCode = 500;
-    
-    if (error instanceof Error) {
-      // Include the actual error message for debugging
-      errorMessage = `Failed to fetch orders: ${error.message}`;
-    }
-    
     return NextResponse.json(
-      { error: errorMessage },
-      { status: statusCode }
+      { error: "Failed to fetch orders" },
+      { status: 500 }
     );
   }
 } 
