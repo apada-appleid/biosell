@@ -31,6 +31,11 @@ The project is a Next.js e-commerce application called "Biosell" (previously "Sh
 - Extended session and JWT types to include user role and type information
 - Protected routes via middleware (app/middleware.ts)
 - Authentication configs in lib/auth.ts
+- OTP verification system for customer authentication:
+  - Mobile number input followed by OTP verification flow
+  - API routes for sending and verifying OTPs (/api/auth/send-otp and /api/auth/verify-otp)
+  - OTP codes are displayed on-screen during testing and will be replaced with SMS service in production
+  - Customer accounts created with <mobile>@example.com email format to ensure uniqueness
 
 ## API Structure
 - API routes use Next.js App Router pattern with route.ts files
@@ -111,4 +116,4 @@ Follow these rules when you write code:
 - Use descriptive variable and function/const names. Also, event functions should be named with a "handle" prefix, like "handleClick" for onClick and "handleKeyDown" for onKeyDown.
 - Implement accessibility features on elements. For example, a tag should have a tabindex="0", aria-label, on:click, and on:keydown, and similar attributes.
 - Use consts instead of functions, for example, "const toggle = () =>". Also, define a type if possible.
-- When accessing user information, always use the session object from NextAuth.
+- When accessing user information, always use the session object from NextAuth. 
