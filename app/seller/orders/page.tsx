@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { FiArrowLeft, FiPackage, FiClock, FiCheck, FiX } from 'react-icons/fi';
 
@@ -32,6 +33,7 @@ interface Order {
 }
 
 export default function SellerOrdersPage() {
+  const { data: session, status } = useSession();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,12 +41,13 @@ export default function SellerOrdersPage() {
   // Fetch seller orders
   useEffect(() => {
     const fetchOrders = async () => {
+      if (status === 'loading') return;
+      
       try {
         setIsLoading(true);
-        // In a real app, you would get the seller ID from authentication
-        const sellerId = '8ccc27c2-7ea3-4bfa-8ae5-a5734342bb53'; // Demo seller ID
-        
-        const response = await fetch(`/api/orders?sellerId=${sellerId}`);
+        // Use the API without explicitly passing sellerId
+        // The backend will extract the seller ID from the session
+        const response = await fetch('/api/orders');
         
         if (!response.ok) {
           throw new Error('Failed to fetch orders');
@@ -61,7 +64,7 @@ export default function SellerOrdersPage() {
     };
     
     fetchOrders();
-  }, []);
+  }, [status]);
   
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('fa-IR', {
