@@ -3,7 +3,6 @@ import Image from 'next/image';
 import { FiMinus, FiPlus, FiTrash2 } from 'react-icons/fi';
 import { CartItem as CartItemType } from '@/app/types';
 import { useCartStore } from '@/app/store/cart';
-import Link from 'next/link';
 import { FiShoppingBag } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 

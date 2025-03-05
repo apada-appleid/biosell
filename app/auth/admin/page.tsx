@@ -1,17 +1,17 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import Link from 'next/link';
-import { TbLock, TbMail, TbShield } from 'react-icons/tb';
+import { useState } from "react";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
+import { TbLock, TbMail, TbShield } from "react-icons/tb";
 
 const loginSchema = z.object({
-  email: z.string().email('ایمیل معتبر وارد کنید'),
-  password: z.string().min(6, 'رمز عبور باید حداقل 6 کاراکتر باشد'),
+  email: z.string().email("ایمیل معتبر وارد کنید"),
+  password: z.string().min(6, "رمز عبور باید حداقل 6 کاراکتر باشد"),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -28,8 +28,8 @@ export default function AdminLoginPage() {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: '',
-      password: '',
+      email: "",
+      password: "",
     },
   });
 
@@ -38,23 +38,23 @@ export default function AdminLoginPage() {
     setError(null);
 
     try {
-      const result = await signIn('credentials', {
+      const result = await signIn("credentials", {
         redirect: false,
         email: data.email,
         password: data.password,
-        role: 'admin', // فقط برای مدیران
+        role: "admin", // فقط برای مدیران
       });
 
       if (result?.error) {
-        setError('ایمیل یا رمز عبور اشتباه است');
+        setError("ایمیل یا رمز عبور اشتباه است");
         setIsLoading(false);
         return;
       }
 
-      router.push('/admin/dashboard');
+      router.push("/admin/dashboard");
       router.refresh();
     } catch (err) {
-      setError('خطا در ورود به سیستم');
+      setError("خطا در ورود به سیستم");
       console.error(err);
       setIsLoading(false);
     }
@@ -83,7 +83,10 @@ export default function AdminLoginPage() {
         <div className="bg-white p-8 shadow-md rounded-lg w-full">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 ایمیل
               </label>
               <div className="relative">
@@ -95,19 +98,22 @@ export default function AdminLoginPage() {
                   type="email"
                   className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                   placeholder="example@biosell.me"
-                  {...register('email', { required: true })}
+                  {...register("email", { required: true })}
                   dir="ltr"
                 />
               </div>
               {errors.email && (
                 <p className="mt-1 text-sm text-red-600">
-                  {errors.email.message || 'ایمیل الزامی است'}
+                  {errors.email.message || "ایمیل الزامی است"}
                 </p>
               )}
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
                 رمز عبور
               </label>
               <div className="relative">
@@ -119,13 +125,13 @@ export default function AdminLoginPage() {
                   type="password"
                   className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
                   placeholder="********"
-                  {...register('password', { required: true })}
+                  {...register("password", { required: true })}
                   dir="ltr"
                 />
               </div>
               {errors.password && (
                 <p className="mt-1 text-sm text-red-600">
-                  {errors.password.message || 'رمز عبور الزامی است'}
+                  {errors.password.message || "رمز عبور الزامی است"}
                 </p>
               )}
             </div>
@@ -138,12 +144,18 @@ export default function AdminLoginPage() {
                   type="checkbox"
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
-                <label htmlFor="remember-me" className="mr-2 block text-sm text-gray-700">
+                <label
+                  htmlFor="remember-me"
+                  className="mr-2 block text-sm text-gray-700"
+                >
                   مرا به خاطر بسپار
                 </label>
               </div>
               <div className="text-sm">
-                <Link href="/auth/reset-password" className="font-medium text-blue-600 hover:text-blue-500">
+                <Link
+                  href="/auth/reset-password"
+                  className="font-medium text-blue-600 hover:text-blue-500"
+                >
                   فراموشی رمز عبور
                 </Link>
               </div>
@@ -164,14 +176,30 @@ export default function AdminLoginPage() {
               >
                 {isLoading ? (
                   <span className="flex items-center">
-                    <svg className="animate-spin -mr-1 ml-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    <svg
+                      className="animate-spin -mr-1 ml-3 h-5 w-5 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
                     </svg>
                     در حال ورود...
                   </span>
                 ) : (
-                  'ورود به پنل مدیریت'
+                  "ورود به پنل مدیریت"
                 )}
               </button>
             </div>
@@ -179,22 +207,26 @@ export default function AdminLoginPage() {
 
           <div className="mt-6 text-center">
             <div className="space-y-2">
-              <Link href="/auth/login" className="block text-sm text-gray-600 hover:text-blue-500">
+              <Link
+                href="/auth/login"
+                className="block text-sm text-gray-600 hover:text-blue-500"
+              >
                 ورود فروشندگان
               </Link>
-              <Link href="/auth/customer-login" className="block text-sm text-gray-600 hover:text-blue-500">
+              <Link
+                href="/auth/customer-login"
+                className="block text-sm text-gray-600 hover:text-blue-500"
+              >
                 ورود مشتریان
               </Link>
             </div>
           </div>
         </div>
-        
+
         <div className="mt-6 text-center text-sm text-gray-500">
-          <p>
-            این بخش فقط برای مدیران سیستم قابل دسترس است.
-          </p>
+          <p>این بخش فقط برای مدیران سیستم قابل دسترس است.</p>
         </div>
       </div>
     </div>
   );
-} 
+}
