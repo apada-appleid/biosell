@@ -141,7 +141,7 @@ export default function CustomerLayout({
             </div>
             <div className="flex items-center">
               <Link href="/" className="text-xl font-bold text-blue-600">
-                شاپگرام
+                بایوسل
               </Link>
             </div>
             <div className="flex items-center">

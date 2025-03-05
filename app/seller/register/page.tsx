@@ -108,7 +108,7 @@ export default function SellerRegisterPage() {
       <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-lg">
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">ثبت‌نام فروشنده</h1>
-          <p className="text-sm text-gray-600">به جمع فروشندگان شاپگرام بپیوندید و کسب‌وکار خود را آنلاین کنید</p>
+          <p className="text-sm text-gray-600">به جمع فروشندگان بایوسل بپیوندید و کسب‌وکار خود را آنلاین کنید</p>
         </div>
 
         {error && (
@@ -234,7 +234,7 @@ export default function SellerRegisterPage() {
       </div>
 
       <div className="mt-8 max-w-2xl text-center">
-        <h2 className="text-xl font-bold text-gray-800 mb-4">مزایای فروش در شاپگرام</h2>
+        <h2 className="text-xl font-bold text-gray-800 mb-4">مزایای فروش در بایوسل</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white p-5 rounded-lg shadow-md">
             <div className="text-indigo-600 text-3xl mb-3">⚡</div>

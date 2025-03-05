@@ -20,6 +20,6 @@ yarn start
 
 # Note: For production deployment, you should use a process manager like PM2
 # Example PM2 commands:
-# pm2 delete shopgram-front # Delete existing instance if any
-# pm2 start yarn --name "shopgram-front" -- start
+# pm2 delete biosell-front # Delete existing instance if any
+# pm2 start yarn --name "biosell-front" -- start
 # pm2 save 

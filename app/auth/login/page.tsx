@@ -64,7 +64,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="text-2xl font-bold text-blue-600">
-            شاپگرام
+            بایوسل
           </Link>
           <h2 className="text-center text-2xl font-bold text-gray-900 mt-4">
             ورود فروشندگان

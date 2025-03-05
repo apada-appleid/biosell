@@ -65,7 +65,7 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link href="/" className="text-2xl font-bold text-blue-600">
-            شاپگرام
+            بایوسل
           </Link>
           <div className="mt-6 flex justify-center">
             <div className="h-16 w-16 bg-blue-100 rounded-full flex items-center justify-center">
@@ -94,7 +94,7 @@ export default function AdminLoginPage() {
                   id="email"
                   type="email"
                   className="w-full pr-10 pl-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
-                  placeholder="example@shopgram.apadaa.ir"
+                  placeholder="example@biosell.me"
                   {...register('email', { required: true })}
                   dir="ltr"
                 />

@@ -57,7 +57,7 @@ export default withAuth(
         // Require token for other protected routes
         return !!token;
       },
-    },
+    }
   }
 );
 

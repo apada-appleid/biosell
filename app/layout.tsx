@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ShopGram - Instagram Shopping Experience",
+  title: "Biosell - Instagram Shopping Experience",
   description: "Shop directly from your favorite Instagram content",
 };
 

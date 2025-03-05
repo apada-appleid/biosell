@@ -20,7 +20,7 @@ export default function Home() {
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between max-w-6xl mx-auto">
-          <h1 className="text-xl font-semibold text-gray-900">شاپ‌گرام</h1>
+          <h1 className="text-xl font-semibold text-gray-900">بایوسل</h1>
           <div className="flex items-center space-x-4 rtl:space-x-reverse">
             <Link 
               href="/cart" 
@@ -36,7 +36,7 @@ export default function Home() {
               )}
             </Link>
             <Link 
-              href="/login" 
+              href="/auth/login" 
               className="text-gray-700 hover:text-gray-900"
               aria-label="User account"
               tabIndex={0}
@@ -54,7 +54,7 @@ export default function Home() {
             <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mb-4">
               <FiShoppingBag className="w-10 h-10 text-white" />
             </div>
-            <h3 className="text-xl font-bold text-blue-600">شاپ‌گرام</h3>
+            <h3 className="text-xl font-bold text-blue-600">بایوسل</h3>
             <p className="text-gray-600 mt-2">فروشگاه آنلاین اینستاگرام شما</p>
           </div>
           
@@ -64,7 +64,7 @@ export default function Home() {
                 فروشگاه آنلاین خودتان را در چند دقیقه بسازید
               </h2>
               <p className="text-lg text-gray-700 mb-6 text-force-dark text-center md:text-right">
-                با شاپ‌گرام به راحتی محصولات خود را به مشتریان‌تان در اینستاگرام بفروشید. 
+                با بایوسل به راحتی محصولات خود را به مشتریان‌تان در اینستاگرام بفروشید. 
                 بدون نیاز به دانش فنی، در چند دقیقه فروشگاه آنلاین خود را راه‌اندازی کنید.
               </p>
               <div className="flex justify-center md:justify-start">
@@ -86,7 +86,7 @@ export default function Home() {
       <div className="py-12 md:py-20">
         <div className="max-w-6xl mx-auto px-4">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8 text-center text-force-dark">
-            ویژگی‌های شاپ‌گرام
+            ویژگی‌های بایوسل
           </h2>
           <div className="grid md:grid-cols-3 gap-8">
             <div className="bg-white p-6 rounded-lg shadow-md text-center flex flex-col items-center">
@@ -121,7 +121,7 @@ export default function Home() {
             آماده‌اید تا فروش خود را افزایش دهید؟
           </h2>
           <p className="text-lg text-blue-100 mb-8 max-w-2xl mx-auto">
-            همین امروز با شاپ‌گرام شروع کنید و تجربه فروش آنلاین جدیدی را برای خود و مشتریانتان رقم بزنید.
+            همین امروز با بایوسل شروع کنید و تجربه فروش آنلاین جدیدی را برای خود و مشتریانتان رقم بزنید.
           </p>
           <Link 
             href="/seller/register" 

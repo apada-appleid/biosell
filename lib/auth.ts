@@ -88,7 +88,6 @@ const authOptions: NextAuthOptions = {
               phone: user.phone || undefined
             };
           } else {
-            // Seller login
             const seller = await prisma.seller.findUnique({
               where: {
                 email: credentials.email

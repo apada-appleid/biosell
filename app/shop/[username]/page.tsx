@@ -374,7 +374,7 @@ export default function ShopPage() {
       {/* فوتر */}
       <footer className="bg-white border-t border-gray-200 py-4 px-6 text-center">
         <p className="text-xs md:text-sm text-gray-600">
-          قدرت گرفته از <span className="font-medium">شاپ‌گرام</span>
+          قدرت گرفته از <span className="font-medium">بایوسل</span>
         </p>
       </footer>
 

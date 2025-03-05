@@ -121,7 +121,7 @@ export default function ProductDetailsPage() {
   };
 
   // نام فروشگاه را از دیتای موجود بگیریم یا پیش‌فرض قرار دهیم
-  const businessName = product?.seller?.shopName || "فروشگاه شاپ‌گرام";
+  const businessName = product?.seller?.shopName || "فروشگاه بایوسل";
   
   // لینک بازگشت
   const backLinkHref = product?.sellerId 

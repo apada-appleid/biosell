@@ -425,7 +425,7 @@ export default function CustomerLoginPage() {
             href="/"
             className="text-2xl font-bold text-blue-600 hover:text-blue-500"
           >
-            شاپگرام
+            بایوسل
           </Link>
           <h2 className="mt-3 text-xl font-semibold text-gray-900">
             ورود به پنل کاربری

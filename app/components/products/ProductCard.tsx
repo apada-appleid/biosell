@@ -12,7 +12,7 @@ interface ProductCardProps {
   storeName?: string;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, storeName = "فروشگاه شاپ‌گرام" }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ product, storeName = "فروشگاه بایوسل" }) => {
   const router = useRouter();
   const addToCart = useCartStore(state => state.addToCart);
   const hydrate = useCartStore(state => state.hydrate);

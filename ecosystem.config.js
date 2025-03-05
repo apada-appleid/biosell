@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: "shopgram-front",
+      name: "biosell-front",
       script: "yarn",
       args: "start",
       cwd: "/path/to/your/app", // Update this to your actual app path on the server
