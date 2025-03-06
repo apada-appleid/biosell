@@ -1,28 +1,28 @@
-'use client';
+"use client";
 
-import { useState, useEffect, TouchEvent } from 'react';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import Image from 'next/image';
-import Link from 'next/link';
-import React from 'react';
-import { useCartStore } from '@/app/store/cart';
-import { Product, ProductImage as ProductImageType } from '@/app/types';
-import { 
-  User, 
-  Heart, 
-  MessageCircle, 
-  ExternalLink, 
-  Grid, 
-  ChevronLeft, 
-  ChevronRight, 
-  X, 
-  Share2, 
-  Minus, 
-  Plus, 
+import { useState, useEffect, TouchEvent } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
+import React from "react";
+import { useCartStore } from "@/app/store/cart";
+import { Product } from "@/app/types";
+import {
+  User,
+  Heart,
+  MessageCircle,
+  ExternalLink,
+  Grid,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Share2,
+  Minus,
+  Plus,
   ShoppingBag,
   Loader2,
-} from 'lucide-react';
-import { useToastStore } from '@/app/store/toast';
+} from "lucide-react";
+import { useToastStore } from "@/app/store/toast";
 import { ensureValidImageUrl } from "@/utils/s3-storage";
 
 // تعریف انواع داده
@@ -43,7 +43,7 @@ interface DebugInfoType {
 
 /**
  * ShopPage component displays a seller's profile and products
- * 
+ *
  * This component now uses the path segments from Next.js routing
  * instead of directly accessing params to avoid the Next.js warning
  * about synchronously accessing params properties.
@@ -54,10 +54,10 @@ export default function ShopPage() {
   const addToCart = useCartStore((state) => state.addToCart);
   const hydrate = useCartStore((state) => state.hydrate);
   const showToast = useToastStore((state) => state.showToast);
-  
+
   // Extract username from pathname more reliably
-  const username = pathname.split('/shop/')[1]?.split('/')[0];
-  
+  const username = pathname.split("/shop/")[1]?.split("/")[0];
+
   const [seller, setSeller] = useState<Seller | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,7 +70,9 @@ export default function ShopPage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
-  const [slideDirection, setSlideDirection] = useState<'next' | 'prev' | null>(null);
+  const [slideDirection, setSlideDirection] = useState<"next" | "prev" | null>(
+    null
+  );
 
   // Hydrate cart from localStorage on initial load
   useEffect(() => {
@@ -79,7 +81,7 @@ export default function ShopPage() {
       hydrate();
       setMounted(true);
     };
-    
+
     hydrateData();
   }, [hydrate]);
 
@@ -87,27 +89,27 @@ export default function ShopPage() {
   useEffect(() => {
     const fetchSeller = async () => {
       if (!username) {
-        console.error('No username found in URL');
-        setError('خطا در بارگیری اطلاعات فروشنده: نام کاربری نامعتبر');
+        console.error("No username found in URL");
+        setError("خطا در بارگیری اطلاعات فروشنده: نام کاربری نامعتبر");
         setLoading(false);
         return;
       }
-      
+
       try {
-        console.log('Fetching seller data for username:', username);
+        console.log("Fetching seller data for username:", username);
         const response = await fetch(`/api/shop/seller?username=${username}`);
         if (!response.ok) {
-          setError('فروشنده یافت نشد');
+          setError("فروشنده یافت نشد");
           setLoading(false);
           return;
         }
         const data = await response.json();
-        console.log('Seller data received:', data);
+        console.log("Seller data received:", data);
         setSeller(data);
         setLoading(false);
       } catch (error) {
-        console.error('Error fetching seller:', error);
-        setError('خطا در بارگیری اطلاعات فروشنده');
+        console.error("Error fetching seller:", error);
+        setError("خطا در بارگیری اطلاعات فروشنده");
         setLoading(false);
       }
     };
@@ -121,15 +123,20 @@ export default function ShopPage() {
       if (!seller) return;
 
       try {
-        console.log('Fetching products for seller ID:', seller.id);
-        const response = await fetch(`/api/shop/products?sellerId=${seller.id}`);
+        console.log("Fetching products for seller ID:", seller.id);
+        const response = await fetch(
+          `/api/shop/products?sellerId=${seller.id}`
+        );
         if (!response.ok) {
-          throw new Error('خطا در بارگیری محصولات');
+          throw new Error("خطا در بارگیری محصولات");
         }
         const data = await response.json();
-        console.log('Products received:', data);
-        setDebugInfo(prev => ({ ...prev as Record<string, any>, productsResponse: data }));
-        
+        console.log("Products received:", data);
+        setDebugInfo((prev) => ({
+          ...(prev as Record<string, any>),
+          productsResponse: data,
+        }));
+
         // Make sure we're getting an array
         let productList: Product[] = [];
         if (Array.isArray(data)) {
@@ -137,24 +144,25 @@ export default function ShopPage() {
         } else if (data.products && Array.isArray(data.products)) {
           productList = data.products;
         } else {
-          console.error('Unexpected products data format:', data);
+          console.error("Unexpected products data format:", data);
         }
-        
+
         // اطمینان از سازگاری داده‌های محصول با نوع Product
-        const validProducts = productList.map(p => ({
+        const validProducts = productList.map((p) => ({
           ...p,
-          available: p.available !== undefined ? p.available : p.isActive ?? true,
+          available:
+            p.available !== undefined ? p.available : p.isActive ?? true,
           createdAt: p.createdAt || new Date().toISOString(),
           // اطمینان از اینکه هر دو فیلد likes_count و likesCount مقدار دارند
           likes_count: p.likes_count || p.likesCount || 0,
-          likesCount: p.likesCount || p.likes_count || 0
+          likesCount: p.likesCount || p.likes_count || 0,
         }));
-        
+
         setProducts(validProducts);
         setLoading(false);
       } catch (error) {
-        console.error('Error fetching products:', error);
-        setError('خطا در بارگیری محصولات');
+        console.error("Error fetching products:", error);
+        setError("خطا در بارگیری محصولات");
         setLoading(false);
       }
     };
@@ -187,13 +195,13 @@ export default function ShopPage() {
   // توابع مربوط به تعداد محصول
   const incrementQuantity = () => {
     if (selectedProduct?.inventory && quantity < selectedProduct.inventory) {
-      setQuantity(prev => prev + 1);
+      setQuantity((prev) => prev + 1);
     }
   };
 
   const decrementQuantity = () => {
     if (quantity > 1) {
-      setQuantity(prev => prev - 1);
+      setQuantity((prev) => prev - 1);
     }
   };
 
@@ -203,27 +211,30 @@ export default function ShopPage() {
       try {
         // استفاده از استور zustand برای مدیریت سبد خرید
         addToCart(selectedProduct, quantity);
-        
+
         // Show toast with action buttons
-        showToast(`${quantity} عدد ${selectedProduct.title} به سبد خرید اضافه شد`, [
-          {
-            label: 'تکمیل سفارش',
-            onClick: () => router.push('/cart')
-          },
-          {
-            label: 'ادامه خرید',
-            onClick: () => {
-              useToastStore.getState().hideToast();
-              closeProductDetails();
-            }
-          }
-        ]);
-        
+        showToast(
+          `${quantity} عدد ${selectedProduct.title} به سبد خرید اضافه شد`,
+          [
+            {
+              label: "تکمیل سفارش",
+              onClick: () => router.push("/cart"),
+            },
+            {
+              label: "ادامه خرید",
+              onClick: () => {
+                useToastStore.getState().hideToast();
+                closeProductDetails();
+              },
+            },
+          ]
+        );
+
         // بستن مودال محصول
         closeProductDetails();
       } catch (error) {
-        console.error('خطا در افزودن به سبد خرید:', error);
-        alert('خطا در افزودن به سبد خرید. لطفاً دوباره تلاش کنید.');
+        console.error("خطا در افزودن به سبد خرید:", error);
+        alert("خطا در افزودن به سبد خرید. لطفاً دوباره تلاش کنید.");
       }
     }
   };
@@ -231,7 +242,7 @@ export default function ShopPage() {
   // Handle thumbnail click to change the displayed image
   const handleThumbnailClick = (index: number) => {
     // Determine slide direction for animation
-    setSlideDirection(index > currentImageIndex ? 'next' : 'prev');
+    setSlideDirection(index > currentImageIndex ? "next" : "prev");
     setCurrentImageIndex(index);
   };
 
@@ -239,81 +250,86 @@ export default function ShopPage() {
   const handleTouchStart = (e: TouchEvent) => {
     setTouchStart(e.targetTouches[0].clientX);
   };
-  
+
   const handleTouchMove = (e: TouchEvent) => {
     setTouchEnd(e.targetTouches[0].clientX);
   };
-  
+
   const handleTouchEnd = () => {
     if (!touchStart || !touchEnd) return;
-    
+
     const distance = touchStart - touchEnd;
     const isSignificantSwipe = Math.abs(distance) > 50; // Minimum swipe distance
-    
+
     if (!isSignificantSwipe) {
       // If the swipe wasn't significant, reset touch state and return
       setTouchStart(null);
       setTouchEnd(null);
       return;
     }
-    
+
     if (!selectedProduct?.images || selectedProduct.images.length <= 1) {
       // No need for swipe if there's only one image
       setTouchStart(null);
       setTouchEnd(null);
       return;
     }
-    
+
     // FIX: Corrected the swipe direction logic to match RTL expectations and our new animations
     // When swiping right-to-left (distance > 0), we show the next image
     // When swiping left-to-right (distance < 0), we show the previous image
     if (distance > 0) {
       // Swipe right-to-left (show next image)
-      setSlideDirection('next');
-      setCurrentImageIndex(prev => 
-        prev === selectedProduct.images.length - 1 ? 0 : prev + 1
+      setSlideDirection("next");
+      setCurrentImageIndex((prev) =>
+        selectedProduct.images && prev === selectedProduct.images.length - 1
+          ? 0
+          : prev + 1
       );
     } else {
       // Swipe left-to-right (show previous image)
-      setSlideDirection('prev');
-      setCurrentImageIndex(prev => 
-        prev === 0 ? selectedProduct.images.length - 1 : prev - 1
+      setSlideDirection("prev");
+      setCurrentImageIndex((prev) =>
+        selectedProduct.images && prev === 0
+          ? selectedProduct.images.length - 1
+          : prev - 1
       );
     }
-    
+
     // Reset touch state
     setTouchStart(null);
     setTouchEnd(null);
   };
 
-  // Navigation functions for image gallery  
+  // Navigation functions for image gallery
   const navigateToNextImage = () => {
     if (!selectedProduct?.images) return;
-    setSlideDirection('next');
-    setCurrentImageIndex(prev => 
-      prev === selectedProduct.images.length - 1 ? 0 : prev + 1
-    );
+    setSlideDirection("next");
+    const imagesLength = selectedProduct.images.length;
+    setCurrentImageIndex((prev) => (prev === imagesLength - 1 ? 0 : prev + 1));
   };
-  
+
   const navigateToPrevImage = () => {
     if (!selectedProduct?.images) return;
-    setSlideDirection('prev');
-    setCurrentImageIndex(prev => 
-      prev === 0 ? selectedProduct.images.length - 1 : prev - 1
-    );
+    setSlideDirection("prev");
+    const imagesLength = selectedProduct.images.length;
+    setCurrentImageIndex((prev) => (prev === 0 ? imagesLength - 1 : prev - 1));
   };
 
   // Debug component (visible only in development)
   const DebugInfo = () => {
-    if (process.env.NODE_ENV !== 'development') return null;
-    
+    if (process.env.NODE_ENV !== "development") return null;
+
     return (
       <div className="fixed bottom-0 left-0 right-0 bg-black bg-opacity-80 text-white p-2 text-xs max-h-32 overflow-auto">
         <div>Username: {username}</div>
-        <div>Seller: {seller ? `ID: ${seller.id}, Name: ${seller.shopName}` : 'Not loaded'}</div>
+        <div>
+          Seller:{" "}
+          {seller ? `ID: ${seller.id}, Name: ${seller.shopName}` : "Not loaded"}
+        </div>
         <div>Products: {products.length}</div>
-        <div>Loading: {loading ? 'Yes' : 'No'}</div>
-        <div>Error: {error || 'None'}</div>
+        <div>Loading: {loading ? "Yes" : "No"}</div>
+        <div>Error: {error || "None"}</div>
       </div>
     );
   };
@@ -337,14 +353,16 @@ export default function ShopPage() {
           <div className="mx-auto w-20 h-20 flex items-center justify-center rounded-full bg-red-50 mb-6">
             <X className="h-10 w-10 text-red-500" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">فروشنده یافت نشد</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            فروشنده یافت نشد
+          </h2>
           <p className="text-gray-600 mb-6">
-            {error === 'فروشنده یافت نشد' 
-              ? 'متأسفانه فروشنده مورد نظر شما در سیستم وجود ندارد.' 
-              : error || 'مشکلی در بارگذاری اطلاعات فروشنده رخ داده است.'}
+            {error === "فروشنده یافت نشد"
+              ? "متأسفانه فروشنده مورد نظر شما در سیستم وجود ندارد."
+              : error || "مشکلی در بارگذاری اطلاعات فروشنده رخ داده است."}
           </p>
-          <button 
-            onClick={() => router.push('/')}
+          <button
+            onClick={() => router.push("/")}
             className="w-full py-3 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
             بازگشت به صفحه اصلی
@@ -362,14 +380,14 @@ export default function ShopPage() {
         ...product,
         images: product.images.map((img: any) => ({
           ...img,
-          imageUrl: ensureValidImageUrl(img.imageUrl)
-        }))
+          imageUrl: ensureValidImageUrl(img.imageUrl),
+        })),
       };
     }
-    
+
     return {
       ...product,
-      imageUrl: ensureValidImageUrl(product.imageUrl)
+      imageUrl: ensureValidImageUrl(product.imageUrl),
     };
   };
 
@@ -382,7 +400,9 @@ export default function ShopPage() {
       {/* هدر فروشگاه */}
       <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between max-w-6xl mx-auto">
-          <h1 className="text-xl font-semibold text-gray-900">{seller.shopName}</h1>
+          <h1 className="text-xl font-semibold text-gray-900">
+            {seller.shopName}
+          </h1>
           <Link href="/cart" className="relative">
             <ShoppingBag className="h-6 w-6 text-gray-800" />
           </Link>
@@ -396,8 +416,8 @@ export default function ShopPage() {
             <div className="flex items-center">
               <div className="relative h-20 w-20 md:h-24 md:w-24 rounded-full overflow-hidden bg-gray-100 flex-shrink-0">
                 {seller.profileImage ? (
-                  <Image 
-                    src={seller.profileImage} 
+                  <Image
+                    src={seller.profileImage}
                     alt={seller.shopName}
                     fill
                     className="object-cover"
@@ -408,31 +428,41 @@ export default function ShopPage() {
                   </div>
                 )}
               </div>
-              
+
               <div className="flex-1 mr-4 md:mr-6">
-                <h2 className="text-xl md:text-2xl font-bold text-gray-900">@{seller.username}</h2>
+                <h2 className="text-xl md:text-2xl font-bold text-gray-900">
+                  @{seller.username}
+                </h2>
                 <p className="text-gray-700 text-sm md:text-base mt-1">
                   {seller.bio || `فروشگاه رسمی ${seller.shopName}`}
                 </p>
               </div>
             </div>
-            
+
             {/* آمار فروشگاه */}
             <div className="flex justify-around mt-5 md:w-1/2 md:justify-between">
               <div className="text-center">
-                <div className="font-bold text-gray-900 md:text-lg">{products.length}</div>
-                <div className="text-xs md:text-sm text-gray-600 font-medium">محصولات</div>
+                <div className="font-bold text-gray-900 md:text-lg">
+                  {products.length}
+                </div>
+                <div className="text-xs md:text-sm text-gray-600 font-medium">
+                  محصولات
+                </div>
               </div>
               <div className="text-center">
                 <div className="font-bold text-gray-900 md:text-lg">0</div>
-                <div className="text-xs md:text-sm text-gray-600 font-medium">مشتریان</div>
+                <div className="text-xs md:text-sm text-gray-600 font-medium">
+                  مشتریان
+                </div>
               </div>
               <div className="text-center">
                 <div className="font-bold text-gray-900 md:text-lg">0</div>
-                <div className="text-xs md:text-sm text-gray-600 font-medium">نظرات</div>
+                <div className="text-xs md:text-sm text-gray-600 font-medium">
+                  نظرات
+                </div>
               </div>
             </div>
-            
+
             <div className="mt-4 md:mt-6 md:max-w-xs">
               <button className="w-full bg-blue-500 text-white py-2 px-4 rounded-md font-medium hover:bg-blue-600 transition-colors">
                 دنبال کردن
@@ -440,20 +470,20 @@ export default function ShopPage() {
             </div>
           </div>
         </div>
-        
+
         {/* گرید محصولات */}
         <div className="p-1 md:p-4 md:max-w-6xl md:mx-auto">
           {products && products.length > 0 ? (
             <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-1 md:gap-4">
               {products.map((product) => (
-                <div 
-                  key={product.id} 
+                <div
+                  key={product.id}
                   className="aspect-square cursor-pointer relative md:rounded-md md:shadow-sm md:overflow-hidden"
                   onClick={() => openProductDetails(product)}
                 >
                   {product.images && product.images.length > 0 ? (
-                    <Image 
-                      src={product.images[0].imageUrl} 
+                    <Image
+                      src={product.images[0].imageUrl}
                       alt={product.title}
                       fill
                       className="object-cover"
@@ -471,7 +501,7 @@ export default function ShopPage() {
                     </div>
                   )}
                   <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 text-xs md:text-sm font-medium">
-                    {product.price.toLocaleString('fa-IR')} تومان
+                    {product.price.toLocaleString("fa-IR")} تومان
                   </div>
                 </div>
               ))}
@@ -479,7 +509,9 @@ export default function ShopPage() {
           ) : (
             <div className="text-center py-12">
               <Grid className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 text-lg">این فروشگاه هنوز محصولی ندارد</p>
+              <p className="text-gray-500 text-lg">
+                این فروشگاه هنوز محصولی ندارد
+              </p>
             </div>
           )}
         </div>
@@ -501,7 +533,7 @@ export default function ShopPage() {
           <div className="bg-white w-full h-full md:h-auto md:max-w-5xl md:max-h-[85vh] md:rounded-lg md:overflow-hidden flex flex-col">
             {/* هدر مودال */}
             <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-              <button 
+              <button
                 onClick={closeProductDetails}
                 className="text-gray-500 hover:text-gray-700"
               >
@@ -512,66 +544,73 @@ export default function ShopPage() {
               </h2>
               <div className="w-6" />
             </div>
-            
+
             {/* محتوای مودال */}
             <div className="flex-1 overflow-y-auto p-0 md:p-4">
               <div className="md:grid md:grid-cols-2 md:gap-8">
                 {/* تصویر محصول */}
                 <div className="md:sticky md:top-0">
-                  <div 
+                  <div
                     className="aspect-square relative bg-gray-100 md:rounded-lg overflow-hidden"
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                   >
                     {/* Navigation arrows for desktop */}
-                    {selectedProduct.images && selectedProduct.images.length > 1 && (
-                      <>
-                        <button 
-                          onClick={navigateToNextImage}
-                          className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-70 rounded-full p-2 shadow-md z-10 hidden md:block"
-                          aria-label="تصویر بعدی"
-                        >
-                          <ChevronLeft className="h-5 w-5 text-gray-600" />
-                        </button>
-                        <button 
-                          onClick={navigateToPrevImage}
-                          className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-70 rounded-full p-2 shadow-md z-10 hidden md:block"
-                          aria-label="تصویر قبلی"
-                        >
-                          <ChevronRight className="h-5 w-5 text-gray-600" />
-                        </button>
-                      </>
-                    )}
-                    
+                    {selectedProduct.images &&
+                      selectedProduct.images.length > 1 && (
+                        <>
+                          <button
+                            onClick={navigateToNextImage}
+                            className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-70 rounded-full p-2 shadow-md z-10 hidden md:block"
+                            aria-label="تصویر بعدی"
+                          >
+                            <ChevronLeft className="h-5 w-5 text-gray-600" />
+                          </button>
+                          <button
+                            onClick={navigateToPrevImage}
+                            className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-70 rounded-full p-2 shadow-md z-10 hidden md:block"
+                            aria-label="تصویر قبلی"
+                          >
+                            <ChevronRight className="h-5 w-5 text-gray-600" />
+                          </button>
+                        </>
+                      )}
+
                     {/* Image slider container */}
                     <div className="relative w-full h-full overflow-hidden">
                       {/* Display the current image with slide animation */}
-                      {selectedProduct.images && selectedProduct.images.length > 0 ? (
-                        <div 
+                      {selectedProduct.images &&
+                      selectedProduct.images.length > 0 ? (
+                        <div
                           className={`w-full h-full ${
-                            slideDirection === 'next' ? 'animate-slide-next' : 
-                            slideDirection === 'prev' ? 'animate-slide-prev' : ''
+                            slideDirection === "next"
+                              ? "animate-slide-next"
+                              : slideDirection === "prev"
+                              ? "animate-slide-prev"
+                              : ""
                           }`}
                         >
-                          <Image 
-                            src={selectedProduct.images[currentImageIndex].imageUrl} 
-                            alt={selectedProduct.title} 
-                            fill 
+                          <Image
+                            src={
+                              selectedProduct.images[currentImageIndex].imageUrl
+                            }
+                            alt={selectedProduct.title}
+                            fill
                             className="object-contain"
                             priority={true}
                           />
-                          
+
                           {/* Improved swipe indicator with better design */}
                           {selectedProduct.images.length > 1 && (
                             <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 rtl:space-x-reverse px-3 py-2 bg-black bg-opacity-30 rounded-full md:hidden">
                               {selectedProduct.images.map((_, index) => (
-                                <div 
-                                  key={index} 
+                                <div
+                                  key={index}
                                   className={`rounded-full transition-all duration-300 ${
-                                    currentImageIndex === index 
-                                      ? 'w-3 h-3 bg-white' 
-                                      : 'w-2 h-2 bg-white bg-opacity-50'
+                                    currentImageIndex === index
+                                      ? "w-3 h-3 bg-white"
+                                      : "w-2 h-2 bg-white bg-opacity-50"
                                   }`}
                                 />
                               ))}
@@ -579,10 +618,10 @@ export default function ShopPage() {
                           )}
                         </div>
                       ) : selectedProduct.imageUrl ? (
-                        <Image 
-                          src={selectedProduct.imageUrl} 
-                          alt={selectedProduct.title} 
-                          fill 
+                        <Image
+                          src={selectedProduct.imageUrl}
+                          alt={selectedProduct.title}
+                          fill
                           className="object-contain"
                           priority={true}
                         />
@@ -593,52 +632,59 @@ export default function ShopPage() {
                       )}
                     </div>
                   </div>
-                  
+
                   {/* نمایش تصاویر چندگانه */}
-                  {selectedProduct.images && selectedProduct.images.length > 1 && (
-                    <div className="mt-2 px-4 overflow-x-auto">
-                      <div className="flex space-x-2 rtl:space-x-reverse">
-                        {selectedProduct.images.map((image, index) => (
-                          <div
-                            key={index}
-                            onClick={() => handleThumbnailClick(index)}
-                            className={`w-16 h-16 rounded-md overflow-hidden border flex-shrink-0 cursor-pointer transition-all duration-200 ${
-                              currentImageIndex === index 
-                                ? 'border-blue-500 ring-2 ring-blue-300' 
-                                : 'border-gray-200 hover:border-gray-300'
-                            }`}
-                            aria-label={`نمایش تصویر ${index + 1}`}
-                            tabIndex={0}
-                            onKeyDown={(e) => e.key === 'Enter' && handleThumbnailClick(index)}
-                          >
-                            <Image
-                              src={image.imageUrl}
-                              alt={`${selectedProduct.title} - تصویر ${index + 1}`}
-                              width={64}
-                              height={64}
-                              className="object-cover w-full h-full"
-                            />
-                          </div>
-                        ))}
+                  {selectedProduct.images &&
+                    selectedProduct.images.length > 1 && (
+                      <div className="mt-2 px-4 overflow-x-auto">
+                        <div className="flex space-x-2 rtl:space-x-reverse">
+                          {selectedProduct.images.map((image, index) => (
+                            <div
+                              key={index}
+                              onClick={() => handleThumbnailClick(index)}
+                              className={`w-16 h-16 rounded-md overflow-hidden border flex-shrink-0 cursor-pointer transition-all duration-200 ${
+                                currentImageIndex === index
+                                  ? "border-blue-500 ring-2 ring-blue-300"
+                                  : "border-gray-200 hover:border-gray-300"
+                              }`}
+                              aria-label={`نمایش تصویر ${index + 1}`}
+                              tabIndex={0}
+                              onKeyDown={(e) =>
+                                e.key === "Enter" && handleThumbnailClick(index)
+                              }
+                            >
+                              <Image
+                                src={image.imageUrl}
+                                alt={`${selectedProduct.title} - تصویر ${
+                                  index + 1
+                                }`}
+                                width={64}
+                                height={64}
+                                className="object-cover w-full h-full"
+                              />
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                 </div>
-                
+
                 {/* اطلاعات محصول */}
                 <div className="p-4 md:p-0">
                   <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">
                     {selectedProduct.title}
                   </h1>
-                  
+
                   <div className="text-lg md:text-xl font-semibold text-gray-900 mb-4">
-                    {selectedProduct.price.toLocaleString('fa-IR')} تومان
+                    {selectedProduct.price.toLocaleString("fa-IR")} تومان
                   </div>
-                  
+
                   <div className="prose prose-sm text-gray-700 mb-6">
-                    <p className="whitespace-pre-line">{selectedProduct.description}</p>
+                    <p className="whitespace-pre-line">
+                      {selectedProduct.description}
+                    </p>
                   </div>
-                  
+
                   {/* دکمه‌های عملیاتی */}
                   <div className="flex justify-between items-center mb-6">
                     <div className="flex items-center space-x-4 rtl:space-x-reverse">
@@ -653,50 +699,60 @@ export default function ShopPage() {
                       </button>
                     </div>
                     <div className="text-sm text-gray-500">
-                      {(selectedProduct.likes_count || selectedProduct?.likesCount || 0) > 0 
-                        ? `${selectedProduct.likes_count || selectedProduct?.likesCount} لایک` 
-                        : '0 لایک'}
+                      {(selectedProduct.likes_count ||
+                        selectedProduct?.likesCount ||
+                        0) > 0
+                        ? `${
+                            selectedProduct.likes_count ||
+                            selectedProduct?.likesCount
+                          } لایک`
+                        : "0 لایک"}
                     </div>
                   </div>
-                  
+
                   {/* انتخاب تعداد */}
-                  {selectedProduct.inventory && selectedProduct.inventory > 0 && (
-                    <div className="mb-6">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        تعداد
-                      </label>
-                      <div className="flex items-center">
-                        <button
-                          className="flex items-center justify-center w-8 h-8 rounded-full border border-gray-300 bg-white text-gray-500 hover:bg-gray-100"
-                          onClick={decrementQuantity}
-                          disabled={quantity <= 1}
-                        >
-                          <Minus className="h-4 w-4" />
-                        </button>
-                        <span className="w-12 text-center text-gray-900 font-medium">
-                          {quantity}
-                        </span>
-                        <button
-                          className="flex items-center justify-center w-8 h-8 rounded-full border border-gray-300 bg-white text-gray-500 hover:bg-gray-100"
-                          onClick={incrementQuantity}
-                          disabled={!selectedProduct.inventory || quantity >= selectedProduct.inventory}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </button>
+                  {selectedProduct.inventory &&
+                    selectedProduct.inventory > 0 && (
+                      <div className="mb-6">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          تعداد
+                        </label>
+                        <div className="flex items-center">
+                          <button
+                            className="flex items-center justify-center w-8 h-8 rounded-full border border-gray-300 bg-white text-gray-500 hover:bg-gray-100"
+                            onClick={decrementQuantity}
+                            disabled={quantity <= 1}
+                          >
+                            <Minus className="h-4 w-4" />
+                          </button>
+                          <span className="w-12 text-center text-gray-900 font-medium">
+                            {quantity}
+                          </span>
+                          <button
+                            className="flex items-center justify-center w-8 h-8 rounded-full border border-gray-300 bg-white text-gray-500 hover:bg-gray-100"
+                            onClick={incrementQuantity}
+                            disabled={
+                              !selectedProduct.inventory ||
+                              quantity >= selectedProduct.inventory
+                            }
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  )}
-                  
+                    )}
+
                   {/* دکمه افزودن به سبد خرید */}
-                  {selectedProduct.inventory && selectedProduct.inventory > 0 ? (
-                    <button 
+                  {selectedProduct.inventory &&
+                  selectedProduct.inventory > 0 ? (
+                    <button
                       className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
                       onClick={handleAddToCart}
                     >
                       افزودن به سبد خرید
                     </button>
                   ) : (
-                    <button 
+                    <button
                       className="w-full bg-gray-200 text-gray-500 py-3 rounded-lg font-semibold cursor-not-allowed"
                       disabled
                     >
@@ -711,4 +767,4 @@ export default function ShopPage() {
       )}
     </div>
   );
-} 
+}

@@ -24,6 +24,7 @@ The project is a Next.js e-commerce application called "Biosell" (previously "Sh
 - TailwindCSS for styling
 - NextAuth.js for authentication
 - Docker containerization for deployment
+- AWS S3 for file storage and delivery
 
 ## Authentication System
 - Uses NextAuth.js with credential provider
@@ -70,6 +71,19 @@ The project is a Next.js e-commerce application called "Biosell" (previously "Sh
 - React hooks for local component state
 - Context API for some shared state
 
+## File Storage (AWS S3)
+- Uses AWS S3 for storing product images and other assets
+- Two distinct buckets with different access policies:
+  1. sellers-products: Public bucket with direct access for product images
+  2. receipts: Private bucket for payment receipts, requiring signed URLs for access
+- Direct pre-signed URL uploads for secure client-side uploads
+- Path structure: /{entity-type}/{entity-id}/{filename}
+- Server-side signed URL generation for secure uploads
+- S3 credentials managed through environment variables
+- Helper utility in utils/s3-storage.ts for managing uploads and retrieving files
+- Images served through CloudFront CDN for better performance
+- Receipt images require authenticated access via signed URLs with expiration
+
 ## Database Structure
 - Prisma schema with models for:
   - User (admin)
@@ -89,6 +103,29 @@ The project is a Next.js e-commerce application called "Biosell" (previously "Sh
 - Form handling with react-hook-form
 - Date and price formatting utilities
 - Component-based UI architecture
+
+## UI Components and Animations
+- Custom keyframe animations defined in globals.css for transitions
+- Image sliders implement touch gestures for mobile interfaces
+- Special considerations for RTL interfaces:
+  - Slide direction should match cultural expectations (RTL swipe differs from LTR)
+  - Animation direction should follow reading direction
+- Image galleries use:
+  - Touch event handlers (onTouchStart, onTouchMove, onTouchEnd)
+  - slideDirection state to manage animation direction
+  - Visual indicators for pagination (dots at bottom of carousel)
+  - Priority loading for first images
+- Reset animation states when:
+  - Opening new content
+  - Changing views
+  - Initial component loading
+
+## Common Pitfalls to Avoid
+- Setting state directly from props without useEffect can cause infinite re-renders
+- References to window/document should be wrapped in conditionals
+- Implement proper null checks for all data that might be undefined
+- Always handle loading states and error conditions in UI
+- Be careful with state updates in component body (outside effects/handlers)
 
 ## Deployment
 - Docker containerization for consistent deployment
@@ -116,4 +153,8 @@ Follow these rules when you write code:
 - Use descriptive variable and function/const names. Also, event functions should be named with a "handle" prefix, like "handleClick" for onClick and "handleKeyDown" for onKeyDown.
 - Implement accessibility features on elements. For example, a tag should have a tabindex="0", aria-label, on:click, and on:keydown, and similar attributes.
 - Use consts instead of functions, for example, "const toggle = () =>". Also, define a type if possible.
-- When accessing user information, always use the session object from NextAuth. 
+- When accessing user information, always use the session object from NextAuth.
+- For RTL interfaces, ensure swipe gestures and animations match cultural expectations.
+- When implementing pagination indicators, use appropriate contrast and follow UI design system.
+- When uploading files to S3, always use pre-signed URLs and validate file types/sizes before upload.
+- For private S3 buckets (like receipts), never expose direct URLs; always use signed URLs with expiration.

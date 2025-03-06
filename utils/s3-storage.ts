@@ -1,11 +1,13 @@
-import { S3Client } from '@aws-sdk/client-s3';
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { v4 as uuidv4 } from 'uuid';
 
 // ArvanCloud S3 configuration
 const S3_ENDPOINT = process.env.S3_ENDPOINT || 'https://s3.ir-thr-at1.arvanstorage.ir';
 const S3_REGION = process.env.S3_REGION || 'default'; // ArvanCloud doesn't use regions like AWS
 const S3_BUCKET_NAME = process.env.S3_BUCKET_NAME || 'sellers-products';
+const S3_RECEIPTS_BUCKET_NAME = process.env.S3_RECEIPTS_BUCKET_NAME || 'receipts';
 const S3_ACCESS_KEY = process.env.S3_ACCESS_KEY || '';
 const S3_SECRET_KEY = process.env.S3_SECRET_KEY || '';
 
@@ -20,11 +22,11 @@ const s3Client = new S3Client({
   forcePathStyle: true, // Required for ArvanCloud S3
 });
 
-// Base URL for public access to the bucket
-const BUCKET_PUBLIC_URL = `https://${S3_BUCKET_NAME}.s3.ir-thr-at1.arvanstorage.ir`;
+// Base URL for public access to the products bucket
+const PRODUCTS_BUCKET_PUBLIC_URL = `https://${S3_BUCKET_NAME}.s3.ir-thr-at1.arvanstorage.ir`;
 
 /**
- * Upload a file to ArvanCloud S3
+ * Upload a file to ArvanCloud S3 products bucket
  * @param file The file to upload
  * @param path Optional path prefix within the bucket
  * @returns The URL of the uploaded file
@@ -65,15 +67,89 @@ export async function uploadFileToS3(file: File | Buffer, path = 'products'): Pr
     await upload.done();
 
     // Return the public URL
-    return `${BUCKET_PUBLIC_URL}/${key}`;
+    return `${PRODUCTS_BUCKET_PUBLIC_URL}/${key}`;
   } catch (error) {
     console.error('Error uploading to S3:', error);
     throw new Error(`Failed to upload file to S3: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
+// Update the uploadReceiptToS3 function
+export const uploadReceiptToS3 = async (file: File, path: string): Promise<any> => {
+  try {
+    // Convert file to base64 for server-side upload
+    const base64Data = await fileToBase64(file);
+    const fileName = `${uuidv4()}.${file.name.split('.').pop()}`;
+    const fullPath = `${path}/${fileName}`;
+    
+    // Use a server-side API endpoint to handle the upload
+    const response = await fetch('/api/upload/receipt', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        fileName: fullPath,
+        contentType: file.type,
+        fileData: base64Data,
+      }),
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Server upload failed: ${errorData.message || 'Unknown error'}`);
+    }
+    
+    const data = await response.json();
+    return {
+      key: fullPath,
+      url: data.url,
+      bucket: 'receipts'
+    };
+  } catch (error) {
+    console.error('Error uploading receipt to S3:', error);
+    throw new Error(`Failed to upload receipt to S3: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+};
+
+// Helper function to convert File to base64
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      const base64String = reader.result as string;
+      // Remove the data URL prefix (e.g., "data:image/png;base64,")
+      const base64Data = base64String.split(',')[1];
+      resolve(base64Data);
+    };
+    reader.onerror = error => reject(error);
+  });
+};
+
 /**
- * Check if a URL is from our S3 bucket
+ * Generate a signed URL for a private receipt
+ * @param key The S3 object key
+ * @param expiresIn Number of seconds the URL will be valid (default: 900 seconds = 15 minutes)
+ * @returns Signed URL with temporary access
+ */
+export async function getSignedReceiptUrl(key: string, expiresIn = 900): Promise<string> {
+  try {
+    const command = new GetObjectCommand({
+      Bucket: S3_RECEIPTS_BUCKET_NAME,
+      Key: key,
+    });
+
+    const signedUrl = await getSignedUrl(s3Client, command, { expiresIn });
+    return signedUrl;
+  } catch (error) {
+    console.error('Error generating signed URL:', error);
+    throw new Error(`Failed to generate signed URL: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+/**
+ * Check if a URL is from our S3 buckets
  */
 export function isS3Url(url: string): boolean {
   return url.includes('arvanstorage.ir');
