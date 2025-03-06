@@ -45,8 +45,8 @@
       "purpose": "any maskable"
     },
     {
-      "src": "/icons/icon-384x384.png",
-      "sizes": "384x384",
+      "src": "/icons/ios/256.png",
+      "sizes": "256x256",
       "type": "image/png",
       "purpose": "any maskable"
     },
@@ -55,6 +55,32 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "داشبورد",
+      "url": "/customer/dashboard",
+      "icons": [
+        {
+          "src": "/icons/ios/64.png",
+          "sizes": "64x64",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "پروفایل",
+      "url": "/customer/profile",
+      "icons": [
+        {
+          "src": "/icons/ios/64.png",
+          "sizes": "64x64",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 } 

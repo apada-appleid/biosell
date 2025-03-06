@@ -21,6 +21,12 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "default",
     title: "Biosell - بایوسل",
+    startupImage: [
+      {
+        url: "/icons/ios/1024.png",
+        media: "(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)"
+      }
+    ]
   },
   formatDetection: {
     telephone: false,
@@ -31,7 +37,9 @@ export const metadata: Metadata = {
       { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
     apple: [
-      { url: '/icons/icon-192x192.png' },
+      { url: '/icons/ios/180.png', sizes: '180x180', type: 'image/png' },
+      { url: '/icons/ios/152.png', sizes: '152x152', type: 'image/png' },
+      { url: '/icons/ios/120.png', sizes: '120x120', type: 'image/png' },
     ],
   },
 };
