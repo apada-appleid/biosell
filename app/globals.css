@@ -18,6 +18,33 @@
   }
 } */
 
+/* Custom animations for image slider - Fixed for RTL context */
+@keyframes slideNext {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slidePrev {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-next {
+  animation: slideNext 0.3s ease-in-out;
+}
+
+.animate-slide-prev {
+  animation: slidePrev 0.3s ease-in-out;
+}
+
 body {
   color: var(--foreground);
   background: var(--background);

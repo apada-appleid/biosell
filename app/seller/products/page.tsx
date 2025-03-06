@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useSession } from 'next-auth/react';
 import { Edit, Trash2, Search, Plus, Loader2, AlertTriangle } from 'lucide-react';
+import { ensureValidImageUrl } from "@/utils/s3-storage";
 
 // Define types
 interface ProductImage {
@@ -219,7 +220,7 @@ export default function SellerProductsPage() {
                             <div className="h-10 w-10 flex-shrink-0 relative overflow-hidden rounded-full">
                               {product.images && product.images.length > 0 ? (
                                 <Image
-                                  src={product.images[0].imageUrl}
+                                  src={ensureValidImageUrl(product.images[0].imageUrl)}
                                   alt={product.title}
                                   width={40}
                                   height={40}

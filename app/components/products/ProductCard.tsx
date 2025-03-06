@@ -6,6 +6,7 @@ import { FiHeart, FiMessageCircle, FiSend, FiBookmark, FiShoppingBag } from 'rea
 import { Product } from '@/app/types';
 import { useCartStore } from '@/app/store/cart';
 import { useToastStore } from '@/app/store/toast';
+import { ensureValidImageUrl } from "@/utils/s3-storage";
 
 interface ProductCardProps {
   product: Product;
@@ -29,6 +30,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, storeName = "فرو�
     
     hydrateCart();
   }, [hydrate]);
+  
+  // Ensure image URL is valid
+  const imageUrl = ensureValidImageUrl(product.imageUrl || (product.images && product.images.length > 0 ? product.images[0].imageUrl : null));
   
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -86,7 +90,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, storeName = "فرو�
       >
         <div className="relative aspect-square">
           <Image
-            src={product.imageUrl || '/images/product-placeholder.png'}
+            src={imageUrl}
             alt={product.title}
             fill
             className="object-cover"

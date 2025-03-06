@@ -37,6 +37,12 @@ const nextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: '*.arvanstorage.ir',
+        port: '',
+        pathname: '/**',
+      },
     ],
     // Image optimization settings
     formats: ['image/avif', 'image/webp'],

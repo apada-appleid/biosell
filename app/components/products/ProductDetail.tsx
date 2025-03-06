@@ -7,6 +7,7 @@ import { Product } from '@/app/types';
 import { useCartStore } from '@/app/store/cart';
 import { useToastStore } from '@/app/store/toast';
 import { ChevronLeft, ShoppingBag, Heart, MessageCircle, Share2, Minus, Plus, Bookmark } from 'lucide-react';
+import { ensureValidImageUrl } from "@/utils/s3-storage";
 
 interface ProductDetailProps {
   product: Product;
@@ -82,6 +83,16 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, fromUsername }) 
     ? `@${fromUsername}` 
     : "Your Business Name";
   
+  // Process image URLs to ensure they're valid URLs
+  const productImages = product.images?.map(img => ({
+    ...img,
+    imageUrl: ensureValidImageUrl(img.imageUrl)
+  })) || [];
+
+  const mainImageUrl = productImages.length > 0 
+    ? productImages[0].imageUrl 
+    : ensureValidImageUrl(product.imageUrl);
+
   return (
     <div className="flex flex-col h-full">
       {/* Sticky header */}
@@ -104,9 +115,9 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, fromUsername }) 
           {/* Product image section */}
           <div className="md:sticky md:top-20">
             <div className="aspect-square relative bg-gray-100 md:rounded-lg md:overflow-hidden">
-              {(product.images && product.images.length > 0) ? (
+              {(productImages.length > 0) ? (
                 <Image 
-                  src={product.images[0].imageUrl} 
+                  src={mainImageUrl} 
                   alt={product.title} 
                   fill 
                   className="object-contain"
@@ -114,7 +125,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, fromUsername }) 
                 />
               ) : product.imageUrl ? (
                 <Image 
-                  src={product.imageUrl} 
+                  src={mainImageUrl} 
                   alt={product.title} 
                   fill 
                   className="object-contain"
@@ -128,10 +139,10 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, fromUsername }) 
             </div>
             
             {/* Image carousel for multiple images */}
-            {product.images && product.images.length > 1 && (
+            {productImages.length > 1 && (
               <div className="mt-4 px-4 overflow-x-auto">
                 <div className="flex space-x-3 rtl:space-x-reverse">
-                  {product.images.map((image, index) => (
+                  {productImages.map((image, index) => (
                     <div
                       key={index}
                       className="w-20 h-20 rounded-md overflow-hidden border border-gray-200 flex-shrink-0 cursor-pointer"

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, TouchEvent } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -14,14 +14,16 @@ import {
   ExternalLink, 
   Grid, 
   ChevronLeft, 
+  ChevronRight, 
   X, 
   Share2, 
   Minus, 
   Plus, 
   ShoppingBag,
-  Loader2
+  Loader2,
 } from 'lucide-react';
 import { useToastStore } from '@/app/store/toast';
+import { ensureValidImageUrl } from "@/utils/s3-storage";
 
 // تعریف انواع داده
 interface Seller {
@@ -61,9 +63,14 @@ export default function ShopPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [quantity, setQuantity] = useState(1);
   const [debugInfo, setDebugInfo] = useState<DebugInfoType>({});
   const [mounted, setMounted] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const [slideDirection, setSlideDirection] = useState<'next' | 'prev' | null>(null);
 
   // Hydrate cart from localStorage on initial load
   useEffect(() => {
@@ -157,14 +164,24 @@ export default function ShopPage() {
     }
   }, [seller]);
 
-  // توابع مربوط به محصول انتخاب شده
+  // Reset image index when product changes
+  useEffect(() => {
+    setCurrentImageIndex(0);
+    setSlideDirection(null);
+  }, [selectedProduct]);
+
+  // Functions for product details
   const openProductDetails = (product: Product) => {
-    setSelectedProduct(product);
+    setSelectedProduct(processProductImages(product));
     setQuantity(1);
+    setCurrentImageIndex(0);
+    setSlideDirection(null);
+    setIsProductModalOpen(true);
   };
 
   const closeProductDetails = () => {
     setSelectedProduct(null);
+    setIsProductModalOpen(false);
   };
 
   // توابع مربوط به تعداد محصول
@@ -209,6 +226,81 @@ export default function ShopPage() {
         alert('خطا در افزودن به سبد خرید. لطفاً دوباره تلاش کنید.');
       }
     }
+  };
+
+  // Handle thumbnail click to change the displayed image
+  const handleThumbnailClick = (index: number) => {
+    // Determine slide direction for animation
+    setSlideDirection(index > currentImageIndex ? 'next' : 'prev');
+    setCurrentImageIndex(index);
+  };
+
+  // Swipe functionality for image gallery
+  const handleTouchStart = (e: TouchEvent) => {
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+  
+  const handleTouchMove = (e: TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+  
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isSignificantSwipe = Math.abs(distance) > 50; // Minimum swipe distance
+    
+    if (!isSignificantSwipe) {
+      // If the swipe wasn't significant, reset touch state and return
+      setTouchStart(null);
+      setTouchEnd(null);
+      return;
+    }
+    
+    if (!selectedProduct?.images || selectedProduct.images.length <= 1) {
+      // No need for swipe if there's only one image
+      setTouchStart(null);
+      setTouchEnd(null);
+      return;
+    }
+    
+    // FIX: Corrected the swipe direction logic to match RTL expectations and our new animations
+    // When swiping right-to-left (distance > 0), we show the next image
+    // When swiping left-to-right (distance < 0), we show the previous image
+    if (distance > 0) {
+      // Swipe right-to-left (show next image)
+      setSlideDirection('next');
+      setCurrentImageIndex(prev => 
+        prev === selectedProduct.images.length - 1 ? 0 : prev + 1
+      );
+    } else {
+      // Swipe left-to-right (show previous image)
+      setSlideDirection('prev');
+      setCurrentImageIndex(prev => 
+        prev === 0 ? selectedProduct.images.length - 1 : prev - 1
+      );
+    }
+    
+    // Reset touch state
+    setTouchStart(null);
+    setTouchEnd(null);
+  };
+
+  // Navigation functions for image gallery  
+  const navigateToNextImage = () => {
+    if (!selectedProduct?.images) return;
+    setSlideDirection('next');
+    setCurrentImageIndex(prev => 
+      prev === selectedProduct.images.length - 1 ? 0 : prev + 1
+    );
+  };
+  
+  const navigateToPrevImage = () => {
+    if (!selectedProduct?.images) return;
+    setSlideDirection('prev');
+    setCurrentImageIndex(prev => 
+      prev === 0 ? selectedProduct.images.length - 1 : prev - 1
+    );
   };
 
   // Debug component (visible only in development)
@@ -262,6 +354,28 @@ export default function ShopPage() {
       </div>
     );
   }
+
+  // Ensure image URLs are valid in the product dialog
+  const processProductImages = (product: any) => {
+    if (product.images && product.images.length > 0) {
+      return {
+        ...product,
+        images: product.images.map((img: any) => ({
+          ...img,
+          imageUrl: ensureValidImageUrl(img.imageUrl)
+        }))
+      };
+    }
+    
+    return {
+      ...product,
+      imageUrl: ensureValidImageUrl(product.imageUrl)
+    };
+  };
+
+  const handleProductClick = (product: any) => {
+    openProductDetails(product);
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-white max-w-6xl mx-auto">
@@ -404,26 +518,80 @@ export default function ShopPage() {
               <div className="md:grid md:grid-cols-2 md:gap-8">
                 {/* تصویر محصول */}
                 <div className="md:sticky md:top-0">
-                  <div className="aspect-square relative bg-gray-100 md:rounded-lg overflow-hidden">
-                    {selectedProduct.images && selectedProduct.images.length > 0 ? (
-                      <Image 
-                        src={selectedProduct.images[0].imageUrl} 
-                        alt={selectedProduct.title} 
-                        fill 
-                        className="object-contain"
-                      />
-                    ) : selectedProduct.imageUrl ? (
-                      <Image 
-                        src={selectedProduct.imageUrl} 
-                        alt={selectedProduct.title} 
-                        fill 
-                        className="object-contain"
-                      />
-                    ) : (
-                      <div className="h-full w-full flex items-center justify-center">
-                        <Grid className="h-16 w-16 text-gray-300" />
-                      </div>
+                  <div 
+                    className="aspect-square relative bg-gray-100 md:rounded-lg overflow-hidden"
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                  >
+                    {/* Navigation arrows for desktop */}
+                    {selectedProduct.images && selectedProduct.images.length > 1 && (
+                      <>
+                        <button 
+                          onClick={navigateToNextImage}
+                          className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-70 rounded-full p-2 shadow-md z-10 hidden md:block"
+                          aria-label="تصویر بعدی"
+                        >
+                          <ChevronLeft className="h-5 w-5 text-gray-600" />
+                        </button>
+                        <button 
+                          onClick={navigateToPrevImage}
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-70 rounded-full p-2 shadow-md z-10 hidden md:block"
+                          aria-label="تصویر قبلی"
+                        >
+                          <ChevronRight className="h-5 w-5 text-gray-600" />
+                        </button>
+                      </>
                     )}
+                    
+                    {/* Image slider container */}
+                    <div className="relative w-full h-full overflow-hidden">
+                      {/* Display the current image with slide animation */}
+                      {selectedProduct.images && selectedProduct.images.length > 0 ? (
+                        <div 
+                          className={`w-full h-full ${
+                            slideDirection === 'next' ? 'animate-slide-next' : 
+                            slideDirection === 'prev' ? 'animate-slide-prev' : ''
+                          }`}
+                        >
+                          <Image 
+                            src={selectedProduct.images[currentImageIndex].imageUrl} 
+                            alt={selectedProduct.title} 
+                            fill 
+                            className="object-contain"
+                            priority={true}
+                          />
+                          
+                          {/* Improved swipe indicator with better design */}
+                          {selectedProduct.images.length > 1 && (
+                            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 rtl:space-x-reverse px-3 py-2 bg-black bg-opacity-30 rounded-full md:hidden">
+                              {selectedProduct.images.map((_, index) => (
+                                <div 
+                                  key={index} 
+                                  className={`rounded-full transition-all duration-300 ${
+                                    currentImageIndex === index 
+                                      ? 'w-3 h-3 bg-white' 
+                                      : 'w-2 h-2 bg-white bg-opacity-50'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ) : selectedProduct.imageUrl ? (
+                        <Image 
+                          src={selectedProduct.imageUrl} 
+                          alt={selectedProduct.title} 
+                          fill 
+                          className="object-contain"
+                          priority={true}
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center">
+                          <Grid className="h-16 w-16 text-gray-300" />
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
                   {/* نمایش تصاویر چندگانه */}
@@ -433,14 +601,22 @@ export default function ShopPage() {
                         {selectedProduct.images.map((image, index) => (
                           <div
                             key={index}
-                            className="w-16 h-16 rounded-md overflow-hidden border border-gray-200 flex-shrink-0 cursor-pointer"
+                            onClick={() => handleThumbnailClick(index)}
+                            className={`w-16 h-16 rounded-md overflow-hidden border flex-shrink-0 cursor-pointer transition-all duration-200 ${
+                              currentImageIndex === index 
+                                ? 'border-blue-500 ring-2 ring-blue-300' 
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            aria-label={`نمایش تصویر ${index + 1}`}
+                            tabIndex={0}
+                            onKeyDown={(e) => e.key === 'Enter' && handleThumbnailClick(index)}
                           >
                             <Image
                               src={image.imageUrl}
                               alt={`${selectedProduct.title} - تصویر ${index + 1}`}
                               width={64}
                               height={64}
-                              className="object-cover"
+                              className="object-cover w-full h-full"
                             />
                           </div>
                         ))}
