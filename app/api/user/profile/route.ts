@@ -131,7 +131,7 @@ export async function PATCH(req: NextRequest) {
 
     // Only allow updating specific fields
     if (data.name) updateData.name = data.name;
-    if (data.phone) updateData.mobile = data.phone;
+    if (data.mobile) updateData.mobile = data.mobile;
     
     // Now also allow email updates
     if (data.email && data.email !== user.email) {

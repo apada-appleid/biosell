@@ -16,7 +16,7 @@ const registerSchema = z.object({
     .regex(/^[a-z0-9_]+$/, 'نام کاربری فقط می‌تواند شامل حروف کوچک انگلیسی، اعداد و زیرخط باشد'),
   email: z.string().email('ایمیل معتبر وارد کنید'),
   password: z.string().min(8, 'رمز عبور باید حداقل 8 کاراکتر باشد'),
-  phoneNumber: z.string().regex(/^09\d{9}$/, 'شماره موبایل معتبر وارد کنید'),
+  mobileNumber: z.string().regex(/^09\d{9}$/, 'شماره موبایل معتبر وارد کنید'),
 });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
@@ -41,7 +41,7 @@ export default function SellerRegisterPage() {
       username: '',
       email: '',
       password: '',
-      phoneNumber: '',
+      mobileNumber: '',
     },
   });
   
@@ -59,8 +59,17 @@ export default function SellerRegisterPage() {
     setError(null);
 
     try {
+      // Rename phoneNumber to mobile for API compatibility
+      const apiData = {
+        shopName: data.shopName,
+        username: data.username,
+        email: data.email,
+        password: data.password,
+        mobile: data.mobileNumber,
+      };
+
       // Call the seller registration API
-      const response = await axios.post('/api/seller/register', data);
+      const response = await axios.post('/api/seller/register', apiData);
       
       if (!response.data.success) {
         throw new Error(response.data.error || 'Registration failed');
@@ -170,16 +179,16 @@ export default function SellerRegisterPage() {
           </div>
 
           <div className="mb-4">
-            <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="mobileNumber" className="block text-sm font-medium text-gray-700 mb-1">
               شماره تماس <span className="text-red-500">*</span>
             </label>
             <input
-              id="phoneNumber"
+              id="mobileNumber"
               type="tel"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
-              {...register('phoneNumber', { required: true })}
+              {...register('mobileNumber', { required: true })}
             />
-            {errors.phoneNumber && (
+            {errors.mobileNumber && (
               <p className="mt-1 text-sm text-red-600">شماره تماس الزامی است</p>
             )}
           </div>

@@ -17,7 +17,7 @@ interface Customer {
   id: string;
   fullName: string;
   email: string;
-  phone: string;
+  mobile: string;
 }
 
 interface Order {

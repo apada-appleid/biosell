@@ -107,7 +107,7 @@ async function migrateAddresses() {
               await prisma.customerAddress.create({
                 data: {
                   fullName: address.fullName,
-                  phone: address.phone,
+                  mobile: address.phone,
                   address: address.address,
                   city: address.city,
                   province: address.province,
