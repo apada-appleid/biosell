@@ -4,6 +4,8 @@ import { SessionProvider } from 'next-auth/react';
 import React, { useEffect, useState } from 'react';
 import Toast from './components/ui/Toast';
 import { useToastStore } from './store/toast';
+import { PWAInstallPrompt } from './components/PWAInstallPrompt';
+import { NetworkStatus } from './components/NetworkStatus';
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -27,12 +29,16 @@ export default function Providers({ children }: ProvidersProps) {
     <SessionProvider>
       {children}
       {mounted && (
-        <Toast 
-          message={message} 
-          isVisible={isVisible} 
-          onClose={hideToast} 
-          actionButtons={actionButtons}
-        />
+        <>
+          <Toast 
+            message={message} 
+            isVisible={isVisible} 
+            onClose={hideToast} 
+            actionButtons={actionButtons}
+          />
+          <PWAInstallPrompt />
+          <NetworkStatus />
+        </>
       )}
     </SessionProvider>
   );

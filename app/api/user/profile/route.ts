@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
           id: true,
           name: true,
           email: true,
-          phone: true,
+          mobile: true,
           role: true,
         },
       });
@@ -131,7 +131,7 @@ export async function PATCH(req: NextRequest) {
 
     // Only allow updating specific fields
     if (data.name) updateData.name = data.name;
-    if (data.phone) updateData.phone = data.phone;
+    if (data.phone) updateData.mobile = data.phone;
     
     // Now also allow email updates
     if (data.email && data.email !== user.email) {
@@ -166,7 +166,7 @@ export async function PATCH(req: NextRequest) {
         id: true,
         name: true,
         email: true,
-        phone: true,
+        mobile: true,
         role: true,
       },
     });

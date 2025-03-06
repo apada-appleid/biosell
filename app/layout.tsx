@@ -14,15 +14,34 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Biosell - بایوسل | فروشگاه آنلاین زیست محصولات",
-  description: "فروشگاه آنلاین محصولات زیستی - بایوسل",
+  title: "Biosell - بایوسل | فروشگاه‌ساز آنلاین برای صفحات اینستاگرام",
+  description: "فروشگاه‌ساز آنلاین برای صفحات اینستاگرام - بایوسل",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Biosell - بایوسل",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  icons: {
+    icon: [
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/icons/icon-192x192.png' },
+    ],
+  },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
+  userScalable: true,
+  themeColor: "#4f46e5",
 };
 
 export default function RootLayout({
@@ -38,6 +57,13 @@ export default function RootLayout({
           rel="stylesheet"
           type="text/css"
         />
+        {/* PWA meta tags */}
+        <meta name="application-name" content="Biosell - بایوسل" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Biosell - بایوسل" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="theme-color" content="#4f46e5" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

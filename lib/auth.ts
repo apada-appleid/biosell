@@ -128,7 +128,7 @@ const authOptions: NextAuthOptions = {
               email: user.email,
               role: user.role,
               type: 'admin',
-              mobile: user.phone || undefined
+              mobile: user.mobile
             };
           } 
           // Seller login

@@ -1,4 +1,15 @@
 /** @type {import('next').NextConfig} */
+import NextPWA from 'next-pwa';
+
+// Create PWA plugin
+const withPWA = NextPWA({
+  dest: 'public',
+  disable: process.env.NODE_ENV === 'development',
+  register: true,
+  skipWaiting: true,
+  buildExcludes: [/middleware-manifest\.json$/],
+});
+
 const nextConfig = {
   eslint: {
     // Disabling ESLint during production builds
@@ -58,4 +69,4 @@ const nextConfig = {
   output: 'standalone',
 };
 
-export default nextConfig; 
+export default withPWA(nextConfig); 

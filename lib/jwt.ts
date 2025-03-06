@@ -56,7 +56,7 @@ export async function verifyAuthToken(token: string): Promise<AuthTokenPayload |
     const authPayload: AuthTokenPayload = {
       userId: decoded.userId || decoded.id,
       email: decoded.email,
-      mobile: decoded.mobile || decoded.phone,
+      mobile: decoded.mobile,
       type: decoded.type,
       role: decoded.role,
       username: decoded.username,

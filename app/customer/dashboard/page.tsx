@@ -92,7 +92,7 @@ export default function CustomerDashboard() {
           // تنظیم اطلاعات کاربر
           setCustomer({
             name: userData.name || 'کاربر',
-            mobile: userData.phone || (userData as any).mobile || '',
+            mobile: userData.mobile || '',
             completedOrders: 0, // در یک برنامه واقعی باید از API دریافت شود
             pendingOrders: 0,    // در یک برنامه واقعی باید از API دریافت شود
           });
