@@ -66,12 +66,17 @@ export default function RootLayout({
           type="text/css"
         />
         {/* PWA meta tags */}
-        <meta name="application-name" content="Biosell - بایوسل" />
+        <meta name="application-name" content="بایوسل" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Biosell - بایوسل" />
+        <meta name="apple-mobile-web-app-title" content="بایوسل" />
+        <meta name="format-detection" content="telephone=no" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="theme-color" content="#4f46e5" />
+        <meta name="theme-color" content="#FFFFFF" />
+        <meta name="pwa-features" content="installable,dismissable" />
+        
+        <link rel="apple-touch-icon" href="/images/icons/icon-192x192.png" />
+        <link rel="manifest" href="/manifest.json" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

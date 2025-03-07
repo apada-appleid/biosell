@@ -37,12 +37,28 @@
   }
 }
 
+/* انیمیشن برای نمایش پیام PWA از پایین صفحه */
+@keyframes slideUpFade {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 .animate-slide-next {
   animation: slideNext 0.3s ease-in-out;
 }
 
 .animate-slide-prev {
   animation: slidePrev 0.3s ease-in-out;
+}
+
+.animate-slideUpFade {
+  animation: slideUpFade 0.3s ease-out;
 }
 
 body {
