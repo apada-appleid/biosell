@@ -98,15 +98,15 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
       if (username) {
         try {
           // First try to fetch from our seller API
-          const response = await axios.get(`/api/shop/seller?username=${username}`);
-          const seller = response.data;
+          const response = await axios.get(`/api/shop/${username}`);
+          const seller = response.data.seller;
           
           if (!seller || !seller.id) {
             throw new Error('Seller information not found');
           }
           
           // Then fetch the products for this seller
-          const productsResponse = await axios.get(`/api/shop/products?sellerId=${seller.id}`);
+          const productsResponse = await axios.get(`/api/products?sellerId=${seller.id}`);
           
           if (!productsResponse.data || !productsResponse.data.products) {
             throw new Error('No products data returned from API');

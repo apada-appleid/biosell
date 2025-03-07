@@ -41,7 +41,7 @@ export const PWAInstallPrompt = () => {
         }
       }
     } catch (err) {
-      // Silent fail
+      console.error("Error in initial dismissed check:", err);
     }
     
     // فقط یکبار بررسی می‌کنیم
@@ -81,7 +81,7 @@ export const PWAInstallPrompt = () => {
             return;
           }
         } catch (err) {
-          // Silent fail
+          console.error("Error checking dismissal:", err);
         }
         
         // دستگاه iOS است
@@ -159,16 +159,11 @@ export const PWAInstallPrompt = () => {
         // بستن پیام نصب ما
         setShowPrompt(false);
         
-        // اگر کاربر رد کرد، ذخیره می‌کنیم
-        if (choiceResult.outcome === "dismissed") {
-          localStorage.setItem("pwa-prompt-dismissed", Date.now().toString());
-        }
-        
         // دیگر نمی‌توانیم از این رویداد استفاده کنیم
         setDeferredPrompt(null);
       }
     } catch (err) {
-      // Silent fail
+      console.error('Error in install prompt:', err);
       showManualInstallInstructions("other");
     }
   };
@@ -183,7 +178,7 @@ export const PWAInstallPrompt = () => {
       const now = Date.now();
       localStorage.setItem('pwa-prompt-dismissed', now.toString());
     } catch (err) {
-      // Silent fail
+      console.error('Error saving dismissed state:', err);
     }
   };
   
@@ -245,7 +240,7 @@ export const PWAInstallPrompt = () => {
               <Download className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <h3 className="text-lg font-medium text-gray-900">اپلیکیشن بیوسل را نصب کنید</h3>
+              <h3 className="text-lg font-medium text-gray-900">اپلیکیشن بایوسل را نصب کنید</h3>
               <p className="text-sm text-gray-500 mt-1">
                 برای دسترسی سریع‌تر و تجربه بهتر
               </p>

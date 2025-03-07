@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { NextRequest } from 'next/server';
 
-// GET - Fetch seller information by username
-export async function GET(request: Request) {
+// GET - Fetch seller information by username from the URL path
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ username: string }> }
+) {
   try {
-    const { searchParams } = new URL(request.url);
-    const username = searchParams.get('username');
+    const { username } = await params;
     
     if (!username) {
       return NextResponse.json({ error: 'Username is required' }, { status: 400 });
@@ -33,7 +36,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'This shop is currently not active' }, { status: 403 });
     }
     
-    return NextResponse.json(seller);
+    // Return the seller information in the expected format
+    return NextResponse.json({
+      seller: seller
+    });
     
   } catch (error) {
     console.error('Error fetching seller:', error);

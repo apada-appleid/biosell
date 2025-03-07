@@ -65,17 +65,12 @@ export async function POST(request: NextRequest) {
       authenticatedUser = await getAuthenticatedUser(request);
     }
 
-    if (authenticatedUser?.userId) {
-      console.log("Order being placed by authenticated user:", authenticatedUser.userId, "type:", authenticatedUser.type);
-    } else {
-      console.log("Order being placed by guest user (no valid auth token)");
-      // Note: We allow unauthenticated users to place orders, but they need to provide full customer details
-      if (!customerData.fullName || !customerData.mobile || !customerData.email) {
-        return NextResponse.json(
-          { error: "Guest users must provide full customer information" },
-          { status: 400 }
-        );
-      }
+    // Note: We allow unauthenticated users to place orders, but they need to provide full customer details
+    if (!authenticatedUser?.userId && (!customerData.fullName || !customerData.mobile || !customerData.email)) {
+      return NextResponse.json(
+        { error: "Guest users must provide full customer information" },
+        { status: 400 }
+      );
     }
 
     // Fix the customer creation and ID assignment
@@ -184,17 +179,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Log the order with masked sensitive information
-    console.log('Order created:', {
-      orderId: order.id,
-      orderNumber: order.orderNumber,
-      customer: {
-        id: customerId,
-        email: requestBody?.customerData?.email ? requestBody.customerData.email.substring(0, 3) + "***" : "undefined",
-        mobile: requestBody?.customerData?.mobile ? requestBody.customerData.mobile.substring(0, 3) + "***" : "undefined",
-      },
-    });
-
     return NextResponse.json({
       success: true,
       orderNumber,
@@ -202,15 +186,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Order creation error:", error instanceof Error ? error.message : error);
-    
-    // Log more details about the request for debugging
-    console.error("Order request data:", {
-      hasCustomerData: !!requestBody?.customerData,
-      hasAuthHeader: request.headers.has('Authorization'),
-      email: requestBody?.customerData?.email ? requestBody.customerData.email.substring(0, 3) + "***" : "undefined", 
-      mobile: requestBody?.customerData?.mobile ? requestBody.customerData.mobile.substring(0, 3) + "***" : "undefined",
-      cartItemsCount: requestBody?.cartItems?.length || 0,
-    });
     
     // Provide more specific error messages based on error type
     let errorMessage = "Failed to create order";
@@ -235,11 +210,6 @@ export async function POST(request: NextRequest) {
       } else {
         // Include the actual error message for debugging
         errorMessage = `Failed to create order: ${error.message}`;
-      }
-      
-      // Log stack trace for server errors
-      if (statusCode === 500) {
-        console.error("Order creation stack trace:", error.stack);
       }
     }
     
@@ -273,7 +243,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Define a type for the orders
-    type OrderWithRelations = any; // We'll use 'any' as a simplification, ideally this would be fully typed
+    // TODO: Define proper types for orders with relations instead of using 'any'
+    type OrderWithRelations = any;
 
     // Filter orders based on user type
     let orders: OrderWithRelations[] = [];

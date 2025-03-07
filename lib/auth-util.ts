@@ -10,92 +10,79 @@ const REDIRECT_STORAGE_KEY = 'redirectAfterLogin';
  * Saves the redirect URL to session storage with an expiration timestamp
  * to prevent infinite loops
  */
-export const saveRedirectUrl = (url: string) => {
+export function saveRedirectUrl(url: string): void {
   try {
-    // Add a 10-minute expiration to avoid stale redirects
-    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 minutes
+    if (typeof window === 'undefined') return;
     
-    const redirectData = {
-      url,
-      expiresAt
-    };
+    // Set expiration time to 10 minutes from now
+    const expiresAt = Date.now() + 10 * 60 * 1000;
     
-    console.log(`Saving redirect URL: ${url} (expires in 10 minutes)`);
-    
-    // Store in both session and local storage for redundancy
-    sessionStorage.setItem(REDIRECT_STORAGE_KEY, JSON.stringify(redirectData));
-    localStorage.setItem(REDIRECT_STORAGE_KEY, JSON.stringify(redirectData));
-    
-    // Return the URL for immediate use if needed
-    return url;
+    // Save URL and expiration time
+    localStorage.setItem('auth_redirect_url', url);
+    localStorage.setItem('auth_redirect_expires', expiresAt.toString());
   } catch (error) {
-    console.error('Error saving redirect URL:', error);
-    return null;
+    // Silent fail - this is not critical functionality
   }
-};
+}
 
 /**
  * Gets the stored redirect URL if it exists and is not expired
  */
-export const getRedirectUrl = (): string | null => {
+export function getRedirectUrl(): string | null {
   try {
-    // First try session storage
-    let redirectData = sessionStorage.getItem(REDIRECT_STORAGE_KEY);
+    if (typeof window === 'undefined') return null;
     
-    // If not in session storage, try localStorage
-    if (!redirectData) {
-      redirectData = localStorage.getItem(REDIRECT_STORAGE_KEY);
-    }
+    // Get stored URL and expiration time
+    const url = localStorage.getItem('auth_redirect_url');
+    const expiresAtStr = localStorage.getItem('auth_redirect_expires');
     
-    if (!redirectData) {
-      console.log('No redirect URL found in storage');
+    // If no URL is stored, return null
+    if (!url || !expiresAtStr) {
       return null;
     }
     
-    const { url, expiresAt } = JSON.parse(redirectData);
-    
-    // Check if the redirect URL has expired
-    if (Date.now() > expiresAt) {
-      console.log(`Redirect URL expired (set to expire at ${new Date(expiresAt).toISOString()})`);
+    // Check if URL has expired
+    const expiresAt = parseInt(expiresAtStr, 10);
+    if (isNaN(expiresAt) || Date.now() > expiresAt) {
+      // URL has expired, clear it and return null
       clearRedirectUrl();
       return null;
     }
     
-    console.log(`Retrieved redirect URL: ${url}`);
+    // Return valid URL
     return url;
   } catch (error) {
-    console.error('Error getting redirect URL:', error);
-    clearRedirectUrl();
     return null;
   }
-};
+}
 
 /**
  * Clears the redirect URL from both storage mechanisms
  */
-export const clearRedirectUrl = () => {
+export function clearRedirectUrl(): void {
   try {
-    console.log('Clearing stored redirect URL');
-    sessionStorage.removeItem(REDIRECT_STORAGE_KEY);
-    localStorage.removeItem(REDIRECT_STORAGE_KEY);
+    if (typeof window === 'undefined') return;
+    
+    localStorage.removeItem('auth_redirect_url');
+    localStorage.removeItem('auth_redirect_expires');
   } catch (error) {
-    console.error('Error clearing redirect URL:', error);
+    // Silent fail
   }
-};
+}
 
 /**
  * Generates a redirect URL with timestamp to prevent caching
  */
-export const createRedirectUrl = (baseUrl: string, params: Record<string, string> = {}) => {
-  // Add timestamp to prevent caching
-  params.t = Date.now().toString();
+export function createRedirectUrl(baseUrl: string, params: Record<string, string>): string {
+  const url = new URL(baseUrl, window.location.origin);
   
-  const searchParams = new URLSearchParams();
+  // Add parameters to URL
   Object.entries(params).forEach(([key, value]) => {
-    searchParams.append(key, value);
+    if (value) {
+      url.searchParams.append(key, value);
+    }
   });
   
-  const finalUrl = `${baseUrl}?${searchParams.toString()}`;
-  console.log(`Created redirect URL: ${finalUrl}`);
+  const finalUrl = url.toString();
   return finalUrl;
-}; 
+} 

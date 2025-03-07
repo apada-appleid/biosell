@@ -98,7 +98,6 @@ export default function PaymentClient() {
         setUploadStatus('uploading');
         // Upload receipt image to the receipts bucket (private)
         const receiptInfo = await uploadReceiptToS3(receiptImage, `sellers/${Date.now()}`);
-        console.log('Receipt uploaded successfully:', receiptInfo);
         setUploadStatus('success');
         
         // In a real application, you would save the receipt information to your database

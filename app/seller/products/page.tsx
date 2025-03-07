@@ -186,111 +186,189 @@ export default function SellerProductsPage() {
         </div>
       )}
 
-      {/* Products Table */}
+      {/* Products Table/Cards */}
       <div className="mt-8 flex flex-col">
-        <div className="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
-          <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-              {filteredProducts.length > 0 ? (
-                <table className="min-w-full divide-y divide-gray-300">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="py-3.5 pr-4 pl-3 text-right text-sm font-semibold text-gray-900 sm:pr-6">
-                        محصول
-                      </th>
-                      <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
-                        قیمت
-                      </th>
-                      <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
-                        موجودی
-                      </th>
-                      <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
-                        وضعیت
-                      </th>
-                      <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                        <span className="sr-only">عملیات</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200 bg-white">
-                    {filteredProducts.map((product) => (
-                      <tr key={product.id}>
-                        <td className="whitespace-nowrap py-4 pr-4 pl-3 text-sm sm:pr-6">
-                          <div className="flex items-center">
-                            <div className="h-10 w-10 flex-shrink-0 relative overflow-hidden rounded-full">
-                              {product.images && product.images.length > 0 ? (
-                                <Image
-                                  src={ensureValidImageUrl(product.images[0].imageUrl)}
-                                  alt={product.title}
-                                  width={40}
-                                  height={40}
-                                  className="object-cover h-10 w-10"
-                                  unoptimized={true}
-                                />
-                              ) : (
-                                <div className="h-10 w-10 bg-gray-200 flex items-center justify-center rounded-full">
-                                  <span className="text-xs text-gray-500">بدون تصویر</span>
+        {filteredProducts.length > 0 ? (
+          <>
+            {/* Table for desktop */}
+            <div className="hidden md:block">
+              <div className="-my-2 -mx-4 sm:-mx-6 lg:-mx-8">
+                <div className="inline-block min-w-full py-2 align-middle">
+                  <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-300">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th scope="col" className="py-3.5 pr-4 pl-3 text-right text-sm font-semibold text-gray-900 sm:pr-6">
+                              محصول
+                            </th>
+                            <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
+                              قیمت
+                            </th>
+                            <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
+                              موجودی
+                            </th>
+                            <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
+                              وضعیت
+                            </th>
+                            <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
+                              <span className="sr-only">عملیات</span>
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200 bg-white">
+                          {filteredProducts.map((product) => (
+                            <tr key={product.id}>
+                              <td className="whitespace-nowrap py-4 pr-4 pl-3 text-sm sm:pr-6">
+                                <div className="flex items-center">
+                                  <div className="h-10 w-10 flex-shrink-0 relative overflow-hidden rounded-full">
+                                    {product.images && product.images.length > 0 ? (
+                                      <Image
+                                        src={ensureValidImageUrl(product.images[0].imageUrl)}
+                                        alt={product.title}
+                                        width={40}
+                                        height={40}
+                                        className="object-cover h-10 w-10"
+                                        unoptimized={true}
+                                      />
+                                    ) : (
+                                      <div className="h-10 w-10 bg-gray-200 flex items-center justify-center rounded-full">
+                                        <span className="text-xs text-gray-500">بدون تصویر</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="mr-4">
+                                    <div className="font-medium text-gray-900 break-words max-w-[120px] sm:max-w-full">{product.title}</div>
+                                  </div>
                                 </div>
-                              )}
-                            </div>
-                            <div className="mr-4">
-                              <div className="font-medium text-gray-900">{product.title}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-700">
-                          {formatPrice(product.price)}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-700">
-                          {product.inventory}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm">
-                          <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${product.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                            {product.isActive ? 'فعال' : 'غیرفعال'}
-                          </span>
-                        </td>
-                        <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-left text-sm font-medium sm:pr-6">
-                          <div className="flex items-center justify-end space-x-3 space-x-reverse">
-                            <Link href={`/seller/products/${product.id}/edit`} className="text-blue-600 hover:text-blue-900">
-                              <Edit className="h-5 w-5" />
-                              <span className="sr-only">ویرایش</span>
-                            </Link>
-                            <button
-                              onClick={() => handleDeleteClick(product.id)}
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              <Trash2 className="h-5 w-5" />
-                              <span className="sr-only">حذف</span>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <div className="text-center p-12 bg-white">
-                  <div className="text-gray-700">هیچ محصولی پیدا نشد</div>
-                  {searchQuery ? (
-                    <button
-                      className="mt-2 text-blue-600 hover:text-blue-800"
-                      onClick={() => setSearchQuery('')}
-                    >
-                      پاک کردن جستجو
-                    </button>
-                  ) : (
-                    <Link
-                      href="/seller/products/new"
-                      className="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                      افزودن اولین محصول
-                    </Link>
-                  )}
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-700">
+                                {formatPrice(product.price)}
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-700">
+                                {product.inventory}
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-4 text-sm">
+                                <span className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${product.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                                  {product.isActive ? 'فعال' : 'غیرفعال'}
+                                </span>
+                              </td>
+                              <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-left text-sm font-medium sm:pr-6">
+                                <div className="flex items-center justify-end space-x-3 space-x-reverse">
+                                  <Link href={`/seller/products/${product.id}/edit`} className="text-blue-600 hover:text-blue-900">
+                                    <Edit className="h-5 w-5" />
+                                    <span className="sr-only">ویرایش</span>
+                                  </Link>
+                                  <button
+                                    onClick={() => handleDeleteClick(product.id)}
+                                    className="text-red-600 hover:text-red-900"
+                                  >
+                                    <Trash2 className="h-5 w-5" />
+                                    <span className="sr-only">حذف</span>
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
+
+            {/* Card view for mobile */}
+            <div className="md:hidden">
+              <div className="grid grid-cols-1 gap-4">
+                {filteredProducts.map((product) => (
+                  <div key={product.id} className="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
+                    <div className="p-4">
+                      <div className="flex items-center">
+                        <div className="h-14 w-14 flex-shrink-0 relative overflow-hidden rounded-full">
+                          {product.images && product.images.length > 0 ? (
+                            <Image
+                              src={ensureValidImageUrl(product.images[0].imageUrl)}
+                              alt={product.title}
+                              width={56}
+                              height={56}
+                              className="object-cover h-14 w-14"
+                              unoptimized={true}
+                            />
+                          ) : (
+                            <div className="h-14 w-14 bg-gray-200 flex items-center justify-center rounded-full">
+                              <span className="text-xs text-gray-500">بدون تصویر</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="mr-4 flex-1">
+                          <h3 className="font-medium text-gray-900 text-base">{product.title}</h3>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-4 grid grid-cols-3 text-sm">
+                        <div className="col-span-1">
+                          <div className="text-gray-500">قیمت</div>
+                          <div className="font-medium text-gray-900 mt-1">{formatPrice(product.price)}</div>
+                        </div>
+                        <div className="col-span-1">
+                          <div className="text-gray-500">موجودی</div>
+                          <div className="font-medium text-gray-900 mt-1">{product.inventory}</div>
+                        </div>
+                        <div className="col-span-1">
+                          <div className="text-gray-500">وضعیت</div>
+                          <div className="mt-1">
+                            <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${product.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                              {product.isActive ? 'فعال' : 'غیرفعال'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-4 flex justify-end border-t border-gray-100 pt-4">
+                        <div className="flex space-x-2 space-x-reverse">
+                          <Link 
+                            href={`/seller/products/${product.id}/edit`}
+                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
+                          >
+                            <Edit className="ml-1.5 h-4 w-4" />
+                            ویرایش
+                          </Link>
+                          <button
+                            onClick={() => handleDeleteClick(product.id)}
+                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded text-red-700 bg-white hover:bg-gray-50 focus:outline-none"
+                          >
+                            <Trash2 className="ml-1.5 h-4 w-4" />
+                            حذف
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="text-center p-12 bg-white shadow rounded-lg">
+            <div className="text-gray-700">هیچ محصولی پیدا نشد</div>
+            {searchQuery ? (
+              <button
+                className="mt-2 text-blue-600 hover:text-blue-800"
+                onClick={() => setSearchQuery('')}
+              >
+                پاک کردن جستجو
+              </button>
+            ) : (
+              <Link
+                href="/seller/products/new"
+                className="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                افزودن اولین محصول
+              </Link>
+            )}
           </div>
-        </div>
+        )}
       </div>
 
       {/* Delete confirmation modal */}

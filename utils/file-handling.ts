@@ -6,14 +6,6 @@ import { existsSync } from "fs";
 // Define base upload path that can be configured via env
 const UPLOAD_BASE_PATH = process.env.UPLOAD_BASE_PATH || join(process.cwd(), "public");
 
-// Log the upload path for debugging
-console.log('Upload base path:', {
-  UPLOAD_BASE_PATH,
-  env_path: process.env.UPLOAD_BASE_PATH,
-  default_path: join(process.cwd(), "public"),
-  cwd: process.cwd()
-});
-
 export async function saveUploadedFile(
   file: File, 
   entityType: string, 
@@ -29,12 +21,6 @@ export async function saveUploadedFile(
   const uploadDir = join(UPLOAD_BASE_PATH, "uploads", entityType, directoryId);
   const filePath = join(uploadDir, fileName);
   const dbPath = `/uploads/${entityType}/${directoryId}/${fileName}`;
-  
-  console.log('File paths:', {
-    uploadDir,
-    filePath,
-    dbPath
-  });
   
   // Ensure directory exists with proper permissions
   await mkdir(uploadDir, { recursive: true, mode: 0o755 });

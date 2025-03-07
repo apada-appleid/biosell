@@ -170,111 +170,195 @@ export default function SellersPage() {
         </div>
       </div>
 
-      {/* Sellers Table */}
+      {/* Sellers Table/Cards */}
       <div className="mt-8 flex flex-col">
-        <div className="-my-2 -mx-4 overflow-x-auto sm:-mx-6 lg:-mx-8">
-          <div className="inline-block min-w-full py-2 align-middle md:px-6 lg:px-8">
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="py-3.5 pr-4 pl-3 text-right text-sm font-semibold text-gray-900 sm:pr-6">
-                      نام فروشگاه
-                    </th>
-                    <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
-                      نام کاربری
-                    </th>
-                    <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
-                      ایمیل
-                    </th>
-                    <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
-                      تاریخ ثبت‌نام
-                    </th>
-                    <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
-                      اشتراک
-                    </th>
-                    <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
-                      وضعیت
-                    </th>
-                    <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                      <span className="sr-only">عملیات</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {filteredSellers.length > 0 ? (
-                    filteredSellers.map((seller) => (
-                      <tr key={seller.id}>
-                        <td className="whitespace-nowrap py-4 pr-4 pl-3 text-sm font-medium text-gray-900 sm:pr-6">
-                          {seller.shopName}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {seller.username}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {seller.email}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {formatDate(seller.createdAt)}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                          {seller.subscription ? (
-                            <div>
-                              <span className="block">{seller.subscription.planName}</span>
-                              <span className="text-xs text-gray-400">
-                                تا {formatDate(seller.subscription.endDate)}
-                              </span>
-                            </div>
-                          ) : (
-                            "بدون اشتراک"
-                          )}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-4 text-sm">
+        {filteredSellers.length > 0 ? (
+          <>
+            {/* Table view for desktop */}
+            <div className="hidden md:block">
+              <div className="-my-2 -mx-4 sm:-mx-6 lg:-mx-8">
+                <div className="inline-block min-w-full py-2 align-middle">
+                  <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 md:rounded-lg">
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-300">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th scope="col" className="py-3.5 pr-4 pl-3 text-right text-sm font-semibold text-gray-900 sm:pr-6">
+                              نام فروشگاه
+                            </th>
+                            <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
+                              نام کاربری
+                            </th>
+                            <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
+                              ایمیل
+                            </th>
+                            <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
+                              تاریخ ثبت‌نام
+                            </th>
+                            <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
+                              اشتراک
+                            </th>
+                            <th scope="col" className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900">
+                              وضعیت
+                            </th>
+                            <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
+                              <span className="sr-only">عملیات</span>
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200 bg-white">
+                          {filteredSellers.map((seller) => (
+                            <tr key={seller.id}>
+                              <td className="whitespace-nowrap py-4 pr-4 pl-3 text-sm font-medium text-gray-900 sm:pr-6">
+                                <span className="break-words max-w-[120px] sm:max-w-full inline-block">{seller.shopName}</span>
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                {seller.username}
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                <span className="break-all max-w-[120px] sm:max-w-full inline-block">{seller.email}</span>
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                {formatDate(seller.createdAt)}
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                {seller.subscription ? (
+                                  <div>
+                                    <span className="block">{seller.subscription.planName}</span>
+                                    <span className="text-xs text-gray-400">
+                                      تا {formatDate(seller.subscription.endDate)}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  "بدون اشتراک"
+                                )}
+                              </td>
+                              <td className="whitespace-nowrap px-3 py-4 text-sm">
+                                <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                                  seller.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                }`}>
+                                  {seller.isActive ? 'فعال' : 'غیرفعال'}
+                                </span>
+                              </td>
+                              <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                                <div className="flex justify-end space-x-2 space-x-reverse">
+                                  <Link
+                                    href={`/admin/sellers/${seller.id}`}
+                                    className="text-gray-500 hover:text-gray-700"
+                                    aria-label="نمایش"
+                                  >
+                                    <TbEye className="h-5 w-5" />
+                                  </Link>
+                                  <Link
+                                    href={`/admin/sellers/${seller.id}/edit`}
+                                    className="text-blue-500 hover:text-blue-700"
+                                    aria-label="ویرایش"
+                                  >
+                                    <TbEdit className="h-5 w-5" />
+                                  </Link>
+                                  <button
+                                    onClick={() => handleDeleteClick(seller.id)}
+                                    className="text-red-500 hover:text-red-700"
+                                    aria-label="حذف"
+                                  >
+                                    <TbTrash className="h-5 w-5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Card view for mobile */}
+            <div className="md:hidden">
+              <div className="grid grid-cols-1 gap-4">
+                {filteredSellers.map((seller) => (
+                  <div key={seller.id} className="bg-white shadow rounded-lg overflow-hidden border border-gray-200">
+                    <div className="p-4">
+                      <div className="border-b border-gray-100 pb-3">
+                        <h3 className="font-bold text-gray-900 text-lg">{seller.shopName}</h3>
+                        <div className="mt-1 flex items-center justify-between">
+                          <div className="text-sm text-gray-500">{seller.username}</div>
                           <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
                             seller.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                           }`}>
                             {seller.isActive ? 'فعال' : 'غیرفعال'}
                           </span>
-                        </td>
-                        <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                          <div className="flex justify-end space-x-2 space-x-reverse">
-                            <Link
-                              href={`/admin/sellers/${seller.id}`}
-                              className="text-gray-500 hover:text-gray-700"
-                              aria-label="نمایش"
-                            >
-                              <TbEye className="h-5 w-5" />
-                            </Link>
-                            <Link
-                              href={`/admin/sellers/${seller.id}/edit`}
-                              className="text-blue-500 hover:text-blue-700"
-                              aria-label="ویرایش"
-                            >
-                              <TbEdit className="h-5 w-5" />
-                            </Link>
-                            <button
-                              onClick={() => handleDeleteClick(seller.id)}
-                              className="text-red-500 hover:text-red-700"
-                              aria-label="حذف"
-                            >
-                              <TbTrash className="h-5 w-5" />
-                            </button>
+                        </div>
+                      </div>
+                      
+                      <div className="py-3 text-sm">
+                        <div className="grid grid-cols-1 gap-2">
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">ایمیل:</span>
+                            <span className="text-gray-900 text-left">{seller.email}</span>
                           </div>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={7} className="px-3 py-4 text-sm text-center text-gray-500">
-                        فروشنده‌ای یافت نشد
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">تاریخ ثبت‌نام:</span>
+                            <span className="text-gray-900">{formatDate(seller.createdAt)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">اشتراک:</span>
+                            <span className="text-gray-900">
+                              {seller.subscription ? (
+                                <div className="text-left">
+                                  <span className="block">{seller.subscription.planName}</span>
+                                  <span className="text-xs text-gray-400">
+                                    تا {formatDate(seller.subscription.endDate)}
+                                  </span>
+                                </div>
+                              ) : (
+                                "بدون اشتراک"
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-3 border-t border-gray-100 pt-3 flex justify-end">
+                        <div className="flex space-x-2 space-x-reverse">
+                          <Link
+                            href={`/admin/sellers/${seller.id}`}
+                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
+                          >
+                            <TbEye className="ml-1.5 h-4 w-4" />
+                            نمایش
+                          </Link>
+                          <Link
+                            href={`/admin/sellers/${seller.id}/edit`}
+                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded text-blue-700 bg-white hover:bg-gray-50 focus:outline-none"
+                          >
+                            <TbEdit className="ml-1.5 h-4 w-4" />
+                            ویرایش
+                          </Link>
+                          <button
+                            onClick={() => handleDeleteClick(seller.id)}
+                            className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded text-red-700 bg-white hover:bg-gray-50 focus:outline-none"
+                          >
+                            <TbTrash className="ml-1.5 h-4 w-4" />
+                            حذف
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        </div>
+          </>
+        ) : (
+          <tr>
+            <td colSpan={7} className="px-3 py-4 text-sm text-center text-gray-500">
+              فروشنده‌ای یافت نشد
+            </td>
+          </tr>
+        )}
       </div>
 
       {/* Delete Confirmation Modal */}

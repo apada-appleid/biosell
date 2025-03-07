@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import React from "react";
 import { useCartStore } from "@/app/store/cart";
-import { Product } from "@/app/types";
+import { Product, ProductImage } from "@/app/types";
 import {
   User,
   Heart,
@@ -35,12 +35,6 @@ interface Seller {
   isActive: boolean;
 }
 
-// Debug info type
-interface DebugInfoType {
-  productsResponse?: any;
-  [key: string]: any;
-}
-
 /**
  * ShopPage component displays a seller's profile and products
  *
@@ -65,7 +59,6 @@ export default function ShopPage() {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [quantity, setQuantity] = useState(1);
-  const [debugInfo, setDebugInfo] = useState<DebugInfoType>({});
   const [mounted, setMounted] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -73,6 +66,24 @@ export default function ShopPage() {
   const [slideDirection, setSlideDirection] = useState<"next" | "prev" | null>(
     null
   );
+
+  // Ensure image URLs are valid in the product dialog
+  const processProductImages = (product: Product) => {
+    if (product.images && product.images.length > 0) {
+      return {
+        ...product,
+        images: product.images.map((img: ProductImage) => ({
+          ...img,
+          imageUrl: ensureValidImageUrl(img.imageUrl),
+        })),
+      };
+    }
+
+    return {
+      ...product,
+      imageUrl: ensureValidImageUrl(product.imageUrl),
+    };
+  };
 
   // Hydrate cart from localStorage on initial load
   useEffect(() => {
@@ -88,89 +99,57 @@ export default function ShopPage() {
   // دریافت اطلاعات فروشنده
   useEffect(() => {
     const fetchSeller = async () => {
-      if (!username) {
-        console.error("No username found in URL");
-        setError("خطا در بارگیری اطلاعات فروشنده: نام کاربری نامعتبر");
-        setLoading(false);
-        return;
-      }
-
       try {
-        console.log("Fetching seller data for username:", username);
-        const response = await fetch(`/api/shop/seller?username=${username}`);
+        if (!username) return;
+        
+        const response = await fetch(`/api/shop/${username}`);
+        
         if (!response.ok) {
-          setError("فروشنده یافت نشد");
-          setLoading(false);
-          return;
+          throw new Error("فروشنده یافت نشد");
         }
+        
         const data = await response.json();
-        console.log("Seller data received:", data);
-        setSeller(data);
-        setLoading(false);
+        
+        if (!data.seller) {
+          throw new Error("فروشنده یافت نشد");
+        }
+        
+        setSeller(data.seller);
+        
+        // پس از دریافت اطلاعات فروشنده، محصولات را دریافت می‌کنیم
+        await fetchProducts(data.seller.id);
       } catch (error) {
-        console.error("Error fetching seller:", error);
-        setError("خطا در بارگیری اطلاعات فروشنده");
+        setError(error instanceof Error ? error.message : "خطا در دریافت اطلاعات فروشنده");
+        setLoading(false);
+      }
+    };
+    
+    const fetchProducts = async (sellerId: string) => {
+      try {
+        const response = await fetch(`/api/products?sellerId=${sellerId}`);
+        
+        if (!response.ok) {
+          throw new Error("خطا در دریافت محصولات");
+        }
+        
+        const data = await response.json();
+        
+        // Make sure we're getting an array
+        const productsList = Array.isArray(data.products) ? data.products : [];
+        
+        // Process product images to ensure they have valid URLs
+        const processedProducts = productsList.map(processProductImages);
+        
+        setProducts(processedProducts);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      } finally {
         setLoading(false);
       }
     };
 
     fetchSeller();
   }, [username]);
-
-  // دریافت محصولات
-  useEffect(() => {
-    const fetchProducts = async () => {
-      if (!seller) return;
-
-      try {
-        console.log("Fetching products for seller ID:", seller.id);
-        const response = await fetch(
-          `/api/shop/products?sellerId=${seller.id}`
-        );
-        if (!response.ok) {
-          throw new Error("خطا در بارگیری محصولات");
-        }
-        const data = await response.json();
-        console.log("Products received:", data);
-        setDebugInfo((prev) => ({
-          ...(prev as Record<string, any>),
-          productsResponse: data,
-        }));
-
-        // Make sure we're getting an array
-        let productList: Product[] = [];
-        if (Array.isArray(data)) {
-          productList = data;
-        } else if (data.products && Array.isArray(data.products)) {
-          productList = data.products;
-        } else {
-          console.error("Unexpected products data format:", data);
-        }
-
-        // اطمینان از سازگاری داده‌های محصول با نوع Product
-        const validProducts = productList.map((p) => ({
-          ...p,
-          available:
-            p.available !== undefined ? p.available : p.isActive ?? true,
-          createdAt: p.createdAt || new Date().toISOString(),
-          // اطمینان از اینکه هر دو فیلد likes_count و likesCount مقدار دارند
-          likes_count: p.likes_count || p.likesCount || 0,
-          likesCount: p.likesCount || p.likes_count || 0,
-        }));
-
-        setProducts(validProducts);
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching products:", error);
-        setError("خطا در بارگیری محصولات");
-        setLoading(false);
-      }
-    };
-
-    if (seller) {
-      fetchProducts();
-    }
-  }, [seller]);
 
   // Reset image index when product changes
   useEffect(() => {
@@ -316,31 +295,12 @@ export default function ShopPage() {
     setCurrentImageIndex((prev) => (prev === 0 ? imagesLength - 1 : prev - 1));
   };
 
-  // Debug component (visible only in development)
-  const DebugInfo = () => {
-    if (process.env.NODE_ENV !== "development") return null;
-
-    return (
-      <div className="fixed bottom-0 left-0 right-0 bg-black bg-opacity-80 text-white p-2 text-xs max-h-32 overflow-auto">
-        <div>Username: {username}</div>
-        <div>
-          Seller:{" "}
-          {seller ? `ID: ${seller.id}, Name: ${seller.shopName}` : "Not loaded"}
-        </div>
-        <div>Products: {products.length}</div>
-        <div>Loading: {loading ? "Yes" : "No"}</div>
-        <div>Error: {error || "None"}</div>
-      </div>
-    );
-  };
-
   // نمایش بارگذاری
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-white p-4">
         <Loader2 className="h-12 w-12 text-blue-500 animate-spin mb-4" />
         <p className="text-gray-700 text-lg">در حال بارگذاری...</p>
-        <DebugInfo />
       </div>
     );
   }
@@ -368,30 +328,11 @@ export default function ShopPage() {
             بازگشت به صفحه اصلی
           </button>
         </div>
-        <DebugInfo />
       </div>
     );
   }
 
-  // Ensure image URLs are valid in the product dialog
-  const processProductImages = (product: any) => {
-    if (product.images && product.images.length > 0) {
-      return {
-        ...product,
-        images: product.images.map((img: any) => ({
-          ...img,
-          imageUrl: ensureValidImageUrl(img.imageUrl),
-        })),
-      };
-    }
-
-    return {
-      ...product,
-      imageUrl: ensureValidImageUrl(product.imageUrl),
-    };
-  };
-
-  const handleProductClick = (product: any) => {
+  const handleProductClick = (product: Product) => {
     openProductDetails(product);
   };
 
@@ -523,9 +464,6 @@ export default function ShopPage() {
           قدرت گرفته از <span className="font-medium">بایوسل</span>
         </p>
       </footer>
-
-      {/* In development debug info */}
-      <DebugInfo />
 
       {/* مودال نمایش جزئیات محصول */}
       {selectedProduct && (

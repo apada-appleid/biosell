@@ -44,13 +44,11 @@ export default function CustomerOrders() {
         `/api/customer/orders?customerId=${session.user.id}`
       );
 
-      console.log("response", response);
       if (!response.ok) {
         throw new Error("خطا در دریافت سفارش‌ها");
       }
 
       const data = await response.json();
-      console.log("data", data);
       setOrders(data.orders || []);
       setFilteredOrders(data.orders || []);
     } catch (err) {
@@ -61,10 +59,8 @@ export default function CustomerOrders() {
     }
   }, [session]);
 
-  console.log("orders", orders);
   useEffect(() => {
     if (session) {
-      console.log("session", session);
       fetchOrders();
     }
   }, [session, fetchOrders]);

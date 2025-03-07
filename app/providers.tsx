@@ -23,20 +23,6 @@ export default function Providers({ children }: ProvidersProps) {
 
   useEffect(() => {
     setMounted(true);
-    
-    // تنظیم متغیر دیباگ برای کامپوننت‌های PWA
-    if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-      console.log('PWA Debug Mode Enabled');
-      (window as any).enablePWA = () => {
-        console.log('Manually enabling PWA prompt');
-        if ((window as any).debugPWA) {
-          (window as any).debugPWA.clearDismissed();
-          (window as any).debugPWA.showPrompt();
-        } else {
-          console.warn('PWA debug module not ready yet. Try again in a few seconds.');
-        }
-      };
-    }
   }, []);
 
   return (

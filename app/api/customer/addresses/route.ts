@@ -96,12 +96,10 @@ export async function POST(req: NextRequest) {
       if (authHeader && authHeader.startsWith('Bearer ')) {
         // Extract the token
         const token = authHeader.substring(7);
-        console.log('Received auth token in header for POST:', token ? 'Token exists' : 'No token');
         
         try {
           // Verify the token
           const decodedToken = await verifyAuthToken(token);
-          console.log('Decoded token for POST:', decodedToken);
           
           if (decodedToken && decodedToken.userId) {
             // Set customerId from token
@@ -110,8 +108,6 @@ export async function POST(req: NextRequest) {
         } catch (tokenError) {
           console.error('Token verification failed for POST:', tokenError);
         }
-      } else {
-        console.log('No auth header found for POST');
       }
     }
     
@@ -201,12 +197,10 @@ export async function PATCH(req: NextRequest) {
       if (authHeader && authHeader.startsWith('Bearer ')) {
         // Extract the token
         const token = authHeader.substring(7);
-        console.log('Received auth token in header for PATCH:', token ? 'Token exists' : 'No token');
         
         try {
           // Verify the token
           const decodedToken = await verifyAuthToken(token);
-          console.log('Decoded token for PATCH:', decodedToken);
           
           if (decodedToken && decodedToken.userId) {
             // Set customerId from token
@@ -215,8 +209,6 @@ export async function PATCH(req: NextRequest) {
         } catch (tokenError) {
           console.error('Token verification failed for PATCH:', tokenError);
         }
-      } else {
-        console.log('No auth header found for PATCH');
       }
     }
     
@@ -371,12 +363,10 @@ export async function DELETE(req: NextRequest) {
       if (authHeader && authHeader.startsWith('Bearer ')) {
         // Extract the token
         const token = authHeader.substring(7);
-        console.log('Received auth token in header for DELETE:', token ? 'Token exists' : 'No token');
         
         try {
           // Verify the token
           const decodedToken = await verifyAuthToken(token);
-          console.log('Decoded token for DELETE:', decodedToken);
           
           if (decodedToken && decodedToken.userId) {
             // Set customerId from token
@@ -385,8 +375,6 @@ export async function DELETE(req: NextRequest) {
         } catch (tokenError) {
           console.error('Token verification failed for DELETE:', tokenError);
         }
-      } else {
-        console.log('No auth header found for DELETE');
       }
     }
     

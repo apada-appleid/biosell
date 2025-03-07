@@ -141,21 +141,12 @@ export default function CustomerDashboard() {
   // تابع خروج کاربر
   const handleLogout = async () => {
     try {
-      // حذف توکن‌های محلی
       localStorage.removeItem('auth_token');
       localStorage.removeItem('user_info');
-      
-      // خروج از NextAuth session
       await signOut({ redirect: false });
-      
-      console.log('Logout success');
-      
-      // ریدایرکت به صفحه اصلی
-      router.push('/');
+      router.push('/auth/customer-login');
     } catch (error) {
       console.error('Error during logout:', error);
-      // در صورت خطا، به هر حال ریدایرکت کنیم
-      router.push('/');
     }
   };
 
@@ -195,6 +186,13 @@ export default function CustomerDashboard() {
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('fa-IR').format(price) + ' تومان';
   };
+
+  useEffect(() => {
+    if (!session) {
+      // اگر کاربر لاگین نیست، به صفحه لاگین هدایت می‌شود
+      router.push('/auth/login');
+    }
+  }, [session, router]);
 
   if (isLoading) {
     return (

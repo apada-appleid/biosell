@@ -63,15 +63,13 @@ export default function CustomerSupport() {
     }, 1000);
   }, []);
 
-  const onSubmit = (data: TicketFormValues) => {
+  const onSubmit = async (data: TicketFormValues) => {
     setIsSubmitting(true);
     setSubmitStatus(null);
 
     // در حالت واقعی، باید درخواست API را برای ارسال تیکت انجام داد
     // اما در اینجا، از تاخیر شبیه‌سازی شده استفاده می‌کنیم
     setTimeout(() => {
-      console.log('تیکت جدید ارسال شد:', data);
-      
       // اضافه کردن تیکت جدید به لیست
       const newTicket: Ticket = {
         id: `${tickets.length + 1}`,

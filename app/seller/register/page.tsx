@@ -9,6 +9,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useSession, signIn } from 'next-auth/react';
 import axios from 'axios';
+import { useToastStore } from '@/app/store/toast';
 
 const registerSchema = z.object({
   shopName: z.string().min(3, 'نام فروشگاه باید حداقل 3 کاراکتر باشد'),
@@ -28,6 +29,9 @@ export default function SellerRegisterPage() {
   // همه useState ها با هم باشند
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const showToast = useToastStore((state) => state.showToast);
   
   // useForm باید قبل از useEffect‌ها قرار بگیرد چون احتمالاً داخلش از useRef استفاده می‌شود
   const {
@@ -57,6 +61,7 @@ export default function SellerRegisterPage() {
   const onSubmit = async (data: RegisterFormValues) => {
     setIsLoading(true);
     setError(null);
+    setIsSubmitting(true);
 
     try {
       // Rename phoneNumber to mobile for API compatibility
@@ -74,8 +79,6 @@ export default function SellerRegisterPage() {
       if (!response.data.success) {
         throw new Error(response.data.error || 'Registration failed');
       }
-      
-      console.log('Registration successful:', response.data);
       
       // Sign in the user with the new credentials
       const signInResult = await signIn('credentials', {
@@ -214,7 +217,7 @@ export default function SellerRegisterPage() {
           <div className="pt-2">
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || isSubmitting}
               className="w-full bg-gradient-to-r from-indigo-600 to-blue-500 text-white py-3 px-4 rounded-md hover:from-indigo-700 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300 font-medium disabled:opacity-70 disabled:cursor-not-allowed"
             >
               {isLoading ? (
