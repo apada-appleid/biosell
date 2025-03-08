@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     requestBody = body; // Store for error handling
-    const { customerData, cartItems, total, sellerId, paymentMethod, shippingAddress } = body;
+    const { customerData, cartItems, total, sellerId, paymentMethod, shippingAddress, addressId } = body;
     
     // Enhanced validation
     if (!customerData || !cartItems || !Array.isArray(cartItems) || cartItems.length === 0 || !total || !sellerId) {
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
       customerId = customer.id;
     }
 
-    // Create order with the customer ID
+    // Create order with the customer ID and address ID if available
     const orderNumber = generateOrderNumber();
     
     // Include delivery mobile in shipping address since there's no separate field for it
@@ -143,25 +143,49 @@ export async function POST(request: NextRequest) {
       `${customerData.fullName}, ${customerData.deliveryMobile || customerData.mobile}, ${customerData.address}, ${customerData.city}, ${customerData.postalCode}, ${customerData.country || "ایران"}` : 
       null;
     
-    const order = await prisma.order.create({
-      data: {
-        orderNumber,
-        customerId,
-        sellerId,
-        status: "pending",
-        total,
-        paymentMethod: paymentMethod || "credit_card",
-        shippingAddress: finalShippingAddress,
-        items: {
-          create: cartItems.map((item: any) => ({
-            productId: item.product.id,
-            title: item.product.title,
-            price: item.product.price,
-            quantity: item.quantity,
-            totalPrice: item.product.price * item.quantity
-          }))
+    // Create order data with base properties
+    const orderData = {
+      orderNumber,
+      customerId,
+      sellerId,
+      status: "pending",
+      total,
+      paymentMethod: paymentMethod || "credit_card",
+      shippingAddress: finalShippingAddress,
+      items: {
+        create: cartItems.map((item: any) => ({
+          productId: item.product.id,
+          title: item.product.title,
+          price: item.product.price,
+          quantity: item.quantity,
+          totalPrice: item.product.price * item.quantity
+        }))
+      }
+    };
+    
+    // Add customer address ID if provided
+    if (addressId) {
+      // Verify address belongs to this customer
+      const addressExists = await prisma.customerAddress.findFirst({
+        where: {
+          id: addressId,
+          customerId: customerId,
+          deletedAt: null,
         }
-      },
+      });
+      
+      if (addressExists) {
+        // Link address to order
+        // @ts-ignore - We're dynamically adding a field that may not be in the schema yet
+        orderData.addressId = addressId;
+      } else {
+        console.warn(`Address ID ${addressId} not found for customer ${customerId} or is deleted`);
+      }
+    }
+    
+    // Create the order
+    const order = await prisma.order.create({
+      data: orderData,
       include: {
         items: true
       }

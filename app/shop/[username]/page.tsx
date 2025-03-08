@@ -66,6 +66,7 @@ export default function ShopPage() {
   const [slideDirection, setSlideDirection] = useState<"next" | "prev" | null>(
     null
   );
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   // Ensure image URLs are valid in the product dialog
   const processProductImages = (product: Product) => {
@@ -188,34 +189,59 @@ export default function ShopPage() {
   const handleAddToCart = () => {
     if (selectedProduct) {
       try {
+        setIsAddingToCart(true);
+        
         // استفاده از استور zustand برای مدیریت سبد خرید
         addToCart(selectedProduct, quantity);
 
-        // Show toast with action buttons
+        // بستن مودال محصول
+        closeProductDetails();
+
+        // Show toast with action buttons and auto-dismiss behavior
         showToast(
           `${quantity} عدد ${selectedProduct.title} به سبد خرید اضافه شد`,
           [
             {
               label: "تکمیل سفارش",
               onClick: () => router.push("/cart"),
+              autoDismiss: true
             },
             {
               label: "ادامه خرید",
               onClick: () => {
+                // Close toast and continue shopping
                 useToastStore.getState().hideToast();
-                closeProductDetails();
               },
+              autoDismiss: true
             },
-          ]
+          ],
+          'success',
+          8000 // Longer time for user to decide
         );
-
-        // بستن مودال محصول
-        closeProductDetails();
+        
+        setIsAddingToCart(false);
       } catch (error) {
         console.error("خطا در افزودن به سبد خرید:", error);
-        alert("خطا در افزودن به سبد خرید. لطفاً دوباره تلاش کنید.");
+        showToast(
+          "خطا در افزودن به سبد خرید. لطفاً دوباره تلاش کنید.",
+          undefined,
+          'error'
+        );
+        setIsAddingToCart(false);
       }
     }
+  };
+  
+  // Function to navigate directly to cart
+  const handleGoToCart = () => {
+    // First close the modal
+    closeProductDetails();
+    
+    // Hide any existing toast notifications
+    useToastStore.getState().hideToast();
+    
+    // Navigate to cart
+    router.push("/cart");
   };
 
   // Handle thumbnail click to change the displayed image
@@ -683,12 +709,29 @@ export default function ShopPage() {
                   {/* دکمه افزودن به سبد خرید */}
                   {selectedProduct.inventory &&
                   selectedProduct.inventory > 0 ? (
-                    <button
-                      className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
-                      onClick={handleAddToCart}
-                    >
-                      افزودن به سبد خرید
-                    </button>
+                    <div className="space-y-3">
+                      <button
+                        className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center"
+                        onClick={handleAddToCart}
+                        disabled={isAddingToCart}
+                      >
+                        {isAddingToCart ? (
+                          <>
+                            <Loader2 className="h-5 w-5 ml-2 animate-spin" />
+                            در حال افزودن...
+                          </>
+                        ) : (
+                          <>افزودن به سبد خرید</>
+                        )}
+                      </button>
+                      
+                      <button
+                        className="w-full border border-gray-300 bg-gray-50 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors flex items-center justify-center"
+                        onClick={handleGoToCart}
+                      >
+                        مشاهده سبد خرید
+                      </button>
+                    </div>
                   ) : (
                     <button
                       className="w-full bg-gray-200 text-gray-500 py-3 rounded-lg font-semibold cursor-not-allowed"
