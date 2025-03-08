@@ -32,11 +32,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Fetch the customer profile
+    // Fetch the customer profile - only selecting essential fields
     const customer = await prisma.customer.findUnique({
       where: { id: customerId },
-      include: {
-        addresses: true
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        mobile: true,
+        addresses: {
+          where: {
+            deletedAt: null
+          },
+          orderBy: {
+            isDefault: 'desc'
+          }
+        }
       }
     });
 
@@ -108,7 +119,7 @@ export async function PATCH(request: NextRequest) {
 
     const data = await request.json();
     
-    // Validate update data
+    // Validate update data - mobile field is now excluded from updates
     const { fullName, email } = data;
     
     if (!fullName && !email) {
@@ -118,10 +129,11 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Create update object with only provided fields
+    // Create update object with only allowed fields
     const updateData: any = {};
     if (fullName) updateData.fullName = fullName;
     if (email) updateData.email = email;
+    // Mobile is explicitly not included in updateData
 
     // Update customer profile
     const updatedCustomer = await prisma.customer.update({

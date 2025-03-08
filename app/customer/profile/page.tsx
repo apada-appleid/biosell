@@ -27,9 +27,9 @@ const convertPersianToEnglish = (input: string): string => {
 
 // تعریف طرح اعتبارسنجی فرم با zod
 const profileSchema = z.object({
-  name: z.string().min(3, 'نام و نام خانوادگی باید حداقل ۳ کاراکتر باشد'),
+  fullName: z.string().min(3, 'نام و نام خانوادگی باید حداقل ۳ کاراکتر باشد'),
   email: z.string().email('ایمیل معتبر نیست').optional().or(z.literal('')),
-  mobile: z.string().regex(/^09[0-9]{9}$/, 'شماره موبایل معتبر نیست'),
+  mobile: z.string().optional(), // Make mobile optional since we're not updating it
 });
 
 const addressSchema = z.object({
@@ -74,7 +74,7 @@ export default function CustomerProfile() {
   } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: '',
+      fullName: '',
       email: '',
       mobile: '',
     },
@@ -257,7 +257,7 @@ export default function CustomerProfile() {
           return;
         }
         
-        const response = await fetch('/api/user/profile', {
+        const response = await fetch('/api/customer/profile', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -295,7 +295,7 @@ export default function CustomerProfile() {
         
         // تنظیم مقادیر فرم
         reset({
-          name: userData.name || '',
+          fullName: userData.fullName || '',
           email: userData.email || '',
           mobile: userData.mobile || '',
         });
@@ -332,7 +332,7 @@ export default function CustomerProfile() {
       }
       
       // ارسال اطلاعات به API
-      const response = await fetch('/api/user/profile', {
+      const response = await fetch('/api/customer/profile', {
         method: 'PATCH',
         headers,
         credentials: 'include', // اضافه کردن credentials برای ارسال کوکی‌های session
@@ -698,7 +698,7 @@ export default function CustomerProfile() {
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
               {/* نام و نام خانوادگی */}
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
                   نام و نام خانوادگی
                 </label>
                 <div className="relative rounded-md shadow-sm">
@@ -707,16 +707,16 @@ export default function CustomerProfile() {
                   </div>
                   <input
                     type="text"
-                    id="name"
+                    id="fullName"
                     className={`block w-full pr-10 pl-4 py-2 border ${
-                      errors.name ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                      errors.fullName ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
                     } rounded-md shadow-sm sm:text-sm`}
                     placeholder="نام و نام خانوادگی خود را وارد کنید"
-                    {...register('name')}
+                    {...register('fullName')}
                   />
                 </div>
-                {errors.name && (
-                  <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+                {errors.fullName && (
+                  <p className="mt-1 text-sm text-red-600">{errors.fullName.message}</p>
                 )}
               </div>
 
@@ -732,21 +732,14 @@ export default function CustomerProfile() {
                   <input
                     type="text"
                     id="mobile"
-                    className={`block w-full pr-10 pl-4 py-2 border ${
-                      errors.mobile ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-                    } rounded-md shadow-sm sm:text-sm`}
+                    className="block w-full pr-10 pl-4 py-2 border border-gray-300 rounded-md shadow-sm sm:text-sm bg-gray-50 cursor-not-allowed"
                     placeholder="شماره موبایل خود را وارد کنید"
                     dir="ltr"
-                    {...register('mobile', {
-                      onChange: (e) => {
-                        const englishValue = convertPersianToEnglish(e.target.value);
-                        if (englishValue !== e.target.value) {
-                          e.target.value = englishValue;
-                        }
-                      }
-                    })}
+                    {...register('mobile')}
+                    readOnly
                   />
                 </div>
+                <p className="mt-1 text-xs text-gray-500">شماره موبایل قابل تغییر نیست زیرا برای احراز هویت استفاده می‌شود.</p>
                 {errors.mobile && (
                   <p className="mt-1 text-sm text-red-600">{errors.mobile.message}</p>
                 )}

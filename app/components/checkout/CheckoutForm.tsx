@@ -186,14 +186,9 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
   };
   
   // Update user profile with new information
-  const updateUserProfile = async (data: { fullName: string, mobile: string, email: string }) => {
-    if (!user) return;
-    
-    // Only update if there are changes
-    if (!hasUpdatedProfile) return;
-    
+  const updateUserProfile = async (data: { fullName: string, email: string }) => {
     try {
-      // Get the authentication token from localStorage
+      // Get the auth token
       const authToken = localStorage.getItem('auth_token');
       
       if (!authToken) {
@@ -209,14 +204,14 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
       
       console.log('Updating user profile with token:', authToken ? 'token-present' : 'no-token');
       
-      const response = await fetch('/api/user/profile', {
+      const response = await fetch('/api/customer/profile', {
         method: 'PATCH',
         headers,
         credentials: 'include', // Include credentials for session cookies
         body: JSON.stringify({
-          name: data.fullName,
-          email: data.email,
-          mobile: data.mobile
+          fullName: data.fullName,
+          email: data.email
+          // Mobile is intentionally not included as it cannot be updated
         }),
       });
       
@@ -233,7 +228,6 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
                 ...userInfo,
                 email: data.email,
                 name: data.fullName,
-                mobile: data.mobile
               }));
             } catch (error) {
               console.error('Error updating user info in localStorage:', error);
@@ -379,7 +373,6 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
       try {
         await updateUserProfile({
           fullName: data.fullName,
-          mobile: data.mobile,
           email: data.email
         });
       } catch (error) {
