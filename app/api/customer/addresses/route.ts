@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import authOptions from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { getAuthenticatedUser } from '@/lib/auth-helpers';
 import { verifyAuthToken } from '@/lib/jwt';
-import jwt from 'jsonwebtoken';
-import { getAuthenticatedUser, isCustomer } from '@/lib/auth-helpers';
 
-// GET: Fetch customer addresses from CustomerAddress model
+// GET: Fetch all addresses for the authenticated customer
 export async function GET(req: NextRequest) {
   try {
     // Try to get session from NextAuth first
@@ -21,7 +20,12 @@ export async function GET(req: NextRequest) {
     else if (session?.user?.type && session.user.type !== 'customer') {
       return NextResponse.json(
         { error: 'Access denied: Only customers can access addresses' },
-        { status: 403 }
+        { 
+          status: 403,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
       );
     }
     // If no valid session found, try token authentication
@@ -32,7 +36,12 @@ export async function GET(req: NextRequest) {
       if (user && user.type !== 'customer') {
         return NextResponse.json(
           { error: 'Access denied: Only customers can access addresses' },
-          { status: 403 }
+          { 
+            status: 403,
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
         );
       }
       
@@ -46,26 +55,41 @@ export async function GET(req: NextRequest) {
     if (!customerId) {
       return NextResponse.json(
         { error: 'Unauthorized: Valid customer authentication required' },
-        { status: 401 }
+        { 
+          status: 401,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
       );
     }
     
-    // Now fetch addresses for the authenticated customer
+    // Now fetch addresses for the authenticated customer (excluding soft deleted ones)
     const addresses = await prisma.customerAddress.findMany({
       where: {
         customerId: customerId,
-      },
+        deletedAt: null
+      } as any, // Type assertion to bypass type checking
       orderBy: {
         isDefault: 'desc',
       },
     });
     
-    return NextResponse.json({ addresses });
+    return NextResponse.json({ addresses }, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
   } catch (error) {
     console.error('Error fetching customer addresses:', error);
     return NextResponse.json(
       { error: 'Failed to fetch addresses' },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
     );
   }
 }
@@ -77,21 +101,13 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
     let customerId = null;
     
-    // Check if we have a valid session
-    if (session?.user?.email) {
-      // Find customer by email
-      const customer = await prisma.customer.findUnique({
-        where: { email: session.user.email }
-      });
-      
-      if (customer) {
-        customerId = customer.id;
-      }
+    // Check if we have a valid session with userId
+    if (session?.user?.id && session?.user?.type === 'customer') {
+      customerId = session.user.id;
     } 
-    
-    // If no session or no customer found from session, try token from Authorization header
-    if (!customerId) {
-      // Get authorization header
+    // If no session, try JWT token
+    else {
+      // Try to get authenticated user from Bearer token
       const authHeader = req.headers.get('authorization');
       if (authHeader && authHeader.startsWith('Bearer ')) {
         // Extract the token
@@ -101,7 +117,7 @@ export async function POST(req: NextRequest) {
           // Verify the token
           const decodedToken = await verifyAuthToken(token);
           
-          if (decodedToken && decodedToken.userId) {
+          if (decodedToken && decodedToken.userId && decodedToken.type === 'customer') {
             // Set customerId from token
             customerId = decodedToken.userId;
           }
@@ -113,8 +129,12 @@ export async function POST(req: NextRequest) {
     
     // If no valid authentication found
     if (!customerId) {
-      console.log('No valid customer authentication found for POST');
-      return NextResponse.json({ error: 'Unauthorized - لطفاً وارد حساب کاربری خود شوید' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { 
+        status: 401,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
     }
     
     const data = await req.json();
@@ -123,21 +143,32 @@ export async function POST(req: NextRequest) {
     const requiredFields = ['fullName', 'address', 'city', 'postalCode', 'mobile'];
     for (const field of requiredFields) {
       if (!data[field]) {
-        return NextResponse.json({ error: `${field} is required - فیلد ${field} الزامی است` }, { status: 400 });
+        return NextResponse.json({ error: `${field} is required` }, { 
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
       }
     }
     
     // If this is the first address or isDefault is true, set all other addresses to non-default
     if (data.isDefault) {
       await prisma.customerAddress.updateMany({
-        where: { customerId },
+        where: { 
+          customerId,
+          deletedAt: null
+        } as any, // Type assertion to bypass type checking
         data: { isDefault: false }
       });
     }
     
     // Check if this is the first address - make it default in that case
     const addressCount = await prisma.customerAddress.count({
-      where: { customerId }
+      where: { 
+        customerId,
+        deletedAt: null
+      } as any // Type assertion to bypass type checking
     });
     
     if (addressCount === 0) {
@@ -159,40 +190,46 @@ export async function POST(req: NextRequest) {
         }
       });
       
-      console.log('Address created successfully:', address.id);
-      return NextResponse.json({ address }, { status: 201 });
+      return NextResponse.json({ address }, { 
+        status: 201,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
     } catch (dbError) {
       console.error('Database error creating address:', dbError);
-      return NextResponse.json({ error: 'Failed to create address in database' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to create address in database' }, { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
     }
   } catch (error) {
     console.error('Error creating address:', error);
-    return NextResponse.json({ error: 'Failed to create address - خطا در ذخیره آدرس' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to create address' }, { 
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
   }
 }
 
-// PATCH: Update a specific address
+// PATCH: Update an existing customer address
 export async function PATCH(req: NextRequest) {
   try {
     // Try to get session from NextAuth
     const session = await getServerSession(authOptions);
     let customerId = null;
     
-    // Check if we have a valid session
-    if (session?.user?.email) {
-      // Find customer by email
-      const customer = await prisma.customer.findUnique({
-        where: { email: session.user.email }
-      });
-      
-      if (customer) {
-        customerId = customer.id;
-      }
+    // Check if we have a valid session with userId
+    if (session?.user?.id && session?.user?.type === 'customer') {
+      customerId = session.user.id;
     } 
-    
-    // If no session or no customer found from session, try token from Authorization header
-    if (!customerId) {
-      // Get authorization header
+    // If no session, try JWT token
+    else {
+      // Try to get authenticated user from Bearer token
       const authHeader = req.headers.get('authorization');
       if (authHeader && authHeader.startsWith('Bearer ')) {
         // Extract the token
@@ -202,7 +239,7 @@ export async function PATCH(req: NextRequest) {
           // Verify the token
           const decodedToken = await verifyAuthToken(token);
           
-          if (decodedToken && decodedToken.userId) {
+          if (decodedToken && decodedToken.userId && decodedToken.type === 'customer') {
             // Set customerId from token
             customerId = decodedToken.userId;
           }
@@ -212,82 +249,104 @@ export async function PATCH(req: NextRequest) {
       }
     }
     
-    // If no valid authentication found
+    // No customer ID found, return unauthorized
     if (!customerId) {
-      console.log('No valid customer authentication found for PATCH');
-      return NextResponse.json({ error: 'Unauthorized - لطفاً وارد حساب کاربری خود شوید' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { 
+        status: 401,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
     }
     
-    const data = await req.json();
+    // Get request data and check URL parameters
+    const { searchParams } = new URL(req.url);
+    const urlId = searchParams.get('id');
+    const urlDefault = searchParams.get('default') === 'true';
     
-    // Check for address ID from query params or request body
-    const url = new URL(req.url);
-    const idFromQuery = url.searchParams.get('id');
-    const id = idFromQuery || data.id;
+    console.log('PATCH request parameters:', { urlId, urlDefault });
     
-    // Check if the default flag was passed in query params
-    const defaultFromQuery = url.searchParams.get('default');
-    const isSettingDefault = defaultFromQuery === 'true' || data.isDefault;
+    let requestData;
+    try {
+      requestData = await req.json();
+      console.log('PATCH request body:', requestData);
+    } catch (error) {
+      console.error('Error parsing request body:', error);
+      return NextResponse.json({ 
+        error: 'Invalid request body - JSON parsing failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, { 
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+    
+    let { id, isDefault, ...updateData } = requestData;
+    
+    // Prioritize ID from URL parameters if present
+    if (urlId) {
+      console.log('Using ID from URL parameters:', urlId);
+      id = urlId;
+    }
+    
+    // Check for default flag in URL if present
+    if (urlDefault) {
+      console.log('Using default flag from URL parameters');
+      isDefault = true;
+    }
+    
+    console.log('Final request parameters:', { id, isDefault });
+    
+    const isSettingDefault = isDefault === true;
     
     if (!id) {
-      return NextResponse.json({ error: 'Address ID is required - شناسه آدرس الزامی است' }, { status: 400 });
-    }
-    
-    // Handle legacy address mode - if the ID is 'legacy', create a new address
-    if (id === 'legacy') {
-      // Validate required fields
-      const requiredFields = ['fullName', 'address', 'city', 'postalCode', 'mobile'];
-      for (const field of requiredFields) {
-        if (!data[field]) {
-          return NextResponse.json({ error: `${field} is required - فیلد ${field} الزامی است` }, { status: 400 });
+      return NextResponse.json({ 
+        error: 'Address ID is required',
+        details: {
+          urlParams: { id: urlId, default: urlDefault },
+          bodyParams: requestData
         }
-      }
-      
-      try {
-        // Create a new address from legacy data
-        const address = await prisma.customerAddress.create({
-          data: {
-            fullName: data.fullName,
-            mobile: data.mobile,
-            address: data.address,
-            city: data.city,
-            province: data.province || '',
-            postalCode: data.postalCode,
-            isDefault: true, // Make it default since it's the only address
-            customerId
-          }
-        });
-        
-        // Clear the legacy fields from the customer
-        await prisma.customer.update({
-          where: { id: customerId },
-          data: {
-            address: null,
-            city: null,
-            postalCode: null
-          }
-        });
-        
-        console.log('Migrated legacy address successfully:', address.id);
-        return NextResponse.json({ address });
-      } catch (dbError) {
-        console.error('Database error migrating legacy address:', dbError);
-        return NextResponse.json({ error: 'Failed to migrate legacy address' }, { status: 500 });
-      }
+      }, { 
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
     }
     
-    // Verify that the address belongs to the current customer
+    // Find address and verify ownership
     const address = await prisma.customerAddress.findUnique({
-      where: { id }
+      where: { 
+        id,
+        // Only find non-deleted addresses
+        deletedAt: null
+      } as any // Type assertion to bypass type checking
     });
     
     if (!address) {
-      return NextResponse.json({ error: 'Address not found - آدرس مورد نظر یافت نشد' }, { status: 404 });
+      return NextResponse.json({ 
+        error: 'Address not found',
+        details: {
+          addressId: id,
+          customerId: customerId 
+        }
+      }, { 
+        status: 404,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
     }
     
     if (address.customerId !== customerId) {
-      console.log('Customer trying to update address that does not belong to them');
-      return NextResponse.json({ error: 'Unauthorized - شما مجاز به ویرایش این آدرس نیستید' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { 
+        status: 401,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
     }
     
     // If setting as default, update all other addresses to be non-default
@@ -295,25 +354,28 @@ export async function PATCH(req: NextRequest) {
       await prisma.customerAddress.updateMany({
         where: { 
           customerId,
-          id: { not: id }
-        },
+          id: { not: id },
+          // Only update non-deleted addresses
+          deletedAt: null
+        } as any, // Type assertion to bypass type checking
         data: { isDefault: false }
       });
       
       // If only setting default and no other data is provided, just update isDefault
-      if (Object.keys(data).length <= 1 && (data.isDefault || !data.id)) {
+      if (Object.keys(updateData).length === 0 || (isDefault && Object.keys(updateData).length === 0)) {
+        console.log('Only updating isDefault flag');
         const updatedAddress = await prisma.customerAddress.update({
           where: { id },
           data: { isDefault: true }
         });
         
-        console.log('Address set as default successfully:', updatedAddress.id);
-        return NextResponse.json({ address: updatedAddress });
+        return NextResponse.json({ address: updatedAddress }, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
       }
     }
-    
-    // Prepare update data excluding the ID
-    const { id: addressId, ...updateData } = data;
     
     // Update the address
     try {
@@ -325,40 +387,45 @@ export async function PATCH(req: NextRequest) {
         }
       });
       
-      console.log('Address updated successfully:', updatedAddress.id);
-      return NextResponse.json({ address: updatedAddress });
+      return NextResponse.json({ address: updatedAddress }, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
     } catch (dbError) {
       console.error('Database error updating address:', dbError);
-      return NextResponse.json({ error: 'Failed to update address in database' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to update address in database' }, { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
     }
   } catch (error) {
     console.error('Error updating address:', error);
-    return NextResponse.json({ error: 'Failed to update address - خطا در بروزرسانی آدرس' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to update address' }, { 
+      status: 500,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
   }
 }
 
-// DELETE: Remove an address
+// DELETE: Soft delete a customer address
 export async function DELETE(req: NextRequest) {
   try {
     // Try to get session from NextAuth
     const session = await getServerSession(authOptions);
     let customerId = null;
     
-    // Check if we have a valid session
-    if (session?.user?.email) {
-      // Find customer by email
-      const customer = await prisma.customer.findUnique({
-        where: { email: session.user.email }
-      });
-      
-      if (customer) {
-        customerId = customer.id;
-      }
+    // Check if we have a valid session with userId
+    if (session?.user?.id && session?.user?.type === 'customer') {
+      customerId = session.user.id;
     } 
-    
-    // If no session or no customer found from session, try token from Authorization header
-    if (!customerId) {
-      // Get authorization header
+    // If no session, try JWT token
+    else {
+      // Try to get authenticated user from Bearer token
       const authHeader = req.headers.get('authorization');
       if (authHeader && authHeader.startsWith('Bearer ')) {
         // Extract the token
@@ -368,7 +435,7 @@ export async function DELETE(req: NextRequest) {
           // Verify the token
           const decodedToken = await verifyAuthToken(token);
           
-          if (decodedToken && decodedToken.userId) {
+          if (decodedToken && decodedToken.userId && decodedToken.type === 'customer') {
             // Set customerId from token
             customerId = decodedToken.userId;
           }
@@ -378,55 +445,90 @@ export async function DELETE(req: NextRequest) {
       }
     }
     
-    // If no valid authentication found
+    // No customer ID found, return unauthorized
     if (!customerId) {
-      console.log('No valid customer authentication found for DELETE');
-      return NextResponse.json({ error: 'Unauthorized - لطفاً وارد حساب کاربری خود شوید' }, { status: 401 });
-    }
-    
-    const url = new URL(req.url);
-    const id = url.searchParams.get('id');
-    
-    if (!id) {
-      return NextResponse.json({ error: 'Address ID is required - شناسه آدرس الزامی است' }, { status: 400 });
-    }
-    
-    // Handle "legacy" ID - clear fields from customer record
-    if (id === 'legacy') {
-      await prisma.customer.update({
-        where: { id: customerId },
-        data: {
-          address: null,
-          city: null,
-          postalCode: null
+      return NextResponse.json({ error: "Unauthorized" }, { 
+        status: 401,
+        headers: {
+          'Content-Type': 'application/json'
         }
       });
-      
-      return NextResponse.json({ success: true });
     }
     
-    // Verify that the address belongs to the current customer
+    // Get address ID from URL or body
+    const { searchParams } = new URL(req.url);
+    let id = searchParams.get('id');
+    
+    // If ID not in search params, try to get from request body
+    if (!id) {
+      try {
+        const body = await req.json();
+        id = body.id;
+      } catch (error) {
+        // If no JSON body or no ID in body, return error
+        return NextResponse.json({ error: 'Address ID required' }, { 
+          status: 400,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+      }
+    }
+    
+    if (!id) {
+      return NextResponse.json({ error: 'Address ID required' }, { 
+        status: 400,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+    }
+    
+    // Find address and verify ownership
     const address = await prisma.customerAddress.findUnique({
       where: { id }
     });
     
     if (!address) {
-      return NextResponse.json({ error: 'Address not found - آدرس مورد نظر یافت نشد' }, { status: 404 });
+      return NextResponse.json({ 
+        error: 'Address not found',
+        details: {
+          addressId: id,
+          customerId: customerId 
+        }
+      }, { 
+        status: 404,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
     }
     
     if (address.customerId !== customerId) {
-      return NextResponse.json({ error: 'Unauthorized - شما مجاز به حذف این آدرس نیستید' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { 
+        status: 401,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
     }
     
-    // Delete the address
-    await prisma.customerAddress.delete({
-      where: { id }
+    // Soft delete the address by setting deletedAt
+    await prisma.customerAddress.update({
+      where: { id },
+      data: { 
+        isDefault: false, // Make sure it's not the default address anymore
+        deletedAt: new Date()
+      } as any // Type assertion to bypass type checking
     });
     
     // If this was the default address, set another one as default if exists
     if (address.isDefault) {
       const anotherAddress = await prisma.customerAddress.findFirst({
-        where: { customerId }
+        where: { 
+          customerId,
+          deletedAt: null
+        } as any // Type assertion to bypass type checking
       });
       
       if (anotherAddress) {
@@ -437,9 +539,21 @@ export async function DELETE(req: NextRequest) {
       }
     }
     
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true }, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
   } catch (error) {
     console.error('Error deleting address:', error);
-    return NextResponse.json({ error: 'Failed to delete address - خطا در حذف آدرس' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to delete address' },
+      { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
   }
 } 

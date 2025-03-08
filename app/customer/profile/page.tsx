@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { TbUserCircle, TbPhone, TbMail, TbMapPin, TbLoader, TbCheck, TbMapSearch, TbPlus, TbEdit, TbTrash, TbStar, TbCheck as TbCheckIcon } from 'react-icons/tb';
 import { Address, CustomerAddress } from '@/app/types';
 import { useSession } from 'next-auth/react';
+import { useToastStore } from '@/app/store/toast';
 
 // تبدیل اعداد فارسی به انگلیسی
 const convertPersianToEnglish = (input: string): string => {
@@ -60,6 +61,9 @@ export default function CustomerProfile() {
   const [isAddressSaving, setIsAddressSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+
+  // اضافه کردن showToast
+  const showToast = useToastStore(state => state.showToast);
 
   // تنظیمات فرم با react-hook-form
   const {
@@ -134,27 +138,41 @@ export default function CustomerProfile() {
 
   // دریافت آدرس‌های کاربر
   const fetchAddresses = async () => {
-    if (authError) return; // Don't try if we know auth is invalid
-    
     try {
-      // Get the token from localStorage
+      // Check if we have a token first
       const token = localStorage.getItem('auth_token');
-      
       if (!token) {
-        return;
+        console.warn('No authentication token found when fetching addresses');
+        return; // Return early if no token
       }
       
-      // Create headers with authorization
-      const headers: HeadersInit = {
-        'Authorization': `Bearer ${token}`
-      };
+      // Add a timeout to the fetch to avoid hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
       
-      // Fetch addresses from the API
       const response = await fetch('/api/customer/addresses', {
         method: 'GET',
-        headers,
-        credentials: 'include'
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        },
+        credentials: 'include',
+        signal: controller.signal
+      }).catch(err => {
+        // Handle network errors
+        console.error('Network error when fetching addresses:', err);
+        clearTimeout(timeoutId);
+        return null;
       });
+      
+      // Clear the timeout
+      clearTimeout(timeoutId);
+      
+      // Handle network error
+      if (!response) {
+        console.error('Failed to fetch addresses - network error');
+        return;
+      }
       
       // Handle unauthorized response
       if (response.status === 401) {
@@ -173,18 +191,55 @@ export default function CustomerProfile() {
       
       // Handle other error responses
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Error fetching addresses:', errorData);
+        try {
+          // First check if response has content
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const text = await response.text();
+            if (text) {
+              try {
+                const errorData = JSON.parse(text);
+                console.error('Error fetching addresses:', errorData);
+              } catch (parseError) {
+                console.error('Error parsing JSON error response:', parseError);
+                console.error('Raw error text:', text);
+              }
+            } else {
+              console.error('Error fetching addresses: Empty response');
+            }
+          } else {
+            console.error(`Error fetching addresses: Non-JSON response (${response.status} ${response.statusText})`);
+            console.error('Content-Type:', contentType);
+          }
+        } catch (jsonError) {
+          console.error('Error processing error response:', jsonError);
+        }
         return;
       }
       
       // Parse and set addresses
-      const data = await response.json();
-      
-      if (data && data.addresses) {
-        setAddresses(data.addresses);
-      } else {
-        setAddresses([]);
+      try {
+        // Using text() first to handle empty responses gracefully
+        const text = await response.text();
+        if (!text || text.trim() === '') {
+          console.error('Empty response when fetching addresses');
+          return;
+        }
+        
+        try {
+          const data = JSON.parse(text);
+          
+          if (data && data.addresses) {
+            setAddresses(data.addresses);
+          } else {
+            console.error('Invalid response format:', data);
+          }
+        } catch (parseError) {
+          console.error('Error parsing addresses response:', parseError);
+          console.error('Raw response text:', text);
+        }
+      } catch (error) {
+        console.error('Error reading response text:', error);
       }
     } catch (error) {
       console.error('Error fetching addresses:', error);
@@ -194,33 +249,51 @@ export default function CustomerProfile() {
   // دریافت اطلاعات کاربر و آدرس‌ها
   useEffect(() => {
     const fetchUserData = async () => {
-      setIsLoading(true);
       try {
-        // اگر در حال بارگذاری هستیم، منتظر می‌مانیم
-        if (status === 'loading') {
+        const token = localStorage.getItem('auth_token');
+        
+        if (!token) {
+          console.warn("No authentication token found");
           return;
         }
         
-        // بررسی وضعیت احراز هویت کاربر
-        if (status === 'unauthenticated' || !session || !session.user) {
-          console.error('User not authenticated');
-          setIsLoading(false);
+        const response = await fetch('/api/user/profile', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/json'
+          },
+          credentials: 'include'
+        });
+        
+        // بررسی خطای احراز هویت
+        if (response.status === 401) {
+          setAuthError('مشکل در احراز هویت. لطفاً دوباره وارد شوید.');
           
-          // Check for token in localStorage as fallback
-          const token = localStorage.getItem('auth_token');
-          if (!token) {
-            return;
-          }
+          // پاک کردن توکن و انتقال به صفحه ورود
+          setTimeout(() => {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user_info');
+            router.push('/auth/customer-login');
+          }, 1000);
+          
+          return;
         }
-
-        // دریافت اطلاعات کاربر
-        const userData = session?.user || {
-          name: '',
-          email: '',
-          mobile: '',
-        };
-
-        // تنظیم مقادیر پیش‌فرض فرم
+        
+        // بررسی سایر خطاها
+        if (!response.ok) {
+          try {
+            const errorData = await response.json();
+            console.error("Error fetching user data:", errorData);
+          } catch (error) {
+            console.error("Error parsing error response:", error);
+          }
+          return;
+        }
+        
+        const userData = await response.json();
+        
+        // تنظیم مقادیر فرم
         reset({
           name: userData.name || '',
           email: userData.email || '',
@@ -306,6 +379,7 @@ export default function CustomerProfile() {
       // Headers with authorization
       const headers: HeadersInit = {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         'Authorization': `Bearer ${token}`
       };
       
@@ -358,78 +432,182 @@ export default function CustomerProfile() {
 
   // حذف آدرس
   const handleDeleteAddress = async (id: string) => {
+    // Confirm before deleting
     if (!confirm('آیا از حذف این آدرس اطمینان دارید؟')) {
       return;
     }
-
-    setIsDeleting(true);
+    
     try {
-      // گرفتن توکن از localStorage
+      setIsLoading(true);
+      
       const token = localStorage.getItem('auth_token');
-      
-      const headers: HeadersInit = {};
-      
-      // اضافه کردن توکن به هدرها اگر موجود باشد
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+      if (!token) {
+        console.error('No authentication token found');
+        return;
       }
       
       const response = await fetch(`/api/customer/addresses?id=${id}`, {
         method: 'DELETE',
-        credentials: 'include', // اضافه کردن credentials برای ارسال کوکی‌های session
-        headers
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
       });
-
-      if (!response.ok) {
-        throw new Error('خطا در حذف آدرس');
+      
+      if (response.status === 401) {
+        setAuthError('مشکل در احراز هویت. لطفاً دوباره وارد شوید.');
+        
+        // پاک کردن توکن و انتقال به صفحه ورود
+        setTimeout(() => {
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('user_info');
+          router.push('/auth/customer-login');
+        }, 1000);
+        
+        return;
       }
-
+      
+      if (!response.ok) {
+        try {
+          const errorData = await response.json();
+          console.error('Error deleting address:', errorData);
+        } catch (error) {
+          console.error('Error parsing error response:', error);
+        }
+        showToast('خطا در حذف آدرس', [
+          {
+            label: 'تلاش مجدد',
+            onClick: () => handleDeleteAddress(id)
+          },
+          {
+            label: 'بستن',
+            onClick: () => useToastStore.getState().hideToast()
+          }
+        ]);
+        return;
+      }
+      
       // بروزرسانی لیست آدرس‌ها
-      setAddresses(addresses.filter(address => address.id !== id));
+      await fetchAddresses();
+      
+      showToast('آدرس با موفقیت حذف شد', [
+        {
+          label: 'بستن',
+          onClick: () => useToastStore.getState().hideToast()
+        }
+      ]);
     } catch (error) {
       console.error('Error deleting address:', error);
-      alert('خطا در حذف آدرس');
+      showToast('خطا در حذف آدرس', [
+        {
+          label: 'تلاش مجدد',
+          onClick: () => handleDeleteAddress(id)
+        },
+        {
+          label: 'بستن',
+          onClick: () => useToastStore.getState().hideToast()
+        }
+      ]);
     } finally {
-      setIsDeleting(false);
+      setIsLoading(false);
     }
   };
   
-  // تنظیم آدرس پیش‌فرض
+  // تغییر آدرس پیش‌فرض
   const handleSetDefaultAddress = async (id: string) => {
     try {
-      // گرفتن توکن از localStorage
+      setIsLoading(true);
+      
       const token = localStorage.getItem('auth_token');
-      
-      const headers: HeadersInit = {
-        'Content-Type': 'application/json'
-      };
-      
-      // اضافه کردن توکن به هدرها اگر موجود باشد
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+      if (!token) {
+        console.error('No authentication token found');
+        return;
       }
+      
+      console.log(`Setting address ${id} as default`);
       
       const response = await fetch(`/api/customer/addresses?id=${id}&default=true`, {
         method: 'PATCH',
-        credentials: 'include', // اضافه کردن credentials برای ارسال کوکی‌های session
-        headers,
-        body: JSON.stringify({ isDefault: true }),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ isDefault: true })
       });
-  
-      if (!response.ok) {
-        throw new Error('خطا در تنظیم آدرس پیش‌فرض');
-      }
-  
-      // بروزرسانی وضعیت آدرس‌ها در حالت محلی
-      const updatedAddresses = addresses.map(address => ({
-        ...address,
-        isDefault: address.id === id
-      }));
       
-      setAddresses(updatedAddresses);
+      if (response.status === 401) {
+        setAuthError('مشکل در احراز هویت. لطفاً دوباره وارد شوید.');
+        
+        // پاک کردن توکن و انتقال به صفحه ورود
+        setTimeout(() => {
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('user_info');
+          router.push('/auth/customer-login');
+        }, 1000);
+        
+        return;
+      }
+      
+      if (!response.ok) {
+        try {
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const text = await response.text();
+            if (text) {
+              try {
+                const errorData = JSON.parse(text);
+                console.error('Error setting default address:', errorData);
+              } catch (parseError) {
+                console.error('Error parsing JSON error response:', parseError);
+                console.error('Raw error text:', text);
+              }
+            } else {
+              console.error(`Error setting default address: Empty response (Status: ${response.status})`);
+            }
+          } else {
+            console.error(`Error setting default address: Non-JSON response (${response.status} ${response.statusText})`);
+            console.error('Content-Type:', contentType);
+          }
+        } catch (error) {
+          console.error('Error processing error response:', error);
+        }
+        showToast('مشکلی در تغییر آدرس پیش‌فرض رخ داد', [
+          {
+            label: 'تلاش مجدد',
+            onClick: () => handleSetDefaultAddress(id)
+          },
+          {
+            label: 'بستن',
+            onClick: () => useToastStore.getState().hideToast()
+          }
+        ]);
+        return;
+      }
+      
+      // بروزرسانی لیست آدرس‌ها
+      await fetchAddresses();
+      
+      showToast('آدرس پیش‌فرض با موفقیت تغییر کرد', [
+        {
+          label: 'باشه',
+          onClick: () => useToastStore.getState().hideToast()
+        }
+      ]);
     } catch (error) {
       console.error('Error setting default address:', error);
-      alert('خطا در تنظیم آدرس پیش‌فرض');
+      showToast('مشکلی در تغییر آدرس پیش‌فرض رخ داد', [
+        {
+          label: 'تلاش مجدد',
+          onClick: () => handleSetDefaultAddress(id)
+        },
+        {
+          label: 'بستن',
+          onClick: () => useToastStore.getState().hideToast()
+        }
+      ]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -634,87 +812,112 @@ export default function CustomerProfile() {
 
       {/* مدیریت آدرس‌ها */}
       <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between mb-6">
+        <div className="p-6 border-b border-gray-200 bg-gradient-to-l from-blue-50 to-white">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center">
-              <div className="w-16 h-16 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center ml-4">
+              <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center ml-4 shadow-sm">
                 <TbMapPin className="w-8 h-8" />
               </div>
               <div>
-                <h2 className="text-lg font-medium text-gray-900">آدرس‌های تحویل</h2>
-                <p className="text-sm text-gray-500">آدرس‌های محل تحویل سفارش‌های خود را مدیریت کنید</p>
+                <h2 className="text-xl font-bold text-gray-900">آدرس‌های تحویل</h2>
+                <p className="text-sm text-gray-600 mt-1">آدرس‌های محل تحویل سفارش‌های خود را مدیریت کنید</p>
               </div>
             </div>
             <button
               type="button"
               onClick={handleAddNewAddress}
-              className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="inline-flex items-center justify-center px-4 py-2.5 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
-              <TbPlus className="ml-2 h-4 w-4" />
+              <TbPlus className="ml-1.5 h-5 w-5" />
               افزودن آدرس جدید
             </button>
           </div>
 
           {/* لیست آدرس‌ها */}
           {addresses.length === 0 ? (
-            <div className="text-center py-6 bg-gray-50 rounded-md">
-              <TbMapPin className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">آدرسی ثبت نشده است</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                هنوز هیچ آدرسی برای تحویل سفارش ثبت نکرده‌اید.
+            <div className="flex flex-col items-center justify-center py-10 px-4 my-6 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+              <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                <TbMapSearch className="h-10 w-10 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-800">آدرسی ثبت نشده است</h3>
+              <p className="mt-2 text-sm text-gray-600 max-w-md text-center">
+                برای تکمیل سفارش نیاز به ثبت آدرس دارید. لطفاً با کلیک روی دکمه «افزودن آدرس جدید» یک آدرس اضافه کنید.
               </p>
+              <button
+                type="button"
+                onClick={handleAddNewAddress}
+                className="mt-6 inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <TbPlus className="ml-2 h-5 w-5" />
+                افزودن آدرس جدید
+              </button>
             </div>
           ) : (
-            <div className="mt-4 space-y-4">
+            <div className="mt-6 space-y-5">
               {addresses.map((address) => (
                 <div
                   key={address.id}
                   className={`border ${
-                    address.isDefault ? 'border-blue-300 bg-blue-50' : 'border-gray-200'
-                  } rounded-lg p-4 relative`}
+                    address.isDefault ? 'border-blue-500 shadow-sm' : 'border-gray-200'
+                  } rounded-lg p-5 relative hover:shadow-md transition-all duration-200`}
                 >
-                  {address.isDefault && (
-                    <div className="absolute top-4 left-4 bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded-full flex items-center">
-                      <TbStar className="ml-1 h-3 w-3" />
-                      پیش‌فرض
-                    </div>
-                  )}
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="text-md font-medium">{address.fullName}</h3>
-                      <p className="text-sm text-gray-500 mt-1">{address.mobile}</p>
-                      <p className="text-sm mt-2">
-                        {address.province}، {address.city}، {address.address}
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+                    {/* اطلاعات آدرس */}
+                    <div className="flex-grow">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="text-lg font-bold text-gray-800">{address.fullName}</h3>
+                        {address.isDefault && (
+                          <span className="bg-blue-100 text-blue-700 text-xs font-medium px-2.5 py-1 rounded-full flex items-center">
+                            <TbStar className="ml-1 h-3 w-3" />
+                            پیش‌فرض
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-600 flex items-center gap-1.5">
+                        <TbPhone className="h-4 w-4 opacity-70" />
+                        {address.mobile}
                       </p>
-                      <p className="text-sm text-gray-500 mt-1">کد پستی: {address.postalCode}</p>
+                      <p className="text-sm mt-3 text-gray-700 flex items-start gap-1.5">
+                        <TbMapPin className="h-4 w-4 mt-0.5 opacity-70 flex-shrink-0" />
+                        <span>{address.province}، {address.city}، {address.address}</span>
+                      </p>
+                      <p className="text-sm text-gray-600 mt-2 flex items-center gap-1.5">
+                        <span className="inline-block w-4 h-4 opacity-0"></span>
+                        <span>کد پستی: {address.postalCode}</span>
+                      </p>
                     </div>
-                    <div className="flex space-x-2 space-x-reverse">
+                    
+                    {/* دکمه‌های عملیات */}
+                    <div className="flex md:flex-col gap-2 mt-3 md:mt-0">
                       {!address.isDefault && (
                         <button
                           type="button"
                           onClick={() => handleSetDefaultAddress(address.id)}
-                          className="inline-flex items-center px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50"
+                          className="inline-flex items-center justify-center px-3 py-1.5 border border-blue-300 rounded-md text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
                           title="تنظیم به عنوان پیش‌فرض"
                         >
-                          <TbStar className="h-3 w-3" />
+                          <TbStar className="h-4 w-4 ml-1" />
+                          <span className="hidden sm:inline">پیش‌فرض</span>
                         </button>
                       )}
                       <button
                         type="button"
                         onClick={() => handleEditAddress(address)}
-                        className="inline-flex items-center px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50"
+                        className="inline-flex items-center justify-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
                         title="ویرایش"
                       >
-                        <TbEdit className="h-3 w-3" />
+                        <TbEdit className="h-4 w-4 ml-1" />
+                        <span className="hidden sm:inline">ویرایش</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDeleteAddress(address.id)}
                         disabled={isDeleting}
-                        className="inline-flex items-center px-2 py-1 border border-gray-300 rounded text-xs font-medium text-red-600 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="inline-flex items-center justify-center px-3 py-1.5 border border-rose-300 rounded-md text-sm font-medium text-rose-700 bg-white hover:bg-rose-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         title="حذف"
                       >
-                        <TbTrash className="h-3 w-3" />
+                        <TbTrash className="h-4 w-4 ml-1" />
+                        <span className="hidden sm:inline">حذف</span>
                       </button>
                     </div>
                   </div>
