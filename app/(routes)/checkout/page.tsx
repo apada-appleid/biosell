@@ -30,28 +30,38 @@ interface UserInfo {
   mobile?: string;
 }
 
+interface FormData {
+  fullName: string;
+  email: string;
+  mobile: string;
+  province: string;
+  city: string;
+  address: string;
+  postalCode: string;
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const showToast = useToastStore(state => state.showToast);
-  const hideToast = useToastStore(state => state.hideToast);
-  const { cart, clearCart } = useCartStore();
+  const { showToast, hideToast } = useToastStore();
+  const { cart } = useCartStore();
+  const clearCart = useCartStore(state => state.clearCart);
   
   const [localUser, setLocalUser] = useState<UserInfo | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'online' | 'bank_transfer'>('online');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [orderComplete, setOrderComplete] = useState(false);
   const [receiptImage, setReceiptImage] = useState<File | null>(null);
-  const [receiptImagePreview, setReceiptImagePreview] = useState<string | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [mounted, setMounted] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     fullName: '',
     email: '',
     mobile: '',
-    address: '',
-    city: '',
     province: '',
+    city: '',
+    address: '',
     postalCode: '',
   });
   
@@ -74,6 +84,12 @@ export default function CheckoutPage() {
   // Initialize component
   useEffect(() => {
     setMounted(true);
+    
+    // Only redirect to cart if it's empty AND an order wasn't just completed
+    if (cart.items.length === 0 && !orderComplete) {
+      router.push('/cart');
+      return;
+    }
     
     // Hide any active toasts when entering checkout
     if (typeof window !== 'undefined') {
@@ -104,7 +120,7 @@ export default function CheckoutPage() {
         console.error('Error getting local user:', error);
       }
     }
-  }, [hideToast]);
+  }, [hideToast, cart.items.length, router, orderComplete]);
   
   // Update form data when session changes
   useEffect(() => {
@@ -133,47 +149,32 @@ export default function CheckoutPage() {
       router.push('/auth/customer-login?callbackUrl=/checkout');
       return;
     }
-    
-    // Redirect to cart if cart is empty
-    if (cart.items.length === 0) {
-      router.push('/cart');
-    }
-  }, [status, router, cart.items.length, mounted, localUser, session]);
-  
-  const handlePaymentMethodChange = (method: 'online' | 'bank_transfer') => {
-    setPaymentMethod(method);
-    // Reset receipt data when switching to online payment
-    if (method === 'online') {
-      setReceiptImage(null);
-      setReceiptImagePreview(null);
-      setUploadStatus('idle');
-    }
-  };
+  }, [status, router, localUser, session]);
   
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    // Validate file type
+    // Check file type and size
     const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
     if (!validTypes.includes(file.type)) {
-      setError('لطفاً یک تصویر با فرمت PNG یا JPG انتخاب کنید.');
+      showToast('لطفاً فقط تصاویر با فرمت JPG یا PNG آپلود کنید.', undefined, 'error');
       return;
     }
     
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('حجم فایل نباید بیشتر از 5 مگابایت باشد.');
+    // Check file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+      showToast('حجم تصویر نباید بیشتر از 5 مگابایت باشد.', undefined, 'error');
       return;
     }
     
-    setError(null);
     setReceiptImage(file);
     
-    // Create a preview URL
+    // Create preview URL
     const reader = new FileReader();
     reader.onloadend = () => {
-      setReceiptImagePreview(reader.result as string);
+      setReceiptPreview(reader.result as string);
     };
     reader.readAsDataURL(file);
   };
@@ -395,23 +396,22 @@ export default function CheckoutPage() {
       const shippingAddress = 
         `${formData.fullName}, ${formData.mobile}, ${formData.province}, ${formData.city}, ${formData.address}, کدپستی: ${formData.postalCode}`;
       
-      // Handle bank transfer with receipt upload
+      // Validate receipt upload for bank transfer
+      if (!receiptImage) {
+        throw new Error('لطفاً تصویر فیش واریزی را آپلود کنید.');
+      }
+      
+      // Upload receipt to S3
       let receiptInfo = null;
-      if (paymentMethod === 'bank_transfer') {
-        if (!receiptImage) {
-          throw new Error('لطفاً تصویر فیش واریزی را آپلود کنید.');
-        }
-        
-        setUploadStatus('uploading');
-        try {
-          // Upload receipt to private S3 bucket via server API
-          receiptInfo = await uploadReceiptToS3(receiptImage, `orders/${Date.now()}`);
-          setUploadStatus('success');
-        } catch (uploadError) {
-          console.error('Error uploading receipt:', uploadError);
-          setUploadStatus('error');
-          throw new Error('خطا در آپلود فیش واریزی. لطفاً دوباره تلاش کنید.');
-        }
+      setUploadStatus('uploading');
+      try {
+        // Upload receipt to private S3 bucket via server API
+        receiptInfo = await uploadReceiptToS3(receiptImage, `orders/${Date.now()}`);
+        setUploadStatus('success');
+      } catch (uploadError) {
+        console.error('Error uploading receipt:', uploadError);
+        setUploadStatus('error');
+        throw new Error('خطا در آپلود فیش واریزی. لطفاً دوباره تلاش کنید.');
       }
       
       // Get auth token
@@ -427,70 +427,45 @@ export default function CheckoutPage() {
         cartItems: cart.items,
         total: cart.total,
         sellerId,
-        paymentMethod: paymentMethod === 'online' ? 'credit_card' : 'bank_transfer',
+        paymentMethod: 'bank_transfer',
         shippingAddress,
-        receiptInfo, // Include receipt info for bank transfers
-        addressId: selectedAddressId // افزودن شناسه آدرس انتخاب شده
+        receiptInfo,
+        addressId: selectedAddressId
       };
       
-      // Submit order
+      // Create order
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${authToken}`
         },
-        body: JSON.stringify(orderData)
+        body: JSON.stringify(orderData),
       });
       
-      // Parse response
-      const result = await response.json();
-      
       if (!response.ok) {
-        throw new Error(result.error || result.message || 'خطا در ثبت سفارش');
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'خطا در ثبت سفارش.');
       }
       
-      // Store order number for success page
-      if (result.orderNumber) {
-        sessionStorage.setItem('last_order', result.orderNumber);
-      }
+      const data = await response.json();
       
-      // Clear cart
-      clearCart();
+      // Set orderComplete flag to true to prevent cart redirect
+      setOrderComplete(true);
       
-      // Show success message with auto-dismiss
-      showToast(
-        'سفارش شما با موفقیت ثبت شد',
-        [{
-          label: 'مشاهده سفارش',
-          onClick: () => {
-            hideToast();
-            if (result.orderId) {
-              router.push(`/customer/orders/${result.orderId}`);
-            } else {
-              router.push('/customer/orders');
-            }
-          },
-          autoDismiss: true
-        }],
-        'success',
-        5000
-      );
+      // First redirect to order page
+      router.push(`/customer/orders/${data.orderId}`);
       
-      // Redirect to success page
-      router.push('/checkout/success');
+      // After redirect is initiated, clear cart and show toast
+      setTimeout(() => {
+        clearCart();
+        showToast('سفارش شما با موفقیت ثبت شد!', undefined, 'success');
+      }, 100);
       
-    } catch (error) {
-      console.error('Checkout error:', error);
-      setError(error instanceof Error ? error.message : 'خطا در ثبت سفارش');
-      
-      // Show error toast
-      showToast(
-        error instanceof Error ? error.message : 'خطا در ثبت سفارش',
-        undefined,
-        'error'
-      );
-    } finally {
+    } catch (err) {
+      console.error('Error submitting order:', err);
+      setError(err instanceof Error ? err.message : 'خطا در ثبت سفارش.');
+      showToast(err instanceof Error ? err.message : 'خطا در ثبت سفارش.', undefined, 'error');
       setIsProcessing(false);
     }
   };
@@ -862,25 +837,14 @@ export default function CheckoutPage() {
               )}
             </div>
             
-            {/* Payment Method */}
+            {/* روش پرداخت */}
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
               <h2 className="text-lg font-medium mb-4 text-gray-800">روش پرداخت</h2>
               
               <div className="space-y-4">
-                <div 
-                  className={`border rounded-lg p-4 cursor-pointer transition-all duration-200 ${
-                    paymentMethod === 'online' 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 hover:border-blue-300'
-                  }`}
-                  onClick={() => handlePaymentMethodChange('online')}
-                >
+                <div className="border rounded-lg p-4 cursor-not-allowed opacity-60 transition-all duration-200">
                   <div className="flex items-center">
-                    <div className={`w-5 h-5 rounded-full border-2 ${
-                      paymentMethod === 'online' 
-                        ? 'border-blue-500 bg-blue-500' 
-                        : 'border-gray-300'
-                    } flex-shrink-0 ml-3`}></div>
+                    <div className="w-5 h-5 rounded-full border-gray-300 flex-shrink-0 ml-3"></div>
                     <div className="flex items-center">
                       <FiCreditCard className="ml-2 text-gray-600" />
                       <div className="flex-grow">
@@ -889,22 +853,14 @@ export default function CheckoutPage() {
                       </div>
                     </div>
                   </div>
+                  <div className="mt-3 pr-8 text-xs text-red-600 bg-red-50 p-2 rounded-md border border-red-100">
+                    پرداخت آنلاین در حال حاضر فعال نیست. لطفاً از روش انتقال بانکی استفاده کنید.
+                  </div>
                 </div>
                 
-                <div 
-                  className={`border rounded-lg p-4 cursor-pointer transition-all duration-200 ${
-                    paymentMethod === 'bank_transfer' 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 hover:border-blue-300'
-                  }`}
-                  onClick={() => handlePaymentMethodChange('bank_transfer')}
-                >
+                <div className="border rounded-lg p-4 border-blue-500 bg-blue-50">
                   <div className="flex items-center">
-                    <div className={`w-5 h-5 rounded-full border-2 ${
-                      paymentMethod === 'bank_transfer' 
-                        ? 'border-blue-500 bg-blue-500' 
-                        : 'border-gray-300'
-                    } flex-shrink-0 ml-3`}></div>
+                    <div className="w-5 h-5 rounded-full border-2 border-blue-500 bg-blue-500 flex-shrink-0 ml-3"></div>
                     <div className="flex items-center">
                       <FiDollarSign className="ml-2 text-gray-600" />
                       <div className="flex-grow">
@@ -914,58 +870,56 @@ export default function CheckoutPage() {
                     </div>
                   </div>
                   
-                  {paymentMethod === 'bank_transfer' && (
-                    <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                      <p className="text-sm text-gray-700 mb-2">لطفا مبلغ <span className="font-bold">{formatPrice(cart.total)}</span> را به شماره حساب زیر واریز نمایید:</p>
-                      <div className="bg-white p-3 rounded border border-gray-200 text-center mb-3">
-                        <p className="font-bold text-gray-900 text-lg">IR06-0570-0123-4567-8901-2345-67</p>
-                        <p className="text-sm text-gray-600">بانک ملت - به نام شرکت بایوسل</p>
-                      </div>
+                  <div className="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                    <p className="text-sm text-gray-700 mb-2">لطفا مبلغ <span className="font-bold">{formatPrice(cart.total)}</span> را به شماره حساب زیر واریز نمایید:</p>
+                    <div className="bg-white p-3 rounded border border-gray-200 text-center mb-3">
+                      <p className="font-bold text-gray-900 text-lg">IR06-0570-0123-4567-8901-2345-67</p>
+                      <p className="text-sm text-gray-600">بانک ملت - به نام شرکت بایوسل</p>
+                    </div>
+                    
+                    <div className="mt-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        آپلود تصویر فیش واریزی:
+                      </label>
                       
-                      <div className="mt-4">
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          آپلود تصویر فیش واریزی:
-                        </label>
-                        
-                        <input
-                          type="file"
-                          ref={fileInputRef}
-                          onChange={handleFileChange}
-                          accept="image/png, image/jpeg, image/jpg"
-                          className="hidden"
-                          aria-label="انتخاب فایل تصویر فیش واریزی"
-                        />
-                        
-                        <div 
-                          onClick={handleBrowseClick}
-                          className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
-                            receiptImagePreview ? 'border-blue-300 bg-blue-50' : 'border-gray-300 hover:border-blue-300'
-                          }`}
-                        >
-                          {receiptImagePreview ? (
-                            <div className="relative">
-                              <Image 
-                                src={receiptImagePreview}
-                                alt="پیش‌نمایش فیش" 
-                                width={300}
-                                height={200}
-                                className="max-h-48 mx-auto object-contain rounded"
-                              />
-                              <p className="text-sm text-blue-600 mt-2">برای تغییر تصویر کلیک کنید</p>
-                            </div>
-                          ) : (
-                            <>
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                              </svg>
-                              <p className="mt-2 text-sm text-gray-600">تصویر فیش واریزی را اینجا بکشید و رها کنید یا کلیک کنید</p>
-                              <p className="mt-1 text-xs text-gray-500">فرمت‌های مجاز: JPG و PNG (حداکثر 5 مگابایت)</p>
-                            </>
-                          )}
-                        </div>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        accept="image/png, image/jpeg, image/jpg"
+                        className="hidden"
+                        aria-label="انتخاب فایل تصویر فیش واریزی"
+                      />
+                      
+                      <div 
+                        onClick={handleBrowseClick}
+                        className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
+                          receiptPreview ? 'border-blue-300 bg-blue-50' : 'border-gray-300 hover:border-blue-300'
+                        }`}
+                      >
+                        {receiptPreview ? (
+                          <div className="relative">
+                            <Image 
+                              src={receiptPreview}
+                              alt="پیش‌نمایش فیش" 
+                              width={300}
+                              height={200}
+                              className="max-h-48 mx-auto object-contain rounded"
+                            />
+                            <p className="text-sm text-blue-600 mt-2">برای تغییر تصویر کلیک کنید</p>
+                          </div>
+                        ) : (
+                          <>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <p className="mt-2 text-sm text-gray-600">تصویر فیش واریزی را اینجا بکشید و رها کنید یا کلیک کنید</p>
+                            <p className="mt-1 text-xs text-gray-500">فرمت‌های مجاز: JPG و PNG (حداکثر 5 مگابایت)</p>
+                          </>
+                        )}
                       </div>
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -974,7 +928,7 @@ export default function CheckoutPage() {
             <div className="mt-6">
               <button
                 type="submit"
-                disabled={isProcessing || (paymentMethod === 'bank_transfer' && !receiptImage)}
+                disabled={isProcessing || !receiptImage}
                 className={`w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg transition-all duration-300 font-medium 
                   ${isProcessing ? 'opacity-80' : 'opacity-100 hover:shadow-lg hover:shadow-blue-500/20 animate-pulse-button'} 
                   disabled:opacity-70 disabled:cursor-not-allowed disabled:animate-none`}
@@ -989,17 +943,8 @@ export default function CheckoutPage() {
                   </span>
                 ) : (
                   <span className="flex items-center justify-center">
-                    {paymentMethod === 'online' ? (
-                      <>
-                        <FiCreditCard className="ml-2 h-5 w-5" />
-                        پرداخت آنلاین و ثبت سفارش
-                      </>
-                    ) : (
-                      <>
-                        <FiCheck className="ml-2 h-5 w-5" />
-                        آپلود فیش و تکمیل سفارش
-                      </>
-                    )}
+                    <FiCheck className="ml-2 h-5 w-5" />
+                    آپلود فیش و تکمیل سفارش
                   </span>
                 )}
               </button>

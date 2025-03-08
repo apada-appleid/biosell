@@ -8,8 +8,8 @@ import { v4 as uuidv4 } from 'uuid';
 // Environment variables
 const S3_RECEIPTS_BUCKET_NAME = process.env.S3_RECEIPTS_BUCKET_NAME || 'receipts';
 const S3_ENDPOINT = process.env.S3_ENDPOINT || 'https://s3.ir-thr-at1.arvanstorage.ir';
-const S3_ACCESS_KEY_ID = process.env.S3_ACCESS_KEY_ID || '';
-const S3_SECRET_ACCESS_KEY = process.env.S3_SECRET_ACCESS_KEY || '';
+const S3_ACCESS_KEY_ID = process.env.S3_ACCESS_KEY || '';
+const S3_SECRET_ACCESS_KEY = process.env.S3_SECRET_KEY || '';
 const S3_REGION = process.env.S3_REGION || 'default';
 
 // Create S3 client

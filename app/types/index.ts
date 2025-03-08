@@ -97,4 +97,5 @@ export interface Order {
   status: 'pending' | 'processing' | 'completed' | 'cancelled';
   createdAt: string;
   user: User;
+  addressId?: string;
 } 

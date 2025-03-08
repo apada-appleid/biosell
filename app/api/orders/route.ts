@@ -16,6 +16,27 @@ function generateOrderNumber() {
   return `${timestamp.slice(-6)}${random}`;
 }
 
+// TS interface for orderData
+interface OrderData {
+  orderNumber: string;
+  customerId: string;
+  sellerId: string;
+  status: string;
+  total: number;
+  paymentMethod: string;
+  shippingAddress: string | null;
+  addressId?: string; // Optional addressId field
+  items: {
+    create: {
+      productId: string;
+      title: string;
+      price: number;
+      quantity: number;
+      totalPrice: number;
+    }[];
+  };
+}
+
 export async function POST(request: NextRequest) {
   // Store the request body outside the try block so it's available in catch
   let requestBody;
@@ -144,7 +165,7 @@ export async function POST(request: NextRequest) {
       null;
     
     // Create order data with base properties
-    const orderData = {
+    const orderData: OrderData = {
       orderNumber,
       customerId,
       sellerId,
@@ -175,8 +196,7 @@ export async function POST(request: NextRequest) {
       });
       
       if (addressExists) {
-        // Link address to order
-        // @ts-ignore - We're dynamically adding a field that may not be in the schema yet
+        // Link address to order - no need for @ts-ignore now
         orderData.addressId = addressId;
       } else {
         console.warn(`Address ID ${addressId} not found for customer ${customerId} or is deleted`);
