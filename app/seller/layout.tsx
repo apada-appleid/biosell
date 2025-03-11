@@ -9,12 +9,14 @@ import {
   TbShoppingBag, 
   TbLogout, 
   TbMenu2,
-  TbX
+  TbX,
+  TbClipboardList
 } from 'react-icons/tb';
 
 const navigation = [
   { name: 'داشبورد', href: '/seller/dashboard', icon: TbLayoutDashboard },
   { name: 'محصولات', href: '/seller/products', icon: TbShoppingBag },
+  { name: 'مشاهده سفارش‌ها', href: '/seller/orders', icon: TbClipboardList },
 ];
 
 // مسیرهایی که نیاز به احراز هویت ندارند

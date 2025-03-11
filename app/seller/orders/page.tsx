@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { FiArrowLeft, FiPackage, FiClock, FiCheck, FiX } from 'react-icons/fi';
+import { FiArrowLeft, FiPackage, FiClock, FiCheck, FiX, FiEye } from 'react-icons/fi';
 
 interface OrderItem {
   id: string;
@@ -162,45 +162,130 @@ export default function SellerOrdersPage() {
           <p className="text-gray-600">سفارش‌های جدید در اینجا نمایش داده خواهند شد.</p>
         </div>
       ) : (
-        <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-          <ul role="list" className="divide-y divide-gray-200">
-            {orders.map((order) => (
-              <li key={order.id} className="p-4 hover:bg-gray-50">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center">
-                      {getStatusIcon(order.status)}
-                      <h3 className="text-lg font-medium text-gray-900 mr-2">
-                        سفارش #{order.orderNumber}
-                      </h3>
-                      <span className={`mr-2 px-2 py-1 text-xs rounded-full ${getStatusColor(order.status)}`}>
-                        {getStatusText(order.status)}
-                      </span>
-                    </div>
-                    
-                    <div className="mt-2 text-sm text-gray-500">
-                      <p>تاریخ: {formatDate(order.createdAt)}</p>
-                      <p>مشتری: {order.customer?.fullName || 'نامشخص'}</p>
-                      <p>تعداد اقلام: {order.items.length}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4 md:mt-0 flex flex-col items-end">
-                    <p className="text-lg font-medium text-gray-900">
+        <div>
+          {/* Desktop Table View (hidden on mobile) */}
+          <div className="hidden md:block bg-white shadow overflow-hidden rounded-lg">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    شماره سفارش
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    وضعیت
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    تاریخ
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    مشتری
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    تعداد اقلام
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    مبلغ کل
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    عملیات
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {orders.map((order) => (
+                  <tr key={order.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {order.orderNumber}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        {getStatusIcon(order.status)}
+                        <span className={`mr-2 px-2 py-1 text-xs rounded-full ${getStatusColor(order.status)}`}>
+                          {getStatusText(order.status)}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDate(order.createdAt)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {order.customer?.fullName || 'نامشخص'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {order.items.length}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {formatPrice(order.total)}
-                    </p>
-                    <Link
-                      href={`/seller/orders/${order.id}`}
-                      className="mt-2 inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                      مشاهده جزئیات
-                      <FiArrowLeft className="mr-1" />
-                    </Link>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <Link
+                        href={`/seller/orders/${order.id}`}
+                        className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        aria-label={`مشاهده جزئیات سفارش ${order.orderNumber}`}
+                        tabIndex={0}
+                      >
+                        <FiEye className="ml-1" />
+                        مشاهده
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Card View (shown on mobile) */}
+          <div className="md:hidden space-y-4">
+            {orders.map((order) => (
+              <div key={order.id} className="bg-white shadow rounded-lg overflow-hidden">
+                <div className="p-4 border-b border-gray-200">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-lg font-medium text-gray-900">
+                      سفارش #{order.orderNumber}
+                    </h3>
+                    <span className={`px-2 py-1 text-xs rounded-full flex items-center ${getStatusColor(order.status)}`}>
+                      {getStatusIcon(order.status)}
+                      <span className="mr-1">{getStatusText(order.status)}</span>
+                    </span>
                   </div>
                 </div>
-              </li>
+                
+                <div className="p-4 space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">تاریخ:</span>
+                    <span className="text-gray-900 font-medium">{formatDate(order.createdAt)}</span>
+                  </div>
+                  
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">مشتری:</span>
+                    <span className="text-gray-900 font-medium">{order.customer?.fullName || 'نامشخص'}</span>
+                  </div>
+                  
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">تعداد اقلام:</span>
+                    <span className="text-gray-900 font-medium">{order.items.length}</span>
+                  </div>
+                  
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">مبلغ کل:</span>
+                    <span className="text-gray-900 font-medium">{formatPrice(order.total)}</span>
+                  </div>
+                </div>
+                
+                <div className="px-4 py-3 bg-gray-50 text-left">
+                  <Link
+                    href={`/seller/orders/${order.id}`}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    aria-label={`مشاهده جزئیات سفارش ${order.orderNumber}`}
+                    tabIndex={0}
+                  >
+                    مشاهده جزئیات
+                    <FiArrowLeft className="mr-2" />
+                  </Link>
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       )}
     </div>
