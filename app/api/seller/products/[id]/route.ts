@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import authOptions from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { unlink } from 'fs/promises';
+import { join } from 'path';
 
 /**
  * API handlers for managing seller products by ID
@@ -163,8 +165,6 @@ export async function DELETE(
 
     // Delete physical image files
     if (existingProduct.images && existingProduct.images.length > 0) {
-      const { unlink } = require('fs/promises');
-      const { join } = require('path');
       
       for (const image of existingProduct.images) {
         try {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
@@ -9,26 +9,13 @@ import { useCartStore } from "@/app/store/cart";
 import { useToastStore } from "@/app/store/toast";
 import {
   FiArrowLeft,
-  FiPlus,
   FiCheck,
-  FiX,
   FiCreditCard,
   FiDollarSign,
 } from "react-icons/fi";
 import { TbLoader, TbPlus, TbCheck, TbMapPin, TbX } from "react-icons/tb";
-import { uploadReceiptToS3, getSignedReceiptUrl } from "@/utils/s3-storage";
+import { uploadReceiptToS3 } from "@/utils/s3-storage";
 import { CustomerAddress } from "@/app/types";
-
-interface CartItem {
-  product: {
-    id: string;
-    title: string;
-    price: number;
-    sellerId: string;
-    images: string[];
-  };
-  quantity: number;
-}
 
 interface UserInfo {
   id: string;
@@ -160,7 +147,7 @@ export default function CheckoutPage() {
       router.push("/auth/customer-login?callbackUrl=/checkout");
       return;
     }
-  }, [status, router, localUser, session]);
+  }, [status, router, localUser, session, mounted]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -207,7 +194,7 @@ export default function CheckoutPage() {
     });
   };
 
-  const fetchAddresses = async () => {
+  const fetchAddresses = useCallback(async () => {
     try {
       setIsAddressLoading(true);
 
@@ -226,7 +213,6 @@ export default function CheckoutPage() {
           Authorization: `Bearer ${token}`,
           Accept: "application/json",
         },
-        credentials: "include",
       });
 
       if (!response.ok) {
@@ -277,7 +263,7 @@ export default function CheckoutPage() {
     } finally {
       setIsAddressLoading(false);
     }
-  };
+  }, [router, setIsAddressLoading]);
 
   const handleSelectAddress = (addressId: string) => {
     setSelectedAddressId(addressId);
@@ -394,7 +380,7 @@ export default function CheckoutPage() {
     if (mounted && (session?.user?.id || localStorage.getItem("auth_token"))) {
       fetchAddresses();
     }
-  }, [mounted, session]);
+  }, [mounted, session, fetchAddresses]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -529,9 +515,6 @@ export default function CheckoutPage() {
       </div>
     );
   }
-
-  // Get current user from session or local storage
-  const user = session?.user || localUser;
 
   return (
     <div className="container mx-auto px-4 py-8">

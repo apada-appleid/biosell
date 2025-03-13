@@ -24,7 +24,7 @@ interface Product {
 }
 
 export default function SellerProductsPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

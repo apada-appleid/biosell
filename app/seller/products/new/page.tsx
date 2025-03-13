@@ -4,6 +4,7 @@ import { useState, ChangeEvent, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { XCircle, Upload, Loader2, CheckCircle } from 'lucide-react';
+import Image from "next/image";
 
 interface ProductImage {
   id?: string; // Optional since new uploads won't have IDs yet
@@ -21,7 +22,7 @@ interface ProductFormData {
 }
 
 export default function NewProductPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const [formData, setFormData] = useState<ProductFormData>({
     title: '',
@@ -439,10 +440,13 @@ export default function NewProductPage() {
               {formData.images.map((image, index) => (
                 <div key={index} className="relative group">
                   <div className="relative h-24 w-full overflow-hidden rounded-md">
-                    <img 
+                    <Image 
                       src={image.preview} 
-                      alt={`Preview ${index}`} 
-                      className="h-full w-full object-cover"
+                      alt={`Preview ${index}`}
+                      fill
+                      sizes="100px"
+                      className="object-cover"
+                      priority={index === 0}
                     />
                   </div>
                   <button

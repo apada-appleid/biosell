@@ -33,7 +33,7 @@ interface Order {
 }
 
 export default function SellerOrdersPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

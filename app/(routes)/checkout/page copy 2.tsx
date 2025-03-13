@@ -2,13 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { FiArrowLeft } from 'react-icons/fi';
 import CheckoutForm from '@/app/components/checkout/CheckoutForm';
 import { useCartStore } from '@/app/store/cart';
 import { useSession } from 'next-auth/react';
 import { User } from '@/app/types';
-import { saveRedirectUrl, createRedirectUrl, clearRedirectUrl } from '@/lib/auth-util';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -16,11 +13,6 @@ export default function CheckoutPage() {
   const { cart } = useCartStore();
   const [mounted, setMounted] = useState(false);
   const [localUser, setLocalUser] = useState<User | null>(null);
-  const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    mobile: ''
-  });
   
   // Handle hydration
   useEffect(() => {
@@ -40,14 +32,7 @@ export default function CheckoutPage() {
             email: userInfo.email || '',
             mobile: userInfo.mobile
           });
-          // Fill in form with user info from token if available
-          if (userInfo && userInfo.name && userInfo.mobile) {
-            setFormData({
-              fullName: userInfo.name,
-              email: userInfo.email || `${userInfo.mobile}@example.com`,
-              mobile: userInfo.mobile
-            });
-          }
+          // No need to fill form data anymore as we've removed formData state
         }
       } catch (error) {
         console.error('Error getting local user:', error);
@@ -55,17 +40,6 @@ export default function CheckoutPage() {
     }
   }, []);
   
-  // Update form data when session changes
-  useEffect(() => {
-    if (session) {
-      setFormData({
-        fullName: session.user.name || '',
-        email: session.user.email || '',
-        mobile: session.user.mobile || ''
-      });
-    }
-  }, [session]);
-
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!mounted || status === 'loading') return;

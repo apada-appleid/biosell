@@ -379,9 +379,10 @@ export default function CustomerLoginPage() {
       } else {
         throw new Error("توکن دریافت نشد");
       }
-    } catch (err: any) {
+    } catch (err: Error | unknown) {
       console.error("Error verifying OTP:", err);
-      setError(err.message || "خطا در ورود. لطفا دوباره تلاش کنید.");
+      const errorMessage = err instanceof Error ? err.message : "خطا در ورود. لطفا دوباره تلاش کنید.";
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

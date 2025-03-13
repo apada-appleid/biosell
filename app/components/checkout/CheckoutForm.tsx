@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { useCartStore } from '@/app/store/cart';
-import { Address, User, CustomerAddress } from '@/app/types';
+import { User, CustomerAddress } from '@/app/types';
 import { FiPlus, FiCheck, FiChevronDown, FiChevronUp, FiEdit, FiX, FiStar } from 'react-icons/fi';
 import { TbLoader } from 'react-icons/tb';
 
@@ -25,13 +25,6 @@ interface CheckoutFormData {
   deliveryMobile: string;
 }
 
-interface CustomerInfo {
-  fullName: string;
-  email: string;
-  mobile: string;
-  // ... other fields ...
-}
-
 const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => {
   const router = useRouter();
   const { cart, clearCart } = useCartStore();
@@ -40,8 +33,6 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
   const [showAddresses, setShowAddresses] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState<CustomerAddress | null>(null);
   const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
-  const [isLoadingAddresses, setIsLoadingAddresses] = useState(false);
-  const [hasUpdatedProfile, setHasUpdatedProfile] = useState(false);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
   const [addressError, setAddressError] = useState<string | null>(null);
   const [addressSuccess, setAddressSuccess] = useState<string | null>(null);
@@ -52,7 +43,6 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
     formState: { errors, isSubmitting },
     setValue,
     watch,
-    reset,
     getValues
   } = useForm<CheckoutFormData>({
     defaultValues: {
@@ -66,21 +56,15 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
     }
   });
   
-  // Watch form values for profile update
-  const watchedFullName = watch('fullName');
-  const watchedEmail = watch('email');
-  
-  // Check if profile info has changed
-  useEffect(() => {
-    if (user && (
-      watchedFullName !== user.name || 
-      watchedEmail !== user.email
-    )) {
-      setHasUpdatedProfile(true);
-    } else {
-      setHasUpdatedProfile(false);
-    }
-  }, [watchedFullName, watchedEmail, user]);
+  // Fill form with selected address data
+  const fillAddressForm = useCallback((address: CustomerAddress) => {
+    setValue('fullName', address.fullName);
+    setValue('deliveryMobile', address.mobile);
+    setValue('province', address.province);
+    setValue('city', address.city);
+    setValue('postalCode', address.postalCode);
+    setValue('address', address.address);
+  }, [setValue]);
   
   // Fetch customer's addresses when component mounts
   useEffect(() => {
@@ -90,11 +74,8 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
         const token = localStorage.getItem('auth_token');
         if (!token) {
           console.log('No auth token found, user might not be logged in');
-          setIsLoadingAddresses(false);
           return;
         }
-
-        setIsLoadingAddresses(true);
 
         const response = await fetch(`/api/customer/addresses`, {
           headers: {
@@ -106,7 +87,6 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
         if (response.status === 401) {
           console.error('Unauthorized when fetching addresses - invalid or expired token');
           // Handle unauthorized error - could redirect to login or show message
-          setIsLoadingAddresses(false);
           return;
         }
 
@@ -141,23 +121,11 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
         }
       } catch (error) {
         console.error('Error fetching addresses:', error);
-      } finally {
-        setIsLoadingAddresses(false);
       }
     };
     
     fetchAddresses();
-  }, [user]);
-  
-  // Fill form with selected address data
-  const fillAddressForm = (address: CustomerAddress) => {
-    setValue('fullName', address.fullName);
-    setValue('deliveryMobile', address.mobile);
-    setValue('province', address.province);
-    setValue('city', address.city);
-    setValue('postalCode', address.postalCode);
-    setValue('address', address.address);
-  };
+  }, [user, fillAddressForm]);
   
   // Clear address form to add a new address
   const handleAddNewAddress = () => {

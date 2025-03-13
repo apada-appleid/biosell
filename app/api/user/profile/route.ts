@@ -127,7 +127,14 @@ export async function PATCH(req: NextRequest) {
     }
 
     const data = await req.json();
-    const updateData: any = {};
+    
+    // Define a proper type for user update data
+    interface UserUpdateData {
+      name?: string;
+      mobile?: string;
+    }
+    
+    const updateData: UserUpdateData = {};
 
     // Only allow updating specific fields
     if (data.name) updateData.name = data.name;

@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { TbUserCircle, TbPhone, TbMail, TbMapPin, TbLoader, TbCheck, TbMapSearch, TbPlus, TbEdit, TbTrash, TbStar, TbCheck as TbCheckIcon } from 'react-icons/tb';
-import { Address, CustomerAddress } from '@/app/types';
+import { CustomerAddress } from '@/app/types';
 import { useSession } from 'next-auth/react';
 import { useToastStore } from '@/app/store/toast';
 
@@ -137,7 +137,7 @@ export default function CustomerProfile() {
   }, [status, router]);
 
   // دریافت آدرس‌های کاربر
-  const fetchAddresses = async () => {
+  const fetchAddresses = useCallback(async () => {
     try {
       // Check if we have a token first
       const token = localStorage.getItem('auth_token');
@@ -244,7 +244,7 @@ export default function CustomerProfile() {
     } catch (error) {
       console.error('Error fetching addresses:', error);
     }
-  };
+  }, [router, setAuthError, setAddresses]);
 
   // دریافت اطلاعات کاربر و آدرس‌ها
   useEffect(() => {
@@ -311,7 +311,7 @@ export default function CustomerProfile() {
     };
 
     fetchUserData();
-  }, [session, reset, status]);
+  }, [session, reset, status, fetchAddresses, router]);
 
   // ذخیره اطلاعات کاربر
   const onSubmit = async (data: ProfileFormValues) => {
@@ -421,10 +421,10 @@ export default function CustomerProfile() {
       resetAddress();
       setCurrentAddress(null);
       
-    } catch (error: any) {
+    } catch (error: Error | unknown) {
       console.error('Error saving address:', error);
       setAddressSaveStatus('error');
-      setAddressErrorMessage(error.message || 'خطا در ذخیره آدرس');
+      setAddressErrorMessage(error instanceof Error ? error.message : 'خطا در ذخیره آدرس');
     } finally {
       setIsAddressSaving(false);
     }
@@ -438,7 +438,7 @@ export default function CustomerProfile() {
     }
     
     try {
-      setIsLoading(true);
+      setIsDeleting(true);
       
       const token = localStorage.getItem('auth_token');
       if (!token) {
@@ -509,7 +509,7 @@ export default function CustomerProfile() {
         }
       ]);
     } finally {
-      setIsLoading(false);
+      setIsDeleting(false);
     }
   };
   

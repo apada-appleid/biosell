@@ -13,7 +13,7 @@ const LegalIndexPage = () => {
       <div className="max-w-3xl mx-auto">
         <h1 className="text-3xl font-bold mb-6 text-gray-900">Legal Information</h1>
         <p className="text-gray-700 mb-8">
-          Welcome to Biosell's legal center. Here you can find information about our policies, terms, and other legal documents.
+          Welcome to Biosell&apos;s legal center. Here you can find information about our policies, terms, and other legal documents.
         </p>
 
         <div className="grid gap-6 md:grid-cols-2">
@@ -42,7 +42,7 @@ const LegalIndexPage = () => {
               <h2 className="text-xl font-semibold text-gray-800">Terms of Service</h2>
             </div>
             <p className="text-gray-600 flex-grow">
-              Understand the rules, guidelines, and agreements that govern the use of Biosell's services.
+              Understand the rules, guidelines, and agreements that govern the use of Biosell&apos;s services.
             </p>
             <div className="mt-4 text-indigo-600 font-medium">
               Read Terms of Service →
@@ -74,7 +74,7 @@ const LegalIndexPage = () => {
               <h2 className="text-xl font-semibold text-gray-800">App Category</h2>
             </div>
             <p className="text-gray-600 flex-grow">
-              Information about Biosell's app category, features, and target audience.
+              Information about Biosell&apos;s app category, features, and target audience.
             </p>
             <div className="mt-4 text-indigo-600 font-medium">
               View Category Information →

@@ -9,10 +9,7 @@ import { useCartStore } from "@/app/store/cart";
 import { Product, ProductImage } from "@/app/types";
 import {
   User,
-  Heart,
-  MessageCircle,
   ExternalLink,
-  Grid,
   ChevronLeft,
   ChevronRight,
   X,

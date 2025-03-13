@@ -59,7 +59,7 @@ export default function CustomerLayout({
                 email: userInfo.email || `${userInfo.mobile}@example.com`,
                 password: token,
                 type: "customer"
-              }).then(result => {
+              }).then(() => {
                 // Auto-login completed
               }).catch(err => {
                 console.error("Auto-login failed:", err);

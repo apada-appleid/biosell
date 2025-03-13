@@ -2,21 +2,17 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import { 
   ShoppingBag, 
   DollarSign, 
-  Calendar, 
   Package, 
   PlusCircle, 
   ArrowRight,
   Loader2,
-  Users,
-  BarChart2,
   ClipboardCheck,
   Link as LinkIcon,
   Copy,
-  CheckCircle2
+  CheckCircle
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -28,19 +24,30 @@ interface Subscription {
   isActive: boolean;
 }
 
+interface Order {
+  id: string;
+  orderNumber: string;
+  total: number;
+  status: string;
+  createdAt: string;
+  customer: {
+    name: string;
+  };
+}
+
 interface DashboardStats {
+  totalOrders: number;
   totalProducts: number;
   activeProducts: number;
   totalSales: number;
   totalRevenue: number;
   subscription: Subscription | null;
   productLimitPercentage: number;
-  recentOrders: any[];
+  recentOrders: Order[];
 }
 
 export default function SellerDashboardPage() {
   const { data: session, status } = useSession();
-  const router = useRouter();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -244,7 +251,7 @@ export default function SellerDashboardPage() {
                 aria-label="کپی لینک"
               >
                 {copySuccess ? (
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  <CheckCircle className="h-5 w-5 text-green-500" />
                 ) : (
                   <Copy className="h-5 w-5" />
                 )}

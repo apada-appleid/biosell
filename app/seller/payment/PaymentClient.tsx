@@ -14,13 +14,6 @@ interface Plan {
   maxProducts: number;
 }
 
-// For storing receipt information in database
-interface ReceiptInfo {
-  bucket: string;
-  key: string;
-  uploadedAt: Date;
-}
-
 export default function PaymentClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -101,11 +94,7 @@ export default function PaymentClient() {
         setUploadStatus('success');
         
         // In a real application, you would save the receipt information to your database
-        const receiptData: ReceiptInfo = {
-          bucket: receiptInfo.bucket,
-          key: receiptInfo.key,
-          uploadedAt: new Date()
-        };
+        console.log('Receipt uploaded successfully:', receiptInfo);
         
         // Example API call to save receipt info (not implemented)
         // await fetch('/api/payments/receipts', {

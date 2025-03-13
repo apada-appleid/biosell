@@ -91,7 +91,7 @@ const TermsOfServicePage = () => {
             <li>Violate any applicable laws or regulations</li>
             <li>Infringe on the intellectual property rights of others</li>
             <li>Distribute malicious content such as viruses or malware</li>
-            <li>Attempt to gain unauthorized access to our systems or other users' accounts</li>
+            <li>Attempt to gain unauthorized access to our systems or other users&apos; accounts</li>
             <li>Use our services to send spam or unsolicited messages</li>
             <li>Engage in any activity that disrupts or interferes with our services</li>
           </ul>
@@ -117,7 +117,7 @@ const TermsOfServicePage = () => {
         <section className="mb-6">
           <h2 className="text-xl font-semibold mb-3 text-gray-800">9. Disclaimer of Warranties</h2>
           <p className="text-gray-700 mb-3">
-            Our services are provided "as is" and "as available" without warranties of any kind, either express or implied,
+            Our services are provided &quot;as is&quot; and &quot;as available&quot; without warranties of any kind, either express or implied,
             including but not limited to warranties of merchantability, fitness for a particular purpose, or non-infringement.
           </p>
           <p className="text-gray-700 mb-3">
@@ -140,7 +140,7 @@ const TermsOfServicePage = () => {
           <h2 className="text-xl font-semibold mb-3 text-gray-800">11. Changes to Terms</h2>
           <p className="text-gray-700 mb-3">
             We may update these Terms of Service from time to time. We will notify you of any material changes by posting the
-            new Terms of Service on this page and updating the "Last Updated" date. Your continued use of our services after
+            new Terms of Service on this page and updating the &quot;Last Updated&quot; date. Your continued use of our services after
             any changes indicates your acceptance of the updated Terms of Service.
           </p>
         </section>

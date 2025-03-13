@@ -4,6 +4,7 @@ import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { XCircle, Upload, Loader2, CheckCircle } from 'lucide-react';
+import Image from "next/image";
 
 interface ProductImage {
   id?: string;
@@ -11,6 +12,11 @@ interface ProductImage {
   file?: File;  // For file uploads
   preview: string;
   isNew?: boolean; // To track if it's a new upload
+}
+
+interface ProductImageData {
+  id: string;
+  imageUrl: string;
 }
 
 interface ProductFormData {
@@ -32,7 +38,7 @@ interface ProductFormData {
 export default function EditProductPage() {
   const params = useParams();
   const productId = params.id as string;
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [formData, setFormData] = useState<ProductFormData>({
@@ -74,7 +80,7 @@ export default function EditProductPage() {
           price: String(product.price) || '',
           inventory: String(product.inventory) || '0',
           isActive: product.isActive ?? true,
-          images: product.images?.map((img: any) => ({
+          images: product.images?.map((img: ProductImageData) => ({
             id: img.id,
             imageUrl: img.imageUrl,
             preview: img.imageUrl,
@@ -264,7 +270,8 @@ export default function EditProductPage() {
         throw new Error(errorData.error || 'Failed to update product');
       }
       
-      const updatedProduct = await response.json();
+      // Product updated successfully
+      await response.json();
       
       // Upload new images if there are any
       const newImages = formData.images.filter(img => img.isNew);
@@ -469,10 +476,13 @@ export default function EditProductPage() {
               {formData.images.map((image, index) => (
                 <div key={index} className="relative group">
                   <div className="relative h-24 w-full overflow-hidden rounded-md">
-                    <img 
+                    <Image 
                       src={image.preview} 
-                      alt={`Preview ${index}`} 
-                      className="h-full w-full object-cover"
+                      alt={`Preview ${index}`}
+                      fill
+                      sizes="100px"
+                      className="object-cover"
+                      priority={index === 0}
                     />
                   </div>
                   <button

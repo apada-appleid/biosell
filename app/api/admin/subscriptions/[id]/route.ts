@@ -114,8 +114,15 @@ export async function PATCH(
       }
     }
 
+    // Define a proper type for the update data
+    interface SubscriptionUpdateData {
+      planId?: string;
+      endDate?: Date;
+      isActive?: boolean;
+    }
+
     // Prepare update data
-    const updateData: any = {};
+    const updateData: SubscriptionUpdateData = {};
     if (planId) updateData.planId = planId;
     if (endDate) updateData.endDate = new Date(endDate);
     if (isActive !== undefined) {

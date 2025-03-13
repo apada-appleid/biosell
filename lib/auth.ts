@@ -2,8 +2,6 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { JWT } from 'next-auth/jwt';
-import { User } from 'next-auth';
 
 // Extend the JWT interface
 declare module 'next-auth/jwt' {

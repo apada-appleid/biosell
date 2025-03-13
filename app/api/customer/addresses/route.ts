@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
       where: {
         customerId: customerId,
         deletedAt: null
-      } as any, // Type assertion to bypass type checking
+      },
       orderBy: {
         isDefault: 'desc',
       },
@@ -158,7 +158,7 @@ export async function POST(req: NextRequest) {
         where: { 
           customerId,
           deletedAt: null
-        } as any, // Type assertion to bypass type checking
+        },
         data: { isDefault: false }
       });
     }
@@ -168,7 +168,7 @@ export async function POST(req: NextRequest) {
       where: { 
         customerId,
         deletedAt: null
-      } as any // Type assertion to bypass type checking
+      }
     });
     
     if (addressCount === 0) {
@@ -283,7 +283,8 @@ export async function PATCH(req: NextRequest) {
       });
     }
     
-    let { id, isDefault, ...updateData } = requestData;
+    let { id, isDefault } = requestData;
+    const { ...updateData } = requestData;
     
     // Prioritize ID from URL parameters if present
     if (urlId) {
@@ -322,7 +323,7 @@ export async function PATCH(req: NextRequest) {
         id,
         // Only find non-deleted addresses
         deletedAt: null
-      } as any // Type assertion to bypass type checking
+       }
     });
     
     if (!address) {
@@ -357,7 +358,7 @@ export async function PATCH(req: NextRequest) {
           id: { not: id },
           // Only update non-deleted addresses
           deletedAt: null
-        } as any, // Type assertion to bypass type checking
+        },
         data: { isDefault: false }
       });
       
@@ -464,7 +465,7 @@ export async function DELETE(req: NextRequest) {
       try {
         const body = await req.json();
         id = body.id;
-      } catch (error) {
+      } catch {
         // If no JSON body or no ID in body, return error
         return NextResponse.json({ error: 'Address ID required' }, { 
           status: 400,
@@ -519,7 +520,7 @@ export async function DELETE(req: NextRequest) {
       data: { 
         isDefault: false, // Make sure it's not the default address anymore
         deletedAt: new Date()
-      } as any // Type assertion to bypass type checking
+      }
     });
     
     // If this was the default address, set another one as default if exists
@@ -528,7 +529,7 @@ export async function DELETE(req: NextRequest) {
         where: { 
           customerId,
           deletedAt: null
-        } as any // Type assertion to bypass type checking
+        }
       });
       
       if (anotherAddress) {

@@ -99,12 +99,12 @@ const PrivacyPolicyPage = () => {
             <li>The right to data portability</li>
           </ul>
           <p className="text-gray-700 mb-3">
-            To exercise these rights, please contact us using the information provided in the "Contact Us" section.
+            To exercise these rights, please contact us using the information provided in the &quot;Contact Us&quot; section.
           </p>
         </section>
 
         <section className="mb-6">
-          <h2 className="text-xl font-semibold mb-3 text-gray-800">7. Children's Privacy</h2>
+          <h2 className="text-xl font-semibold mb-3 text-gray-800">7. Children&apos;s Privacy</h2>
           <p className="text-gray-700 mb-3">
             Our services are not intended for use by children under the age of 13. We do not knowingly collect personal information from children under 13. If you become aware that a child has provided us with personal information, please contact us immediately.
           </p>
@@ -113,7 +113,7 @@ const PrivacyPolicyPage = () => {
         <section className="mb-6">
           <h2 className="text-xl font-semibold mb-3 text-gray-800">8. Changes to This Privacy Policy</h2>
           <p className="text-gray-700 mb-3">
-            We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last Updated" date. You are advised to review this Privacy Policy periodically for any changes.
+            We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the &quot;Last Updated&quot; date. You are advised to review this Privacy Policy periodically for any changes.
           </p>
         </section>
 

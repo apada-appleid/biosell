@@ -129,8 +129,14 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    // Define proper type for customer update data
+    interface CustomerUpdateData {
+      fullName?: string;
+      email?: string;
+    }
+
     // Create update object with only allowed fields
-    const updateData: any = {};
+    const updateData: CustomerUpdateData = {};
     if (fullName) updateData.fullName = fullName;
     if (email) updateData.email = email;
     // Mobile is explicitly not included in updateData

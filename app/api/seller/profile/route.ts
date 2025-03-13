@@ -133,8 +133,15 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    // Define a proper type for seller update data
+    interface SellerUpdateData {
+      shopName?: string;
+      bio?: string;
+      email?: string;
+    }
+
     // Create update object with only provided fields
-    const updateData: any = {};
+    const updateData: SellerUpdateData = {};
     if (shopName) updateData.shopName = shopName;
     if (bio) updateData.bio = bio;
     if (email) updateData.email = email;

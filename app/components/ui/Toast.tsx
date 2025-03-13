@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { FiCheckCircle, FiX, FiAlertCircle } from 'react-icons/fi';
 
 interface ToastProps {
@@ -22,14 +22,14 @@ const Toast: React.FC<ToastProps> = ({
   const [isExiting, setIsExiting] = useState(false);
   
   // Handle close with animation
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setIsExiting(true);
     // Wait for animation to complete before removing from DOM
     setTimeout(() => {
       onClose();
       setIsExiting(false);
     }, 300);
-  };
+  }, [onClose]);
 
   // Auto-hide after 5 seconds if not closed manually
   useEffect(() => {
@@ -40,7 +40,7 @@ const Toast: React.FC<ToastProps> = ({
       
       return () => clearTimeout(timeout);
     }
-  }, [isVisible]);
+  }, [isVisible, handleClose]);
   
   // Reset exit animation when toast becomes visible
   useEffect(() => {

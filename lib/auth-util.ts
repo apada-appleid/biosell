@@ -3,9 +3,6 @@
  * centralized methods for handling redirects and authentication state.
  */
 
-// کلید ذخیره‌سازی اطلاعات ریدایرکت
-const REDIRECT_STORAGE_KEY = 'redirectAfterLogin';
-
 /**
  * Saves the redirect URL to session storage with an expiration timestamp
  * to prevent infinite loops
@@ -20,7 +17,7 @@ export function saveRedirectUrl(url: string): void {
     // Save URL and expiration time
     localStorage.setItem('auth_redirect_url', url);
     localStorage.setItem('auth_redirect_expires', expiresAt.toString());
-  } catch (error) {
+  } catch {
     // Silent fail - this is not critical functionality
   }
 }
@@ -32,32 +29,29 @@ export function getRedirectUrl(): string | null {
   try {
     if (typeof window === 'undefined') return null;
     
-    // Get stored URL and expiration time
     const url = localStorage.getItem('auth_redirect_url');
     const expiresAtStr = localStorage.getItem('auth_redirect_expires');
     
-    // If no URL is stored, return null
-    if (!url || !expiresAtStr) {
-      return null;
-    }
+    if (!url || !expiresAtStr) return null;
     
-    // Check if URL has expired
     const expiresAt = parseInt(expiresAtStr, 10);
-    if (isNaN(expiresAt) || Date.now() > expiresAt) {
-      // URL has expired, clear it and return null
+    
+    // Check if expired
+    if (Date.now() > expiresAt) {
+      // Clear expired redirect
       clearRedirectUrl();
       return null;
     }
     
     // Return valid URL
     return url;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
 
 /**
- * Clears the redirect URL from both storage mechanisms
+ * Clears the stored redirect URL
  */
 export function clearRedirectUrl(): void {
   try {
@@ -65,7 +59,7 @@ export function clearRedirectUrl(): void {
     
     localStorage.removeItem('auth_redirect_url');
     localStorage.removeItem('auth_redirect_expires');
-  } catch (error) {
+  } catch {
     // Silent fail
   }
 }

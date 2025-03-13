@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { TbEdit, TbTrash, TbSearch, TbEye, TbFilter } from 'react-icons/tb';
-import authOptions from '@/lib/auth';
 
 type Product = {
   id: string;

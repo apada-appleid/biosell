@@ -16,6 +16,16 @@ function generateOrderNumber() {
   return `${timestamp.slice(-6)}${random}`;
 }
 
+// Define a proper type for cart items
+interface CartItem {
+  product: {
+    id: string;
+    title: string;
+    price: number;
+  };
+  quantity: number;
+}
+
 // TS interface for orderData
 interface OrderData {
   orderNumber: string;
@@ -37,14 +47,53 @@ interface OrderData {
   };
 }
 
+// Define a proper type for the orders
+// TODO: Define proper types for orders with relations instead of using 'any'
+interface OrderItem {
+  id: string;
+  orderId: string;
+  productId: string;
+  title: string;
+  price: number;
+  quantity: number;
+  totalPrice: number;
+  product?: {
+    id: string;
+    title: string;
+    price: number;
+    images?: { imageUrl: string }[];
+  };
+}
+
+interface OrderWithRelations {
+  id: string;
+  orderNumber: string;
+  customerId: string;
+  sellerId: string;
+  status: string;
+  total: number;
+  paymentMethod: string;
+  shippingAddress: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  items: OrderItem[];
+  customer?: {
+    id: string;
+    fullName: string | null;
+    email: string;
+    mobile: string;
+  };
+  seller?: {
+    id: string;
+    shopName: string;
+    username: string;
+  };
+}
+
 export async function POST(request: NextRequest) {
-  // Store the request body outside the try block so it's available in catch
-  let requestBody;
-  
   try {
     const body = await request.json();
-    requestBody = body; // Store for error handling
-    const { customerData, cartItems, total, sellerId, paymentMethod, shippingAddress, addressId } = body;
+    const { customerData, cartItems, total, sellerId, paymentMethod, addressId } = body;
     
     // Enhanced validation
     if (!customerData || !cartItems || !Array.isArray(cartItems) || cartItems.length === 0 || !total || !sellerId) {
@@ -174,7 +223,7 @@ export async function POST(request: NextRequest) {
       paymentMethod: paymentMethod || "credit_card",
       shippingAddress: finalShippingAddress,
       items: {
-        create: cartItems.map((item: any) => ({
+        create: cartItems.map((item: CartItem) => ({
           productId: item.product.id,
           title: item.product.title,
           price: item.product.price,
@@ -285,10 +334,6 @@ export async function GET(request: NextRequest) {
     if (!authenticatedUser?.userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    // Define a type for the orders
-    // TODO: Define proper types for orders with relations instead of using 'any'
-    type OrderWithRelations = any;
 
     // Filter orders based on user type
     let orders: OrderWithRelations[] = [];

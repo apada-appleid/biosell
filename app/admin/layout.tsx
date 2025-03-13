@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { signOut, useSession } from 'next-auth/react';
 import { 
   TbLayoutDashboard, 
-  TbUsers, 
   TbShoppingBag, 
   TbBuildingStore,
   TbMenu2,

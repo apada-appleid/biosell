@@ -1,10 +1,16 @@
-'use client';
+"use client";
 
-import { useState, useEffect, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
-import { TbLoader2, TbCheck, TbAlertTriangle, TbX, TbArrowLeft, TbPlus } from 'react-icons/tb';
-import React from 'react';
+import { useState, useEffect, FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import {
+  TbLoader2,
+  TbAlertTriangle,
+  TbArrowLeft,
+  TbCheck,
+  TbPlus,
+} from "react-icons/tb";
+import React from "react";
 
 type Seller = {
   id: string;
@@ -33,11 +39,15 @@ type Plan = {
   maxProducts: number;
 };
 
-export default function EditSellerPage({ params }: { params: Promise<{ id: string }> }) {
+export default function EditSellerPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   // Properly unwrap params using React.use()
   const unwrappedParams = React.use(params);
   const sellerId = unwrappedParams.id;
-  
+
   const router = useRouter();
   const { data: session, status } = useSession();
   const [seller, setSeller] = useState<Seller | null>(null);
@@ -47,63 +57,69 @@ export default function EditSellerPage({ params }: { params: Promise<{ id: strin
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: '',
-    shopName: '',
-    bio: '',
+    username: "",
+    email: "",
+    password: "",
+    shopName: "",
+    bio: "",
     isActive: true,
   });
-  
+
   // Subscription form data
   const [showSubscriptionForm, setShowSubscriptionForm] = useState(false);
   const [subscriptionData, setSubscriptionData] = useState({
-    planId: '',
+    planId: "",
     durationMonths: 1,
     isActive: true,
   });
   const [isCreatingSubscription, setIsCreatingSubscription] = useState(false);
-  const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(
+    null
+  );
   const [subscriptionSuccess, setSubscriptionSuccess] = useState(false);
 
   useEffect(() => {
     // Redirect if not admin
-    if (status === 'authenticated' && session?.user?.type !== 'admin') {
-      router.push('/admin');
+    if (status === "authenticated" && session?.user?.type !== "admin") {
+      router.push("/admin");
     }
-    
+
     // Fetch seller and plans data
-    if (status === 'authenticated' && session?.user?.type === 'admin' && sellerId) {
+    if (
+      status === "authenticated" &&
+      session?.user?.type === "admin" &&
+      sellerId
+    ) {
       const fetchData = async () => {
         setIsLoading(true);
         try {
           // Fetch seller data
           const sellerResponse = await fetch(`/api/admin/sellers/${sellerId}`);
           if (!sellerResponse.ok) {
-            throw new Error('Failed to fetch seller data');
+            throw new Error("Failed to fetch seller data");
           }
           const sellerData = await sellerResponse.json();
-          
+
           // Fetch available plans
-          const plansResponse = await fetch('/api/admin/plans');
+          const plansResponse = await fetch("/api/admin/plans");
           if (!plansResponse.ok) {
-            throw new Error('Failed to fetch plans');
+            throw new Error("Failed to fetch plans");
           }
           const plansData = await plansResponse.json();
-          
+
           setSeller(sellerData);
           setPlans(plansData);
-          
+
           // Initialize form data
           setFormData({
             username: sellerData.username,
             email: sellerData.email,
-            password: '',
+            password: "",
             shopName: sellerData.shopName,
-            bio: sellerData.bio || '',
+            bio: sellerData.bio || "",
             isActive: sellerData.isActive,
           });
-          
+
           // Initialize subscription form if a subscription exists
           if (sellerData.subscription) {
             setSubscriptionData({
@@ -119,21 +135,25 @@ export default function EditSellerPage({ params }: { params: Promise<{ id: strin
             });
           }
         } catch (error) {
-          console.error('Error fetching data:', error);
-          setError('خطا در دریافت اطلاعات فروشنده یا پلن‌ها');
+          console.error("Error fetching data:", error);
+          setError("خطا در دریافت اطلاعات فروشنده یا پلن‌ها");
         } finally {
           setIsLoading(false);
         }
       };
-      
+
       fetchData();
     }
   }, [sellerId, session, status, router]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
     const { name, value, type } = e.target as HTMLInputElement;
-    
-    if (type === 'checkbox') {
+
+    if (type === "checkbox") {
       const { checked } = e.target as HTMLInputElement;
       setFormData({
         ...formData,
@@ -146,11 +166,13 @@ export default function EditSellerPage({ params }: { params: Promise<{ id: strin
       });
     }
   };
-  
-  const handleSubscriptionChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+
+  const handleSubscriptionChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value, type } = e.target as HTMLInputElement;
-    
-    if (type === 'checkbox') {
+
+    if (type === "checkbox") {
       const { checked } = e.target as HTMLInputElement;
       setSubscriptionData({
         ...subscriptionData,
@@ -166,86 +188,94 @@ export default function EditSellerPage({ params }: { params: Promise<{ id: strin
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    
+
     if (!sellerId) return;
-    
+
     setIsSaving(true);
     setSaveSuccess(false);
     setError(null);
-    
+
     try {
       // Create the request payload (omit empty password)
       const payload = { ...formData };
       if (!payload.password) {
-        // Use object destructuring to create a new object without the password property
-        const { password, ...dataWithoutPassword } = payload;
+        // Remove password property from payload if it's empty
+        delete payload.password;
         const response = await fetch(`/api/admin/sellers/${sellerId}`, {
-          method: 'PATCH',
+          method: "PATCH",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
-          body: JSON.stringify(dataWithoutPassword),
+          body: JSON.stringify(payload),
         });
-        
+
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.error || 'خطا در بروزرسانی اطلاعات فروشنده');
+          throw new Error(
+            errorData.error || "خطا در بروزرسانی اطلاعات فروشنده"
+          );
         }
       } else {
         // If there is a password, send the full payload
         const response = await fetch(`/api/admin/sellers/${sellerId}`, {
-          method: 'PATCH',
+          method: "PATCH",
           headers: {
-            'Content-Type': 'application/json',
+            "Content-Type": "application/json",
           },
           body: JSON.stringify(payload),
         });
-        
+
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.error || 'خطا در بروزرسانی اطلاعات فروشنده');
+          throw new Error(
+            errorData.error || "خطا در بروزرسانی اطلاعات فروشنده"
+          );
         }
       }
-      
+
       setSaveSuccess(true);
-      
+
       // Refresh seller data
       const sellerResponse = await fetch(`/api/admin/sellers/${sellerId}`);
       const sellerData = await sellerResponse.json();
       setSeller(sellerData);
-      
+
       // Reset password field
       setFormData({
         ...formData,
-        password: '',
+        password: "",
       });
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => {
         setSaveSuccess(false);
       }, 3000);
     } catch (error) {
-      console.error('Error updating seller:', error);
-      setError(error instanceof Error ? error.message : 'خطا در بروزرسانی اطلاعات فروشنده');
+      console.error("Error updating seller:", error);
+      setError(
+        error instanceof Error
+          ? error.message
+          : "خطا در بروزرسانی اطلاعات فروشنده"
+      );
     } finally {
       setIsSaving(false);
     }
   };
-  
+
   const handleCreateSubscription = async (e: FormEvent) => {
     e.preventDefault();
-    
+
     if (!sellerId) return;
-    
+
     setIsCreatingSubscription(true);
     setSubscriptionError(null);
     setSubscriptionSuccess(false);
-    
+
     try {
-      const response = await fetch('/api/admin/subscriptions', {
-        method: 'POST',
+      const response = await fetch("/api/admin/subscriptions", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           sellerId: sellerId,
@@ -254,39 +284,41 @@ export default function EditSellerPage({ params }: { params: Promise<{ id: strin
           isActive: subscriptionData.isActive,
         }),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'خطا در ایجاد اشتراک');
+        throw new Error(errorData.error || "خطا در ایجاد اشتراک");
       }
-      
+
       setSubscriptionSuccess(true);
       setShowSubscriptionForm(false);
-      
+
       // Refresh seller data to show the new subscription
       const sellerResponse = await fetch(`/api/admin/sellers/${sellerId}`);
       const sellerData = await sellerResponse.json();
       setSeller(sellerData);
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => {
         setSubscriptionSuccess(false);
       }, 3000);
     } catch (error) {
-      console.error('Error creating subscription:', error);
-      setSubscriptionError(error instanceof Error ? error.message : 'خطا در ایجاد اشتراک');
+      console.error("Error creating subscription:", error);
+      setSubscriptionError(
+        error instanceof Error ? error.message : "خطا در ایجاد اشتراک"
+      );
     } finally {
       setIsCreatingSubscription(false);
     }
   };
-  
+
   // Format date to Persian format
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return new Intl.DateTimeFormat('fa-IR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+    return new Intl.DateTimeFormat("fa-IR", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     }).format(date);
   };
 
@@ -308,7 +340,7 @@ export default function EditSellerPage({ params }: { params: Promise<{ id: strin
           </div>
         </div>
         <button
-          onClick={() => router.push('/admin/sellers')}
+          onClick={() => router.push("/admin/sellers")}
           className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
           <TbArrowLeft className="ml-2 -mr-1 h-5 w-5" />
@@ -323,14 +355,14 @@ export default function EditSellerPage({ params }: { params: Promise<{ id: strin
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">ویرایش فروشنده</h1>
         <button
-          onClick={() => router.push('/admin/sellers')}
+          onClick={() => router.push("/admin/sellers")}
           className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
           <TbArrowLeft className="ml-2 -mr-1 h-5 w-5" />
           بازگشت به لیست فروشندگان
         </button>
       </div>
-      
+
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative mb-6">
           <div className="flex">
@@ -339,7 +371,7 @@ export default function EditSellerPage({ params }: { params: Promise<{ id: strin
           </div>
         </div>
       )}
-      
+
       {saveSuccess && (
         <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded relative mb-6">
           <div className="flex">
@@ -348,7 +380,7 @@ export default function EditSellerPage({ params }: { params: Promise<{ id: strin
           </div>
         </div>
       )}
-      
+
       {subscriptionSuccess && (
         <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded relative mb-6">
           <div className="flex">
@@ -357,16 +389,21 @@ export default function EditSellerPage({ params }: { params: Promise<{ id: strin
           </div>
         </div>
       )}
-      
+
       <div className="bg-white shadow rounded-lg mb-6">
         <div className="px-6 py-6 sm:p-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6 border-b pb-3">اطلاعات فروشنده</h2>
-          
+          <h2 className="text-xl font-semibold text-gray-900 mb-6 border-b pb-3">
+            اطلاعات فروشنده
+          </h2>
+
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 gap-y-8 gap-x-6 sm:grid-cols-6">
               {/* نام کاربری و ایمیل */}
               <div className="sm:col-span-3">
-                <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="username"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   نام کاربری
                 </label>
                 <div>
@@ -381,9 +418,12 @@ export default function EditSellerPage({ params }: { params: Promise<{ id: strin
                   />
                 </div>
               </div>
-              
+
               <div className="sm:col-span-3">
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   ایمیل
                 </label>
                 <div>
@@ -398,10 +438,13 @@ export default function EditSellerPage({ params }: { params: Promise<{ id: strin
                   />
                 </div>
               </div>
-              
+
               {/* نام فروشگاه و رمز عبور */}
               <div className="sm:col-span-3">
-                <label htmlFor="shopName" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="shopName"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   نام فروشگاه
                 </label>
                 <div>
@@ -416,9 +459,12 @@ export default function EditSellerPage({ params }: { params: Promise<{ id: strin
                   />
                 </div>
               </div>
-              
+
               <div className="sm:col-span-3">
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   رمز عبور جدید (اختیاری)
                 </label>
                 <div>
@@ -434,10 +480,13 @@ export default function EditSellerPage({ params }: { params: Promise<{ id: strin
                   />
                 </div>
               </div>
-              
+
               {/* بیوگرافی */}
               <div className="sm:col-span-6">
-                <label htmlFor="bio" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="bio"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   بیوگرافی
                 </label>
                 <div>
@@ -452,7 +501,7 @@ export default function EditSellerPage({ params }: { params: Promise<{ id: strin
                   ></textarea>
                 </div>
               </div>
-              
+
               {/* وضعیت فعال */}
               <div className="sm:col-span-6 mt-2">
                 <div className="flex items-center bg-gray-50 p-4 rounded-md border border-gray-200">
@@ -464,13 +513,16 @@ export default function EditSellerPage({ params }: { params: Promise<{ id: strin
                     onChange={handleChange}
                     className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                   />
-                  <label htmlFor="isActive" className="mr-3 block text-md text-gray-800">
+                  <label
+                    htmlFor="isActive"
+                    className="mr-3 block text-md text-gray-800"
+                  >
                     فروشنده فعال است
                   </label>
                 </div>
               </div>
             </div>
-            
+
             <div className="mt-8 pt-4 border-t border-gray-200 flex justify-end">
               <button
                 type="submit"
@@ -483,68 +535,92 @@ export default function EditSellerPage({ params }: { params: Promise<{ id: strin
                     در حال ذخیره...
                   </>
                 ) : (
-                  'ذخیره تغییرات'
+                  "ذخیره تغییرات"
                 )}
               </button>
             </div>
           </form>
         </div>
       </div>
-      
+
       {/* Subscription Information */}
       <div className="bg-white shadow rounded-lg mb-6">
         <div className="px-6 py-6 sm:p-8">
           <div className="flex justify-between items-center mb-6 border-b pb-3">
-            <h2 className="text-xl font-semibold text-gray-900">اطلاعات اشتراک</h2>
-            
+            <h2 className="text-xl font-semibold text-gray-900">
+              اطلاعات اشتراک
+            </h2>
+
             <button
               type="button"
               onClick={() => setShowSubscriptionForm(!showSubscriptionForm)}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
               <TbPlus className="ml-2 -mr-1 h-4 w-4" />
-              {showSubscriptionForm ? 'انصراف' : 'ایجاد اشتراک جدید'}
+              {showSubscriptionForm ? "انصراف" : "ایجاد اشتراک جدید"}
             </button>
           </div>
-          
+
           {seller.subscription ? (
             <div className="border rounded-md p-5 bg-gray-50">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="border-r border-gray-200 pr-4">
-                  <p className="text-sm font-medium text-gray-500 mb-2">نام پلن:</p>
-                  <p className="text-base font-medium text-gray-800">{seller.subscription.planName}</p>
+                  <p className="text-sm font-medium text-gray-500 mb-2">
+                    نام پلن:
+                  </p>
+                  <p className="text-base font-medium text-gray-800">
+                    {seller.subscription.planName}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500 mb-2">وضعیت:</p>
+                  <p className="text-sm font-medium text-gray-500 mb-2">
+                    وضعیت:
+                  </p>
                   <p className="font-medium">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                      seller.subscription.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                    }`}>
-                      {seller.subscription.isActive ? 'فعال' : 'غیرفعال'}
+                    <span
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                        seller.subscription.isActive
+                          ? "bg-green-100 text-green-800"
+                          : "bg-red-100 text-red-800"
+                      }`}
+                    >
+                      {seller.subscription.isActive ? "فعال" : "غیرفعال"}
                     </span>
                   </p>
                 </div>
                 <div className="border-r border-gray-200 pr-4">
-                  <p className="text-sm font-medium text-gray-500 mb-2">تاریخ شروع:</p>
-                  <p className="text-base font-medium text-gray-800">{formatDate(seller.subscription.startDate)}</p>
+                  <p className="text-sm font-medium text-gray-500 mb-2">
+                    تاریخ شروع:
+                  </p>
+                  <p className="text-base font-medium text-gray-800">
+                    {formatDate(seller.subscription.startDate)}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500 mb-2">تاریخ پایان:</p>
-                  <p className="text-base font-medium text-gray-800">{formatDate(seller.subscription.endDate)}</p>
+                  <p className="text-sm font-medium text-gray-500 mb-2">
+                    تاریخ پایان:
+                  </p>
+                  <p className="text-base font-medium text-gray-800">
+                    {formatDate(seller.subscription.endDate)}
+                  </p>
                 </div>
               </div>
             </div>
           ) : (
             <div className="text-center py-8 bg-gray-50 rounded-md border border-gray-200">
-              <p className="text-gray-500 text-lg">هیچ اشتراک فعالی برای این فروشنده وجود ندارد.</p>
+              <p className="text-gray-500 text-lg">
+                هیچ اشتراک فعالی برای این فروشنده وجود ندارد.
+              </p>
             </div>
           )}
-          
+
           {/* Subscription Form */}
           {showSubscriptionForm && (
             <div className="mt-8 border rounded-md p-6 bg-gray-50">
-              <h3 className="text-lg font-medium text-gray-900 mb-5 border-b pb-3">ایجاد اشتراک جدید</h3>
-              
+              <h3 className="text-lg font-medium text-gray-900 mb-5 border-b pb-3">
+                ایجاد اشتراک جدید
+              </h3>
+
               {subscriptionError && (
                 <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative mb-5">
                   <div className="flex">
@@ -553,11 +629,14 @@ export default function EditSellerPage({ params }: { params: Promise<{ id: strin
                   </div>
                 </div>
               )}
-              
+
               <form onSubmit={handleCreateSubscription}>
                 <div className="grid grid-cols-1 gap-y-8 gap-x-6 sm:grid-cols-6">
                   <div className="sm:col-span-3">
-                    <label htmlFor="planId" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label
+                      htmlFor="planId"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
                       پلن اشتراک
                     </label>
                     <div>
@@ -577,9 +656,12 @@ export default function EditSellerPage({ params }: { params: Promise<{ id: strin
                       </select>
                     </div>
                   </div>
-                  
+
                   <div className="sm:col-span-3">
-                    <label htmlFor="durationMonths" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label
+                      htmlFor="durationMonths"
+                      className="block text-sm font-medium text-gray-700 mb-2"
+                    >
                       مدت اشتراک (ماه)
                     </label>
                     <div>
@@ -598,7 +680,7 @@ export default function EditSellerPage({ params }: { params: Promise<{ id: strin
                       </select>
                     </div>
                   </div>
-                  
+
                   <div className="sm:col-span-6 mt-2">
                     <div className="flex items-center bg-white p-4 rounded-md border border-gray-200">
                       <input
@@ -609,13 +691,16 @@ export default function EditSellerPage({ params }: { params: Promise<{ id: strin
                         onChange={handleSubscriptionChange}
                         className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
-                      <label htmlFor="isActive" className="mr-3 block text-md text-gray-800">
+                      <label
+                        htmlFor="isActive"
+                        className="mr-3 block text-md text-gray-800"
+                      >
                         اشتراک فعال باشد (اشتراک‌های فعلی غیرفعال خواهند شد)
                       </label>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="mt-8 pt-4 border-t border-gray-200 flex justify-end">
                   <button
                     type="submit"
@@ -628,7 +713,7 @@ export default function EditSellerPage({ params }: { params: Promise<{ id: strin
                         در حال ایجاد...
                       </>
                     ) : (
-                      'ایجاد اشتراک'
+                      "ایجاد اشتراک"
                     )}
                   </button>
                 </div>
@@ -639,4 +724,4 @@ export default function EditSellerPage({ params }: { params: Promise<{ id: strin
       </div>
     </div>
   );
-} 
+}

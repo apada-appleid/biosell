@@ -168,8 +168,18 @@ export async function PATCH(
       );
     }
 
+    // Define a proper type for order update data
+    interface OrderUpdateData {
+      status?: string;
+      trackingNumber?: string;
+      shippingProvider?: string;
+      processedAt?: Date;
+      shippedAt?: Date;
+      deliveredAt?: Date;
+    }
+
     // Prepare update data
-    const updateData: any = {};
+    const updateData: OrderUpdateData = {};
     if (status) updateData.status = status;
     if (trackingNumber) updateData.trackingNumber = trackingNumber;
     if (shippingProvider) updateData.shippingProvider = shippingProvider;

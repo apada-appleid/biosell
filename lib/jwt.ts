@@ -20,6 +20,18 @@ interface AuthTokenPayload {
   exp?: number;
 }
 
+interface DecodedToken {
+  userId?: string;
+  id?: string;
+  email?: string;
+  mobile?: string;
+  type?: "admin" | "seller" | "customer";
+  role?: string;
+  username?: string;
+  iat?: number;
+  exp?: number;
+}
+
 export function signJwtAccessToken(
   payload: TokenPayload,
   options = {
@@ -49,12 +61,12 @@ export function verifyJwtAccessToken(token: string) {
 export async function verifyAuthToken(token: string): Promise<AuthTokenPayload | null> {
   try {
     const secret = process.env.SECRET_KEY || "default-secret-key";
-    const decoded = jwt.verify(token, secret) as any;
+    const decoded = jwt.verify(token, secret) as DecodedToken;
     
     // Convert the token payload to include userId
     // This handles tokens that might have 'id' instead of 'userId'
     const authPayload: AuthTokenPayload = {
-      userId: decoded.userId || decoded.id,
+      userId: decoded.userId || decoded.id || '',
       email: decoded.email,
       mobile: decoded.mobile,
       type: decoded.type,

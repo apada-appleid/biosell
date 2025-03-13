@@ -6,10 +6,8 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useSession, signIn } from 'next-auth/react';
 import axios from 'axios';
-import { useToastStore } from '@/app/store/toast';
 
 const registerSchema = z.object({
   shopName: z.string().min(3, 'نام فروشگاه باید حداقل 3 کاراکتر باشد'),
@@ -22,6 +20,14 @@ const registerSchema = z.object({
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
+interface ApiError extends Error {
+  response?: {
+    data?: {
+      error?: string;
+    };
+  };
+}
+
 export default function SellerRegisterPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
@@ -30,8 +36,6 @@ export default function SellerRegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
-  const showToast = useToastStore((state) => state.showToast);
   
   // useForm باید قبل از useEffect‌ها قرار بگیرد چون احتمالاً داخلش از useRef استفاده می‌شود
   const {
@@ -98,9 +102,10 @@ export default function SellerRegisterPage() {
 
       // On successful login, redirect to plans page
       router.push('/seller/plans');
-    } catch (err: any) {
+    } catch (err: Error | ApiError | unknown) {
       console.error('Error during registration:', err);
-      setError(err.response?.data?.error || err.message || 'خطا در ثبت‌نام. لطفاً دوباره تلاش کنید.');
+      const apiError = err as ApiError;
+      setError(apiError.response?.data?.error || (err instanceof Error ? err.message : 'خطا در ثبت‌نام. لطفاً دوباره تلاش کنید.'));
     } finally {
       setIsLoading(false);
     }

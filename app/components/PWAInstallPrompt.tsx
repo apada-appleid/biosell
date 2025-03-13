@@ -8,6 +8,14 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed"; platform: string }>;
 }
 
+interface ExtendedNavigator extends Navigator {
+  standalone?: boolean;
+}
+
+interface ExtendedWindow extends Window {
+  MSStream?: unknown;
+}
+
 export const PWAInstallPrompt = () => {
   // به طور پیش‌فرض پیام را نمایش نمی‌دهیم تا بررسی‌های لازم را انجام دهیم
   const [showPrompt, setShowPrompt] = useState(false);
@@ -40,13 +48,13 @@ export const PWAInstallPrompt = () => {
           }
         }
       }
-    } catch (err) {
+    } catch {
       // Silent fail
     }
     
     // فقط یکبار بررسی می‌کنیم
     setHasCheckedDismissed(true);
-  }, []);
+  }, [hasCheckedDismissed]);
   
   // تنظیم هندلر نصب و بررسی وضعیت standalone
   useEffect(() => {
@@ -55,7 +63,7 @@ export const PWAInstallPrompt = () => {
     const setupInstallPrompt = () => {
       // بررسی حالت standalone (نصب شده)
       const isInStandaloneMode = () =>
-        'standalone' in window.navigator && (window.navigator as any).standalone === true ||
+        'standalone' in window.navigator && (window.navigator as ExtendedNavigator).standalone === true ||
         window.matchMedia('(display-mode: standalone)').matches;
       
       setIsStandalone(isInStandaloneMode());
@@ -63,7 +71,7 @@ export const PWAInstallPrompt = () => {
       // بررسی دستگاه iOS
       const isIOSDevice = () => {
         const userAgent = window.navigator.userAgent.toLowerCase();
-        return /iphone|ipad|ipod/.test(userAgent) && !(window as any).MSStream;
+        return /iphone|ipad|ipod/.test(userAgent) && !(window as ExtendedWindow).MSStream;
       };
       
       setIsIOS(isIOSDevice());
@@ -80,7 +88,7 @@ export const PWAInstallPrompt = () => {
             setShowPrompt(false);
             return;
           }
-        } catch (err) {
+        } catch {
           // Silent fail
         }
         
@@ -132,7 +140,7 @@ export const PWAInstallPrompt = () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       if (cleanupTimeoutFn) cleanupTimeoutFn();
     };
-  }, [hasPromptEventOccurred]);
+  }, [hasPromptEventOccurred, isIOS]);
   
   // کلیک روی دکمه نصب
   const handleInstallClick = async () => {
@@ -167,7 +175,7 @@ export const PWAInstallPrompt = () => {
         // دیگر نمی‌توانیم از این رویداد استفاده کنیم
         setDeferredPrompt(null);
       }
-    } catch (err) {
+    } catch {
       // Silent fail
       showManualInstallInstructions("other");
     }
@@ -182,7 +190,7 @@ export const PWAInstallPrompt = () => {
     try {
       const now = Date.now();
       localStorage.setItem('pwa-prompt-dismissed', now.toString());
-    } catch (err) {
+    } catch {
       // Silent fail
     }
   };

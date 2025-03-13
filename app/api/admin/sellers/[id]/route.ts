@@ -145,8 +145,18 @@ export async function PATCH(
       }
     }
 
+    // Define a proper type for the update data
+    interface SellerUpdateData {
+      username?: string;
+      email?: string;
+      shopName?: string;
+      bio?: string | null;
+      isActive?: boolean;
+      password?: string;
+    }
+
     // Prepare update data
-    const updateData: any = {};
+    const updateData: SellerUpdateData = {};
     if (username) updateData.username = username;
     if (email) updateData.email = email;
     if (shopName) updateData.shopName = shopName;

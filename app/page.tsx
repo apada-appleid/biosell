@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { FiShoppingBag, FiUser, FiZap, FiCreditCard, FiBarChart2 } from 'react-icons/fi';
 import { useProductsStore } from './store/products';
 import { useCartStore } from './store/cart';
 
 export default function Home() {
-  const { products, isLoading, error, fetchProducts } = useProductsStore();
+  const { fetchProducts } = useProductsStore();
   const cartItems = useCartStore(state => state.cart.items);
   
   // Client-side data fetching

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Product, ProductImage } from '../types';
+import { Product } from '../types';
 import axios from 'axios';
 
 interface ProductsState {
@@ -9,6 +9,17 @@ interface ProductsState {
   username: string | null;
   fetchProducts: (username?: string) => Promise<void>;
   getProduct: (id: string) => Product | undefined;
+}
+
+interface ProductApiResponse {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  inventory: number;
+  isActive?: boolean;
+  images?: { imageUrl: string }[];
+  // Add other fields as needed
 }
 
 // Mock product data for fallback
@@ -113,7 +124,7 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
           }
           
           // Ensure all products have the required fields
-          products = productsResponse.data.products.map((product: any) => ({
+          products = productsResponse.data.products.map((product: ProductApiResponse) => ({
             ...product,
             available: product.isActive !== false, // Default to true if not specified
             // Make sure each product has an imageUrl for backward compatibility

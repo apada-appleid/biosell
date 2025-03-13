@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { FiArrowLeft, FiShoppingBag, FiCreditCard } from 'react-icons/fi';
 import CartItems from '@/app/components/cart/CartItems';
 import { useCartStore } from '@/app/store/cart';

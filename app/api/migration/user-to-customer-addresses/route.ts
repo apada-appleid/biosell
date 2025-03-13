@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { CustomerAddress } from '@prisma/client';
@@ -29,13 +30,6 @@ type CustomerWithAddresses = {
   // Other customer fields...
   addresses: CustomerAddress[];
 };
-
-interface AddressRow {
-  id: string;
-  fullName: string | null;
-  mobile: string | null;
-  // ... other fields ...
-}
 
 // This is a one-time migration endpoint to move addresses from User to Customer model
 // It should be secured and only accessible by admins or via a secure method
@@ -77,7 +71,7 @@ export async function POST(req: NextRequest) {
             AND table_name = 'addresses'
           ) as exists;
         `;
-        // @ts-ignore - Check the result based on the database response format
+        // @ts-expect-error - Check the result based on the database response format
         addressesTableExists = tableCheck[0]?.exists || false;
         console.log('Addresses table exists:', addressesTableExists);
         
@@ -173,7 +167,7 @@ export async function POST(req: NextRequest) {
       let usersProcessed = 0;
       let customersCreated = 0;
       let addressesMigrated = 0;
-      let errors: Array<{ userId: string; error: string }> = [];
+      const errors: Array<{ userId: string; error: string }> = [];
 
       // For each user
       for (const user of usersWithAddresses) {

@@ -30,7 +30,7 @@ const DataDeletionPage = () => {
           </p>
           <ul className="list-disc pl-6 mb-3 text-gray-700">
             <li>Your account and profile information</li>
-            <li>Content you've created or uploaded</li>
+            <li>Content you&apos;ve created or uploaded</li>
             <li>Communication history</li>
             <li>Usage data associated with your account</li>
             <li>Payment information</li>
@@ -54,15 +54,15 @@ const DataDeletionPage = () => {
           <ol className="list-decimal pl-6 mb-3 text-gray-700">
             <li className="mb-2">
               <strong>From your account settings:</strong>
-              <p>Log in to your Biosell account, navigate to "Settings" &gt; "Privacy" &gt; "Delete My Data".</p>
+              <p>Log in to your Biosell account, navigate to &quot;Settings&quot; &gt; &quot;Privacy&quot; &gt; &quot;Delete My Data&quot;.</p>
             </li>
             <li className="mb-2">
               <strong>By email:</strong>
-              <p>Send a request to <a href="mailto:the.only.apada@gmail.com" className="text-indigo-600 hover:text-indigo-800">the.only.apada@gmail.com</a> with the subject line "Data Deletion Request" and include your account information.</p>
+              <p>Send a request to <a href="mailto:the.only.apada@gmail.com" className="text-indigo-600 hover:text-indigo-800">the.only.apada@gmail.com</a> with the subject line &quot;Data Deletion Request&quot; and include your account information.</p>
             </li>
             <li className="mb-2">
               <strong>Using our automated callback URL:</strong>
-              <p>If you're coming from a platform that supports data deletion callback (e.g., Facebook), we will process your request automatically through our secure API endpoint.</p>
+              <p>If you&apos;re coming from a platform that supports data deletion callback (e.g., Facebook), we will process your request automatically through our secure API endpoint.</p>
             </li>
           </ol>
         </section>
@@ -101,7 +101,7 @@ const DataDeletionPage = () => {
             While we can delete the data stored in our systems, please note that:
           </p>
           <ul className="list-disc pl-6 mb-3 text-gray-700">
-            <li>We cannot delete your data from third-party services you've connected to your Biosell account</li>
+            <li>We cannot delete your data from third-party services you&apos;ve connected to your Biosell account</li>
             <li>You may need to contact these third parties separately to request deletion of your data</li>
             <li>We will provide information about which third parties may have your data upon request</li>
           </ul>
@@ -110,7 +110,7 @@ const DataDeletionPage = () => {
         <section className="mb-6">
           <h2 className="text-xl font-semibold mb-3 text-gray-800">Data Deletion API Callback</h2>
           <p className="text-gray-700 mb-3">
-            For platform integrations requiring a callback URL (such as Facebook's Data Deletion Request), our endpoint is:
+            For platform integrations requiring a callback URL (such as Facebook&apos;s Data Deletion Request), our endpoint is:
           </p>
           <div className="bg-gray-100 p-3 rounded-md mb-3">
             <code className="text-sm break-all">https://biosell.me/api/data-deletion/callback</code>
@@ -121,7 +121,7 @@ const DataDeletionPage = () => {
           <ul className="list-disc pl-6 mb-3 text-gray-700">
             <li><code>user_id</code>: The platform-specific user identifier</li>
             <li><code>confirmation_code</code>: A unique code generated for the deletion request</li>
-            <li><code>platform</code>: The originating platform (e.g., "facebook", "instagram")</li>
+            <li><code>platform</code>: The originating platform (e.g., &quot;facebook&quot;, &quot;instagram&quot;)</li>
           </ul>
           <p className="text-gray-700 mb-3">
             Our system will respond with a status code and confirmation message upon successful processing of the request.
