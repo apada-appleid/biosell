@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import authOptions from '@/lib/auth';
 import bcrypt from 'bcryptjs';
+import { validateUsername } from '@/lib/username-validator';
 
 // Define params as a Promise according to Next.js 15 docs
 type Params = Promise<{ id: string }>;
@@ -123,8 +124,16 @@ export async function PATCH(
       }
     }
 
-    // Check for username uniqueness if username is being changed
+    // Check for username uniqueness and validity if username is being changed
     if (username && username !== existingSeller.username) {
+      // Check if username is valid (not reserved or has invalid format)
+      const usernameError = validateUsername(username);
+      if (usernameError) {
+        return NextResponse.json({
+          error: usernameError
+        }, { status: 400 });
+      }
+      
       const sellerWithUsername = await prisma.seller.findUnique({
         where: { username },
       });

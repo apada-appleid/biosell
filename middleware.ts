@@ -16,6 +16,11 @@ export default withAuth(
       const isAuth = !!token;
       const pathname = req.nextUrl.pathname;
 
+      // Skip middleware for edge cases of empty paths or pure slashes
+      if (!pathname || pathname === '/' || pathname === '//' || pathname.match(/^\/+$/)) {
+        return NextResponse.next();
+      }
+      
       // Fast path for static assets and public pages
       if (
         pathname.startsWith('/_next/') ||

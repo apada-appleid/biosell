@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { validateUsername } from "@/lib/username-validator";
 
 // Validation schema
 const sellerRegisterSchema = z.object({
@@ -28,6 +29,15 @@ export async function POST(req: NextRequest) {
     }
     
     const { shopName, username, email, password, mobile } = validation.data;
+    
+    // Check if username is valid (not reserved or has invalid format)
+    const usernameError = validateUsername(username);
+    if (usernameError) {
+      return NextResponse.json({
+        success: false,
+        error: usernameError
+      }, { status: 400 });
+    }
     
     // Check if seller already exists
     const existingEmail = await prisma.seller.findUnique({
