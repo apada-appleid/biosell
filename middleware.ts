@@ -23,7 +23,6 @@ export default withAuth(
         pathname.startsWith('/api/') ||
         pathname.includes('.') ||
         pathname === '/' || // Homepage
-        pathname.startsWith('/shop/') || // Shop pages
         pathname.startsWith('/products/') || // Product pages
         pathname === '/cart' || // Cart page
         pathname.startsWith('/checkout') // Checkout pages
@@ -133,7 +132,6 @@ export default withAuth(
           pathname.startsWith('/static/') ||
           pathname.includes('.') ||
           pathname === '/' || // Homepage
-          pathname.startsWith('/shop/') || // Shop pages
           pathname.startsWith('/products/') || // Product pages
           pathname === '/cart' || // Cart page
           pathname.startsWith('/checkout') // Checkout pages
@@ -162,7 +160,7 @@ export const config = {
     '/seller/:path*', 
     '/customer/:path*', 
     '/auth/:path*',
-    // Exclude static files, api routes, the homepage, shop pages, product pages, cart, and checkout from the middleware
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:jpg|jpeg|gif|png|svg)|api/|$|shop/|products/|cart|checkout).*)'
+    // Exclude static files, api routes, the homepage, product pages, cart, and checkout from the middleware
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:jpg|jpeg|gif|png|svg)|api/|$|products/|cart|checkout).*)'
   ],
 }; 

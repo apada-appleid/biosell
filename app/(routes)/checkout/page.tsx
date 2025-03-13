@@ -216,6 +216,7 @@ export default function CheckoutPage() {
 
       if (!token) {
         console.error("No authentication token found");
+        router.push("/auth/customer-login?callbackUrl=/checkout");
         return;
       }
 

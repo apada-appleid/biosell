@@ -75,7 +75,7 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, fromUsername }) 
   
   // Determine the back link destination
   const backLinkHref = fromUsername 
-    ? `/shop/${fromUsername}` 
+    ? `/${fromUsername}` 
     : "/";
   
   // Determine the business name to display
@@ -92,6 +92,10 @@ const ProductDetail: React.FC<ProductDetailProps> = ({ product, fromUsername }) 
   const mainImageUrl = productImages.length > 0 
     ? productImages[0].imageUrl 
     : ensureValidImageUrl(product.imageUrl);
+
+  const shopLink = fromUsername 
+    ? `/${fromUsername}` 
+    : '/';
 
   return (
     <div className="flex flex-col h-full">

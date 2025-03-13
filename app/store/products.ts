@@ -98,7 +98,7 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
       if (username) {
         try {
           // First try to fetch from our seller API
-          const response = await axios.get(`/api/shop/${username}`);
+          const response = await axios.get(`/api/${username}`);
           const seller = response.data.seller;
           
           if (!seller || !seller.id) {

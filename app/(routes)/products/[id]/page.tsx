@@ -125,7 +125,11 @@ export default function ProductDetailsPage() {
   
   // لینک بازگشت
   const backLinkHref = product?.sellerId 
-    ? `/shop/${product.seller?.username || 'seller'}` 
+    ? `/${product.seller?.username || 'seller'}` 
+    : '/';
+
+  const sellerLink = product?.seller?.username 
+    ? `/${product.seller.username}` 
     : '/';
 
   if (isLoading) {
@@ -134,7 +138,7 @@ export default function ProductDetailsPage() {
         <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3">
           <div className="flex items-center justify-between">
             <Link 
-              href={username ? `/shop/${username}` : "/"} 
+              href={username ? `/${username}` : "/"} 
               className="text-gray-800"
               aria-label="Back"
               tabIndex={0}
@@ -159,7 +163,7 @@ export default function ProductDetailsPage() {
         <header className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3">
           <div className="flex items-center justify-between">
             <Link 
-              href={username ? `/shop/${username}` : "/"} 
+              href={username ? `/${username}` : "/"} 
               className="text-gray-800"
               aria-label="Back"
               tabIndex={0}
@@ -175,7 +179,7 @@ export default function ProductDetailsPage() {
           <h2 className="text-xl font-semibold mb-4 text-gray-900">Product Not Found</h2>
           <p className="text-gray-700 mb-6">We couldn&apos;t find the product you&apos;re looking for.</p>
           <Link 
-            href={username ? `/shop/${username}` : "/"}
+            href={username ? `/${username}` : "/"}
             className="bg-blue-500 text-white px-6 py-2 rounded-md"
             aria-label="Back to shop"
             tabIndex={0}
