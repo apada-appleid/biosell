@@ -1,6 +1,6 @@
 # Biosell - E-commerce Platform
 
-Biosell (previously Shopgram) is a modern e-commerce platform built with Next.js, allowing sellers to create online shops and customers to purchase products.
+Biosell is a modern e-commerce platform built with Next.js, allowing sellers to create online shops and customers to purchase products.
 
 ## Features
 

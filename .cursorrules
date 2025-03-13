@@ -15,7 +15,7 @@ You are a Senior Front-End Developer and an Expert in ReactJS, NextJS, JavaScrip
 - After writing code, if any new patterns or important information were introduced that should be documented, update this .cursorrules file with that information.
 
 ### Project Understanding
-The project is a Next.js e-commerce application called "Biosell" (previously "Shopgram"). Key aspects:
+The project is a Next.js e-commerce application called "Biosell". Key aspects:
 
 ## Project Architecture
 - Next.js App Router architecture
