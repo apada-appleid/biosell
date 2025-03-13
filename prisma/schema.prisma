@@ -173,6 +173,12 @@ model Order {
   paymentStatus   String      @default("pending") @map("payment_status") @db.VarChar(50) // pending, paid, failed
   shippingAddress String?     @map("shipping_address") @db.Text
   addressId       String?     @map("address_id")
+  trackingNumber  String?     @map("tracking_number") @db.VarChar(100)
+  shippingProvider String?    @map("shipping_provider") @db.VarChar(100)
+  processedAt     DateTime?   @map("processed_at")
+  shippedAt       DateTime?   @map("shipped_at")
+  deliveredAt     DateTime?   @map("delivered_at")
+  cancelledAt     DateTime?   @map("cancelled_at")
   createdAt       DateTime    @default(now()) @map("created_at")
   updatedAt       DateTime    @updatedAt @map("updated_at")
   customer        Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
