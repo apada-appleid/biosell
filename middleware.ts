@@ -21,6 +21,17 @@ export default withAuth(
         return NextResponse.next();
       }
       
+      // Check if this is a seller username path (single segment path that doesn't match known routes)
+      const pathSegments = pathname.split('/').filter(Boolean);
+      const isSingleSegmentPath = pathSegments.length === 1;
+      const knownTopLevelRoutes = ['admin', 'seller', 'customer', 'auth', 'api', 'products', 'cart', 'checkout', 'static', '_next'];
+      const isPotentialUsernamePath = isSingleSegmentPath && !knownTopLevelRoutes.includes(pathSegments[0]) && !pathname.includes('.');
+      
+      // Let username paths proceed without authentication
+      if (isPotentialUsernamePath) {
+        return NextResponse.next();
+      }
+      
       // Fast path for static assets and public pages
       if (
         pathname.startsWith('/_next/') ||
@@ -131,6 +142,17 @@ export default withAuth(
       authorized: ({ token, req }) => {
         const pathname = req.nextUrl.pathname;
         
+        // Check if this is a seller username path (single segment path that doesn't match known routes)
+        const pathSegments = pathname.split('/').filter(Boolean);
+        const isSingleSegmentPath = pathSegments.length === 1;
+        const knownTopLevelRoutes = ['admin', 'seller', 'customer', 'auth', 'api', 'products', 'cart', 'checkout', 'static', '_next'];
+        const isPotentialUsernamePath = isSingleSegmentPath && !knownTopLevelRoutes.includes(pathSegments[0]) && !pathname.includes('.');
+        
+        // Allow username paths to proceed without authentication
+        if (isPotentialUsernamePath) {
+          return true;
+        }
+        
         // Fast path for static assets, API routes, and public pages
         if (
           pathname.startsWith('/_next/') ||
@@ -165,7 +187,7 @@ export const config = {
     '/seller/:path*', 
     '/customer/:path*', 
     '/auth/:path*',
-    // Exclude static files, api routes, the homepage, product pages, cart, and checkout from the middleware
+    // Exclude static files, api routes, the homepage, product pages, cart, checkout, and username routes from the middleware
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:jpg|jpeg|gif|png|svg)|api/|$|products/|cart|checkout).*)'
   ],
 }; 
