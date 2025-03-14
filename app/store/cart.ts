@@ -2,10 +2,18 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Cart, CartItem, Product } from '../types';
 
+interface LastRemovedItem {
+  product: Product;
+  quantity: number;
+  timestamp: number;
+}
+
 interface CartStore {
   cart: Cart;
+  lastRemovedItem: LastRemovedItem | null;
   addToCart: (product: Product, quantity: number) => void;
   removeFromCart: (productId: string) => void;
+  undoRemove: () => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
   hydrate: () => void; // Add hydration method
@@ -20,6 +28,7 @@ export const useCartStore = create<CartStore>()(
   persist(
     (set, get) => ({
       cart: initialState,
+      lastRemovedItem: null,
       
       addToCart: (product: Product, quantity: number) => {
         if (quantity <= 0) return;
@@ -60,23 +69,47 @@ export const useCartStore = create<CartStore>()(
       },
       
       removeFromCart: (productId: string) => {
-        set((state) => {
-          const updatedItems = state.cart.items.filter(
-            (item) => item.product.id !== productId
-          );
+        const currentState = get();
+        const itemToRemove = currentState.cart.items.find(
+          (item) => item.product.id === productId
+        );
+        
+        if (itemToRemove) {
+          set((state) => {
+            const updatedItems = state.cart.items.filter(
+              (item) => item.product.id !== productId
+            );
+            
+            const total = updatedItems.reduce(
+              (sum, item) => sum + (item.product.price * item.quantity),
+              0
+            );
+            
+            return {
+              cart: {
+                items: updatedItems,
+                total
+              },
+              lastRemovedItem: {
+                product: itemToRemove.product,
+                quantity: itemToRemove.quantity,
+                timestamp: Date.now()
+              }
+            };
+          });
+        }
+      },
+      
+      undoRemove: () => {
+        const { lastRemovedItem } = get();
+        
+        if (lastRemovedItem) {
+          // Add the removed item back to cart
+          get().addToCart(lastRemovedItem.product, lastRemovedItem.quantity);
           
-          const total = updatedItems.reduce(
-            (sum, item) => sum + (item.product.price * item.quantity),
-            0
-          );
-          
-          return {
-            cart: {
-              items: updatedItems,
-              total
-            }
-          };
-        });
+          // Clear the last removed item
+          set({ lastRemovedItem: null });
+        }
       },
       
       updateQuantity: (productId: string, quantity: number) => {
@@ -109,7 +142,10 @@ export const useCartStore = create<CartStore>()(
       },
       
       clearCart: () => {
-        set({ cart: initialState });
+        set({ 
+          cart: initialState,
+          lastRemovedItem: null
+        });
       },
       
       // Method to manually hydrate the cart from localStorage

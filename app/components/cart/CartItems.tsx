@@ -4,13 +4,15 @@ import { FiMinus, FiPlus, FiTrash2, FiShoppingBag } from 'react-icons/fi';
 import { CartItem as CartItemType } from '@/app/types';
 import { useCartStore } from '@/app/store/cart';
 import { useRouter } from 'next/navigation';
+import { useToastStore } from '@/app/store/toast';
 
 interface CartItemProps {
   item: CartItemType;
 }
 
 const CartItem: React.FC<CartItemProps> = ({ item }) => {
-  const { updateQuantity, removeFromCart } = useCartStore();
+  const { updateQuantity, removeFromCart, undoRemove } = useCartStore();
+  const showToast = useToastStore((state) => state.showToast);
   const itemRef = useRef<HTMLDivElement>(null);
   const quantityRef = useRef<HTMLSpanElement>(null);
   
@@ -60,17 +62,36 @@ const CartItem: React.FC<CartItemProps> = ({ item }) => {
       // Set a timeout to ensure the item is removed even if animation fails
       const timeoutId = setTimeout(() => {
         removeFromCart(item.product.id);
+        showUndoToast(item);
       }, 300); // Slightly longer than animation duration
       
       // If animation completes before timeout, clear the timeout and remove the item
       itemRef.current.addEventListener('animationend', () => {
         clearTimeout(timeoutId);
         removeFromCart(item.product.id);
+        showUndoToast(item);
       }, { once: true });
     } else {
       // If no ref, remove immediately
       removeFromCart(item.product.id);
+      showUndoToast(item);
     }
+  };
+
+  // Show undo toast after item removal
+  const showUndoToast = (item: CartItemType) => {
+    showToast(
+      `${item.product.title} از سبد خرید حذف شد`,
+      [
+        {
+          label: "بازگرداندن",
+          onClick: () => undoRemove(),
+          autoDismiss: true
+        }
+      ],
+      'info',
+      5000 // 5 seconds for undo
+    );
   };
   
   const formatPrice = (price: number) => {
@@ -260,4 +281,6 @@ const CartItems: React.FC<CartItemsProps> = ({ items, total }) => {
   );
 };
 
-export default CartItems; 
+export default CartItems;
+
+export { CartItem }; 
