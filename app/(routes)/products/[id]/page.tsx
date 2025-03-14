@@ -62,7 +62,7 @@ export default function ProductDetailsPage() {
   }, [id]);
   
   const incrementQuantity = () => {
-    if (product && quantity < product.inventory) {
+    if (product && quantity < (product.inventory || 0)) {
       setQuantity(prev => prev + 1);
     }
   };

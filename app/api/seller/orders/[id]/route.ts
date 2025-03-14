@@ -176,6 +176,7 @@ export async function PATCH(
       processedAt?: Date;
       shippedAt?: Date;
       deliveredAt?: Date;
+      cancelledAt?: Date;
     }
 
     // Prepare update data

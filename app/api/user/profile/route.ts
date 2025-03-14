@@ -132,6 +132,7 @@ export async function PATCH(req: NextRequest) {
     interface UserUpdateData {
       name?: string;
       mobile?: string;
+      email?: string;
     }
     
     const updateData: UserUpdateData = {};

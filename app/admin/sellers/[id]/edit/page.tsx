@@ -39,6 +39,15 @@ type Plan = {
   maxProducts: number;
 };
 
+type FormData = {
+  username: string;
+  email: string;
+  password?: string;  // Make password optional
+  shopName: string;
+  bio: string;
+  isActive: boolean;
+};
+
 export default function EditSellerPage({
   params,
 }: {
@@ -56,7 +65,7 @@ export default function EditSellerPage({
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     username: "",
     email: "",
     password: "",
@@ -196,41 +205,22 @@ export default function EditSellerPage({
     setError(null);
 
     try {
-      // Create the request payload (omit empty password)
-      const payload = { ...formData };
-      if (!payload.password) {
-        // Remove password property from payload if it's empty
-        delete payload.password;
-        const response = await fetch(`/api/admin/sellers/${sellerId}`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
+      // Create the request payload
+      const { password, ...payload } = formData;
+      
+      const response = await fetch(`/api/admin/sellers/${sellerId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(
-            errorData.error || "خطا در بروزرسانی اطلاعات فروشنده"
-          );
-        }
-      } else {
-        // If there is a password, send the full payload
-        const response = await fetch(`/api/admin/sellers/${sellerId}`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(
-            errorData.error || "خطا در بروزرسانی اطلاعات فروشنده"
-          );
-        }
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.error || "خطا در بروزرسانی اطلاعات فروشنده"
+        );
       }
 
       setSaveSuccess(true);

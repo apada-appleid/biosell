@@ -80,8 +80,12 @@ interface OrderWithRelations {
   customer?: {
     id: string;
     fullName: string | null;
-    email: string;
-    mobile: string;
+    email: string | null;
+    mobile: string | null;
+    address: string | null;
+    city: string | null;
+    postalCode: string | null;
+    country: string | null;
   };
   seller?: {
     id: string;
