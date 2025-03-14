@@ -56,10 +56,19 @@ const CartItem: React.FC<CartItemProps> = ({ item }) => {
     // Add exit animation
     if (itemRef.current) {
       itemRef.current.classList.add('animate-cart-item-exit');
+      
+      // Set a timeout to ensure the item is removed even if animation fails
+      const timeoutId = setTimeout(() => {
+        removeFromCart(item.product.id);
+      }, 300); // Slightly longer than animation duration
+      
+      // If animation completes before timeout, clear the timeout and remove the item
       itemRef.current.addEventListener('animationend', () => {
+        clearTimeout(timeoutId);
         removeFromCart(item.product.id);
       }, { once: true });
     } else {
+      // If no ref, remove immediately
       removeFromCart(item.product.id);
     }
   };

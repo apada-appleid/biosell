@@ -35,8 +35,17 @@ export default function CartPage() {
   }, [hydrate, hideToast]);
   
   const handleBackButton = () => {
-    // Go back to the previous page
-    window.history.back();
+    // Get referrer from document.referrer
+    const referrer = document.referrer;
+    
+    // Check if we have a referrer from the same domain
+    if (referrer && referrer.includes(window.location.hostname)) {
+      // Use the browser's back functionality
+      window.history.back();
+    } else {
+      // If no valid referrer, go to home page
+      router.push('/');
+    }
   };
   
   const formatPrice = (price: number) => {
