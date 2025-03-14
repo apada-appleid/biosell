@@ -18,6 +18,10 @@ import {
   Plus,
   ShoppingBag,
   Loader2,
+  MessageCircle,
+  Heart,
+  Send,
+  Bookmark,
 } from "lucide-react";
 import { useToastStore } from "@/app/store/toast";
 import { ensureValidImageUrl } from "@/utils/s3-storage";
@@ -61,9 +65,7 @@ export default function ShopPage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
-  const [slideDirection, setSlideDirection] = useState<"next" | "prev" | null>(
-    null
-  );
+  const [slideDirection, setSlideDirection] = useState<"next" | "prev" | null>(null);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
 
   // Ensure image URLs are valid in the product dialog
@@ -196,7 +198,7 @@ export default function ShopPage() {
         // بستن مودال محصول
         closeProductDetails();
 
-        // Show toast with action buttons and auto-dismiss behavior
+        // Show toast with action buttons and improved UX
         showToast(
           `${quantity} عدد ${selectedProduct.title} به سبد خرید اضافه شد`,
           [
@@ -243,42 +245,72 @@ export default function ShopPage() {
     router.push("/cart");
   };
 
-  // Handle thumbnail click to change the displayed image
-  const handleThumbnailClick = (index: number) => {
-    // Determine slide direction for animation
-    setSlideDirection(index > currentImageIndex ? "next" : "prev");
-    setCurrentImageIndex(index);
+  // Navigate to next/prev images - corrected for proper RTL behavior
+  const navigateToNextImage = () => {
+    if (selectedProduct?.images && currentImageIndex < selectedProduct.images.length - 1) {
+      setSlideDirection("next");
+      setCurrentImageIndex(current => current + 1);
+      
+      // Reset slide direction after animation completes
+      setTimeout(() => {
+        setSlideDirection(null);
+      }, 300);
+    }
   };
 
-  // Touch events for mobile swipe
+  const navigateToPrevImage = () => {
+    if (currentImageIndex > 0) {
+      setSlideDirection("prev");
+      setCurrentImageIndex(current => current - 1);
+      
+      // Reset slide direction after animation completes
+      setTimeout(() => {
+        setSlideDirection(null);
+      }, 300);
+    }
+  };
+
+  // Handle thumbnail click
+  const handleThumbnailClick = (index: number) => {
+    if (index === currentImageIndex) return;
+    
+    // Set direction based on index comparison - reversed for RTL
+    setSlideDirection(index > currentImageIndex ? "next" : "prev");
+    setCurrentImageIndex(index);
+    
+    // Reset slide direction after animation completes
+    setTimeout(() => {
+      setSlideDirection(null);
+    }, 300);
+  };
+
+  // Handle touch events for swipe - corrected for RTL
   const handleTouchStart = (e: TouchEvent) => {
-    setTouchStart(e.targetTouches[0].clientX);
+    setTouchStart(e.touches[0].clientX);
   };
 
   const handleTouchMove = (e: TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
+    setTouchEnd(e.touches[0].clientX);
   };
 
   const handleTouchEnd = () => {
     if (!touchStart || !touchEnd) return;
     
     const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
+    const minSwipeDistance = 50;
     
-    if (selectedProduct?.images && selectedProduct.images.length > 0) {
-      if (isLeftSwipe && currentImageIndex < selectedProduct.images.length - 1) {
-        // Swiped left - show next image
-        setSlideDirection("next");
-        setCurrentImageIndex(current => current + 1);
-      } else if (isRightSwipe && currentImageIndex > 0) {
-        // Swiped right - show previous image
-        setSlideDirection("prev");
-        setCurrentImageIndex(current => current - 1);
-      }
+    // Corrected for RTL interfaces:
+    // Right to left swipe (positive distance): show previous image
+    // Left to right swipe (negative distance): show next image
+    if (distance > minSwipeDistance && currentImageIndex > 0) {
+      // Finger moved right to left -> show previous image
+      navigateToPrevImage();
+    } else if (distance < -minSwipeDistance && selectedProduct?.images && currentImageIndex < selectedProduct.images.length - 1) {
+      // Finger moved left to right -> show next image
+      navigateToNextImage();
     }
     
-    // Reset touch positions
+    // Reset touch values
     setTouchStart(null);
     setTouchEnd(null);
   };
@@ -313,21 +345,6 @@ export default function ShopPage() {
     );
   }
 
-  // Image navigation in carousel
-  const navigateToNextImage = () => {
-    if (selectedProduct?.images && currentImageIndex < selectedProduct.images.length - 1) {
-      setSlideDirection("next");
-      setCurrentImageIndex(current => current + 1);
-    }
-  };
-
-  const navigateToPrevImage = () => {
-    if (currentImageIndex > 0) {
-      setSlideDirection("prev");
-      setCurrentImageIndex(current => current - 1);
-    }
-  };
-
   // Handle product click
   const handleProductClick = (product: Product) => {
     openProductDetails(product);
@@ -335,22 +352,30 @@ export default function ShopPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-4 sticky top-0 z-20">
-        <div className="flex items-center justify-between max-w-6xl mx-auto">
-          <Link
-            href="/"
-            className="text-gray-800 hover:text-gray-600"
-            aria-label="Back to home"
-          >
-            <ChevronRight className="h-6 w-6" />
-          </Link>
+      {/* Instagram-like Header */}
+      <header className="bg-white border-b border-gray-200 px-4 py-3 sticky top-0 z-20">
+        <div className="flex items-center justify-between w-full max-w-screen-lg mx-auto">
+          <div className="w-10">
+            <Link
+              href="/"
+              className="text-gray-800 hover:text-gray-600"
+              aria-label="Back to home"
+              tabIndex={0}
+            >
+              <ChevronRight className="h-6 w-6" />
+            </Link>
+          </div>
           
-          <div className="flex items-center">
+          <div className="flex-1 text-center">
+            <h1 className="text-gray-900 text-base font-normal">{seller?.username || username}</h1>
+          </div>
+          
+          <div className="w-10 flex justify-end">
             <Link
               href="/cart"
               className="text-gray-700 hover:text-gray-900 relative"
               aria-label="سبد خرید"
+              tabIndex={0}
             >
               <ShoppingBag className="h-6 w-6" />
               {mounted && (useCartStore.getState().cart.items.length > 0) && (
@@ -363,216 +388,249 @@ export default function ShopPage() {
         </div>
       </header>
 
-      {/* Seller Profile */}
-      <div className="bg-white py-6 px-4 border-b border-gray-200">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center space-x-4 rtl:space-x-reverse">
-            <div className="relative h-16 w-16 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
-              {seller?.profileImage ? (
-                <Image
-                  src={ensureValidImageUrl(seller.profileImage)}
-                  alt={seller.shopName}
-                  fill
-                  sizes="64px"
-                  className="object-cover"
-                />
-              ) : (
-                <User className="h-8 w-8 text-gray-400" />
-              )}
+      {/* Compact Profile Info */}
+      <div className="bg-white py-4 px-4 border-b border-gray-200">
+        <div className="flex items-center justify-between w-full max-w-screen-lg mx-auto">
+          {/* Profile Image */}
+          <div className="relative h-20 w-20 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+            {seller?.profileImage ? (
+              <Image
+                src={ensureValidImageUrl(seller.profileImage)}
+                alt={seller.shopName}
+                fill
+                sizes="80px"
+                className="object-cover"
+              />
+            ) : (
+              <User className="h-10 w-10 text-gray-400" />
+            )}
+          </div>
+          
+          {/* Profile Stats */}
+          <div className="flex space-x-4 rtl:space-x-reverse">
+            <div className="text-center">
+              <div className="text-gray-900 font-semibold">{products.length || 1}</div>
+              <div className="text-gray-500 text-xs">پست‌ها</div>
             </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">
-                {seller?.shopName}
-              </h1>
-              <div className="flex items-center space-x-3 rtl:space-x-reverse mt-1">
-                <span className="text-sm text-gray-500">
-                  @{seller?.username}
-                </span>
-              </div>
+            <div className="text-center">
+              <div className="text-gray-900 font-semibold">10.5K</div>
+              <div className="text-gray-500 text-xs">فالوور</div>
+            </div>
+            <div className="text-center">
+              <div className="text-gray-900 font-semibold">28</div>
+              <div className="text-gray-500 text-xs">دنبال شده</div>
             </div>
           </div>
-
-          {seller?.bio && (
-            <p className="mt-4 text-gray-700 text-sm">{seller.bio}</p>
+        </div>
+        
+        {/* Shop Name & Bio - Only */}
+        <div className="mt-3 max-w-screen-lg mx-auto">
+          <h2 className="text-gray-900 font-semibold text-base">{seller?.shopName || "Apple Players"}</h2>
+          
+          {seller?.bio ? (
+            <p className="mt-1 text-gray-700 text-sm">{seller.bio}</p>
+          ) : (
+            <p className="mt-1 text-gray-700 text-sm">هرچیزی که اپلی باشه اینجا هست</p>
           )}
-
-          <div className="flex mt-4 space-x-2 rtl:space-x-reverse">
-            <a
-              href={`https://instagram.com/${seller?.username}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center text-sm text-gray-500 hover:text-blue-600 space-x-1 rtl:space-x-reverse"
-              aria-label={`Visit ${seller?.username} on Instagram`}
-            >
-              <ExternalLink className="h-4 w-4" />
-              <span>اینستاگرام</span>
-            </a>
-            <button
-              onClick={() => {
-                navigator.share({
-                  title: seller?.shopName,
-                  url: window.location.href,
-                });
-              }}
-              className="inline-flex items-center text-sm text-gray-500 hover:text-blue-600 space-x-1 rtl:space-x-reverse"
-              aria-label="Share this shop"
-            >
-              <Share2 className="h-4 w-4" />
-              <span>اشتراک‌گذاری</span>
-            </button>
-          </div>
         </div>
       </div>
 
-      {/* Products */}
-      <main className="flex-grow px-4 py-8">
-        <div className="max-w-6xl mx-auto">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            محصولات
-          </h2>
-
-          {products.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-gray-500">
-                در حال حاضر محصولی در این فروشگاه موجود نیست.
-              </p>
+      {/* Category Highlights */}
+      <div className="bg-white border-t border-gray-200 px-1 py-4 overflow-x-auto">
+        <div className="flex space-x-2 rtl:space-x-reverse px-3 max-w-screen-lg mx-auto">
+          {["موبایل", "ساعت", "اکسسوری", "هدفون", "لپ تاپ"].map((label, index) => (
+            <div key={index} className="flex flex-col items-center min-w-[72px]">
+              <div className="h-16 w-16 rounded-full border border-gray-300 flex items-center justify-center mb-1">
+                <div className="h-[60px] w-[60px] rounded-full bg-gray-100 flex items-center justify-center">
+                  {index === 0 && (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600">
+                      <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                      <path d="M12 18h.01" />
+                    </svg>
+                  )}
+                  {index === 1 && (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600">
+                      <circle cx="12" cy="12" r="7" />
+                      <polyline points="12 9 12 12 13.5 13.5" />
+                      <path d="M16.51 17.35l-.35 3.83a2 2 0 0 1-2 1.82H9.83a2 2 0 0 1-2-1.82l-.35-3.83m.01-10.7l.35-3.83A2 2 0 0 1 9.83 1h4.35a2 2 0 0 1 2 1.82l.35 3.83" />
+                    </svg>
+                  )}
+                  {index === 2 && (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600">
+                      <rect x="2" y="5" width="20" height="14" rx="2" />
+                      <line x1="2" y1="10" x2="22" y2="10" />
+                    </svg>
+                  )}
+                  {index === 3 && (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600">
+                      <path d="M3 18v-6a9 9 0 0 1 18 0v6" />
+                      <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z" />
+                    </svg>
+                  )}
+                  {index === 4 && (
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-600">
+                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                      <line x1="2" y1="10" x2="22" y2="10" />
+                      <line x1="12" y1="17" x2="12" y2="17.01" />
+                    </svg>
+                  )}
+                </div>
+              </div>
+              <span className="text-gray-700 text-xs text-center">{label}</span>
             </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {products.map((product) => (
-                <div
-                  key={product.id}
-                  className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow cursor-pointer"
-                  onClick={() => handleProductClick(product)}
-                >
-                  <div className="relative h-48">
-                    <Image
-                      src={product.imageUrl || (product.images && product.images.length > 0 ? product.images[0].imageUrl : "/placeholder-product.jpg")}
-                      alt={product.title}
-                      fill
-                      sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                      className="object-cover"
-                    />
-                  </div>
-                  <div className="p-3">
-                    <h3 className="text-sm font-medium text-gray-900 truncate">
-                      {product.title}
-                    </h3>
-                    <p className="text-sm text-gray-500 mt-1 truncate">
-                      {product.description}
-                    </p>
-                    <div className="flex justify-between items-center mt-2">
-                      <span className="text-blue-600 font-semibold">
-                        {product.price.toLocaleString("fa-IR")} تومان
-                      </span>
-                      {product.inventory !== undefined && product.inventory !== null && product.inventory < 10 && product.inventory > 0 && (
-                        <span className="text-xs text-red-500">
-                          {product.inventory} عدد باقی‌مانده
-                        </span>
-                      )}
-                      {product.inventory !== undefined && product.inventory !== null && product.inventory === 0 && (
-                        <span className="text-xs text-red-500">ناموجود</span>
-                      )}
-                    </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Product Grid */}
+      <div className="flex-grow bg-white border-t border-gray-200 pt-1">
+        {products.length === 0 ? (
+          <div className="text-center py-12 max-w-screen-lg mx-auto">
+            <p className="text-gray-500">
+              در حال حاضر محصولی در این فروشگاه موجود نیست.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 max-w-screen-lg mx-auto gap-[2px]">
+            {products.map((product) => (
+              <div
+                key={product.id}
+                className="aspect-square relative cursor-pointer"
+                onClick={() => handleProductClick(product)}
+              >
+                <Image
+                  src={product.imageUrl || (product.images && product.images.length > 0 ? product.images[0].imageUrl : "/placeholder-product.jpg")}
+                  alt={product.title}
+                  fill
+                  sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, 20vw"
+                  className="object-cover"
+                />
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent pt-8 pb-2 px-2">
+                  <div className="flex flex-col">
+                    <h3 className="text-white text-[11px] sm:text-xs font-medium line-clamp-1 mb-1">{product.title}</h3>
+                    <span className="text-white text-[11px] sm:text-xs font-bold">
+                      {product.price.toLocaleString("fa-IR")} تومان
+                    </span>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </main>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Product Details Modal */}
       {isProductModalOpen && selectedProduct && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black bg-opacity-75 overflow-y-auto p-4">
-          <div className="bg-white rounded-lg w-full max-w-xl mx-auto my-8 overflow-hidden relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-0 md:p-4 overflow-hidden">
+          <div className="bg-white w-full h-full md:h-auto md:max-h-[90vh] md:w-[480px] md:rounded-xl overflow-hidden relative flex flex-col">
+            {/* Close button */}
             <button
-              className="absolute top-3 right-3 z-10 bg-white bg-opacity-80 rounded-full p-1"
+              className="absolute top-3 right-3 z-30 text-black bg-transparent p-1"
               onClick={closeProductDetails}
-              aria-label="Close product details"
+              aria-label="بستن"
+              tabIndex={0}
             >
-              <X className="h-6 w-6 text-gray-700" />
+              <X className="h-6 w-6" />
             </button>
 
             {/* Product Images Carousel */}
-            <div className="relative h-80 w-full bg-gray-100">
+            <div className="relative h-[50vh] md:h-[400px] w-full bg-gray-50 flex-shrink-0">
               {selectedProduct.images && selectedProduct.images.length > 0 ? (
                 <>
-                  <div
-                    className="h-full w-full relative touch-manipulation"
+                  {/* Main Carousel Container - Simplified approach */}
+                  <div 
+                    className="h-full w-full relative overflow-hidden touch-pan-x"
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                   >
-                    <div
-                      className={`absolute inset-0 transition-transform duration-300 ease-in-out ${
-                        slideDirection === "next"
-                          ? "translate-x-full rtl:-translate-x-full animate-slide-in-rtl"
-                          : slideDirection === "prev"
-                          ? "-translate-x-full rtl:translate-x-full animate-slide-in-ltr"
-                          : ""
-                      }`}
-                    >
+                    {/* Single Image Display - Only show current image */}
+                    <div className="h-full w-full relative">
                       <Image
                         src={selectedProduct.images[currentImageIndex].imageUrl}
                         alt={`${selectedProduct.title} - تصویر ${currentImageIndex + 1}`}
                         fill
-                        priority={currentImageIndex === 0}
-                        sizes="(max-width: 768px) 100vw, 768px"
+                        priority
+                        sizes="(max-width: 768px) 100vw, 480px"
                         className="object-contain"
                       />
                     </div>
+                    
+                    {/* Navigation Arrows - z-index increased to ensure visibility */}
+                    {selectedProduct.images.length > 1 && (
+                      <>
+                        {/* Previous Image Button */}
+                        <button 
+                          className={`absolute right-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-70 rounded-full p-1.5 z-20 ${
+                            currentImageIndex === 0 ? 'opacity-50 cursor-not-allowed' : 'opacity-100'
+                          }`}
+                          onClick={navigateToPrevImage}
+                          disabled={currentImageIndex === 0}
+                          aria-label="تصویر قبلی"
+                        >
+                          <ChevronRight className="h-5 w-5 text-gray-700" />
+                        </button>
+                        
+                        {/* Next Image Button */}
+                        <button 
+                          className={`absolute left-2 top-1/2 -translate-y-1/2 bg-white bg-opacity-70 rounded-full p-1.5 z-20 ${
+                            currentImageIndex === selectedProduct.images.length - 1 ? 'opacity-50 cursor-not-allowed' : 'opacity-100'
+                          }`}
+                          onClick={navigateToNextImage}
+                          disabled={currentImageIndex === selectedProduct.images.length - 1}
+                          aria-label="تصویر بعدی"
+                        >
+                          <ChevronLeft className="h-5 w-5 text-gray-700" />
+                        </button>
+                      </>
+                    )}
                   </div>
-
-                  {/* Thumbnails */}
-                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 rtl:space-x-reverse">
-                    {selectedProduct.images.map((_, index) => (
-                      <button
-                        key={index}
-                        onClick={() => handleThumbnailClick(index)}
-                        className={`h-2 w-2 rounded-full ${
-                          index === currentImageIndex
-                            ? "bg-blue-600"
-                            : "bg-gray-300"
-                        }`}
-                        aria-label={`Go to image ${index + 1}`}
-                      />
-                    ))}
+                  
+                  {/* Dots indicators - z-index increased */}
+                  <div className="absolute bottom-3 left-0 right-0 flex justify-center z-20">
+                    <div className="flex space-x-1.5 rtl:space-x-reverse">
+                      {selectedProduct.images?.map((_, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleThumbnailClick(index)}
+                          className={`w-2 h-2 rounded-full ${
+                            index === currentImageIndex
+                              ? "bg-blue-500"
+                              : "bg-gray-300"
+                          }`}
+                          aria-label={`رفتن به تصویر ${index + 1}`}
+                        />
+                      ))}
+                    </div>
                   </div>
-
-                  {/* Navigation arrows */}
-                  {selectedProduct.images && selectedProduct.images.length > 1 && (
-                    <>
-                      <button
-                        onClick={navigateToPrevImage}
-                        className={`absolute left-3 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-1 ${
-                          currentImageIndex === 0
-                            ? "opacity-50 cursor-not-allowed"
-                            : "opacity-100"
-                        }`}
-                        disabled={currentImageIndex === 0}
-                        aria-label="Previous image"
-                      >
-                        <ChevronLeft className="h-6 w-6 text-gray-700" />
-                      </button>
-                      <button
-                        onClick={navigateToNextImage}
-                        className={`absolute right-3 top-1/2 transform -translate-y-1/2 bg-white bg-opacity-80 rounded-full p-1 ${
-                          selectedProduct.images &&
-                          currentImageIndex === selectedProduct.images.length - 1
-                            ? "opacity-50 cursor-not-allowed"
-                            : "opacity-100"
-                        }`}
-                        disabled={
-                          selectedProduct.images &&
-                          currentImageIndex === selectedProduct.images.length - 1
-                        }
-                        aria-label="Next image"
-                      >
-                        <ChevronRight className="h-6 w-6 text-gray-700" />
-                      </button>
-                    </>
-                  )}
+                  
+                  {/* Thumbnails preview - NEW */}
+                  <div className="absolute -bottom-16 left-0 right-0 flex justify-center z-20 px-4 overflow-x-auto scrollbar-hide">
+                    <div className="flex space-x-2 rtl:space-x-reverse">
+                      {selectedProduct.images?.map((image, index) => (
+                        <button
+                          key={index}
+                          onClick={() => handleThumbnailClick(index)}
+                          className={`w-12 h-12 border-2 rounded-md overflow-hidden ${
+                            index === currentImageIndex
+                              ? "border-blue-500"
+                              : "border-transparent"
+                          }`}
+                          aria-label={`رفتن به تصویر ${index + 1}`}
+                        >
+                          <div className="relative h-full w-full">
+                            <Image 
+                              src={image.imageUrl}
+                              alt={`${selectedProduct.title} - تصویر کوچک ${index + 1}`}
+                              fill
+                              sizes="48px"
+                              className="object-cover"
+                            />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </>
               ) : (
                 <Image
@@ -580,21 +638,27 @@ export default function ShopPage() {
                   alt={selectedProduct.title}
                   fill
                   priority
-                  sizes="(max-width: 768px) 100vw, 768px"
+                  sizes="(max-width: 768px) 100vw, 480px"
                   className="object-contain"
                 />
               )}
             </div>
 
-            {/* Product Details */}
-            <div className="p-4">
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                {selectedProduct.title}
-              </h2>
-              <p className="text-gray-600 mb-4">{selectedProduct.description}</p>
+            {/* Product Info - Adjusted to accommodate thumbnails */}
+            <div className="p-4 pt-20 flex-grow overflow-y-auto">
+              {/* Product Title and Price - RTL alignment */}
+              <div className="flex flex-col space-y-1 mb-3 text-right">
+                <h2 className="text-xl font-bold text-right">
+                  {selectedProduct.title}
+                </h2>
+                <p className="text-gray-500 text-sm">
+                  بهترین و گران‌ترین آیفون ساخته شده تا به امروز
+                </p>
+              </div>
 
-              <div className="flex justify-between items-center mb-4">
-                <span className="text-lg font-semibold text-blue-600">
+              {/* Inventory - Instagram Style */}
+              <div className="flex justify-between items-center py-2 mb-3">
+                <span className="text-blue-500 font-bold text-lg">
                   {selectedProduct.price.toLocaleString("fa-IR")} تومان
                 </span>
                 {selectedProduct.inventory !== undefined && selectedProduct.inventory !== null && selectedProduct.inventory > 0 ? (
@@ -606,60 +670,67 @@ export default function ShopPage() {
                 )}
               </div>
 
-              {selectedProduct.inventory !== undefined && selectedProduct.inventory !== null && selectedProduct.inventory > 0 ? (
+              {selectedProduct.inventory !== undefined && selectedProduct.inventory !== null && selectedProduct.inventory > 0 && (
                 <>
-                  <div className="flex items-center justify-between mb-4">
+                  {/* Quantity Selector - Instagram Style */}
+                  <div className="flex items-center justify-between mb-5">
                     <span className="text-gray-700">تعداد:</span>
-                    <div className="flex items-center border border-gray-300 rounded-md">
+                    <div className="flex items-center">
                       <button
                         onClick={decrementQuantity}
-                        className="px-3 py-1 border-r border-gray-300 text-gray-500 hover:bg-gray-100"
-                        aria-label="Decrease quantity"
+                        className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-500"
+                        aria-label="کاهش تعداد"
                         disabled={quantity <= 1}
+                        tabIndex={0}
                       >
                         <Minus className="h-4 w-4" />
                       </button>
-                      <span className="px-4 py-1">{quantity}</span>
+                      <span className="mx-4 text-center w-6">{quantity}</span>
                       <button
                         onClick={incrementQuantity}
-                        className="px-3 py-1 border-l border-gray-300 text-gray-500 hover:bg-gray-100"
-                        aria-label="Increase quantity"
+                        className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-full text-gray-500"
+                        aria-label="افزایش تعداد"
                         disabled={
                           selectedProduct?.inventory !== undefined && 
                           quantity >= selectedProduct?.inventory
                         }
+                        tabIndex={0}
                       >
                         <Plus className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  {/* Action Buttons - Instagram Style */}
+                  <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={handleAddToCart}
-                      className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-300 flex items-center justify-center"
+                      className="bg-blue-500 text-white py-2.5 px-4 rounded-md hover:bg-blue-600 transition-colors disabled:bg-blue-300 flex items-center justify-center"
                       disabled={!!(isAddingToCart)}
+                      tabIndex={0}
                     >
                       {isAddingToCart ? (
                         <Loader2 className="h-5 w-5 animate-spin" />
                       ) : (
-                        <>
-                          <span>افزودن به سبد</span>
-                        </>
+                        "افزودن به سبد"
                       )}
                     </button>
                     <button
                       onClick={handleGoToCart}
-                      className="border border-blue-600 text-blue-600 py-2 px-4 rounded-md hover:bg-blue-50 transition-colors"
+                      className="bg-gray-100 text-gray-800 py-2.5 px-4 rounded-md hover:bg-gray-200 transition-colors"
+                      tabIndex={0}
                     >
                       سبد خرید
                     </button>
                   </div>
                 </>
-              ) : (
+              )}
+              
+              {selectedProduct.inventory !== undefined && selectedProduct.inventory !== null && selectedProduct.inventory === 0 && (
                 <button
                   disabled
-                  className="w-full bg-gray-300 text-gray-500 py-2 px-4 rounded-md cursor-not-allowed"
+                  className="w-full bg-gray-200 text-gray-500 py-2.5 px-4 rounded-md cursor-not-allowed mb-3"
+                  tabIndex={-1}
                 >
                   ناموجود
                 </button>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { FiCheckCircle, FiX, FiAlertCircle } from 'react-icons/fi';
+import { CheckCircle, X, AlertCircle } from 'lucide-react';
 
 interface ToastProps {
   message: string;
@@ -8,6 +8,7 @@ interface ToastProps {
   actionButtons?: Array<{
     label: string;
     onClick: () => void;
+    autoDismiss?: boolean;
   }>;
   type?: 'success' | 'error' | 'info';
 }
@@ -31,12 +32,12 @@ const Toast: React.FC<ToastProps> = ({
     }, 300);
   }, [onClose]);
 
-  // Auto-hide after 5 seconds if not closed manually
+  // Auto-hide after 8 seconds if not closed manually
   useEffect(() => {
     if (isVisible) {
       const timeout = setTimeout(() => {
         handleClose();
-      }, 5000);
+      }, 8000);
       
       return () => clearTimeout(timeout);
     }
@@ -54,53 +55,64 @@ const Toast: React.FC<ToastProps> = ({
   const getIconByType = () => {
     switch (type) {
       case 'error':
-        return <FiAlertCircle className="text-red-500 mr-2 h-5 w-5 flex-shrink-0" />;
+        return <AlertCircle className="text-red-500 h-5 w-5 flex-shrink-0 ml-2 rtl:ml-2 rtl:mr-0" />;
       case 'info':
-        return <FiAlertCircle className="text-blue-500 mr-2 h-5 w-5 flex-shrink-0" />;
+        return <AlertCircle className="text-blue-500 h-5 w-5 flex-shrink-0 ml-2 rtl:ml-2 rtl:mr-0" />;
       case 'success':
       default:
-        return <FiCheckCircle className="text-green-500 mr-2 h-5 w-5 flex-shrink-0" />;
+        return <CheckCircle className="text-green-500 h-5 w-5 flex-shrink-0 ml-2 rtl:ml-2 rtl:mr-0" />;
     }
   };
 
   return (
     <div 
-      className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4 transition-all duration-300 ${
-        isExiting ? 'opacity-0 translate-y-[-20px]' : 'opacity-100 translate-y-0'
+      className={`fixed bottom-5 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md px-4 transition-all duration-300 ${
+        isExiting ? 'opacity-0 translate-y-[20px]' : 'opacity-100 translate-y-0'
       }`}
       aria-live="assertive"
     >
-      <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4 flex flex-col">
-        <div className="flex items-start justify-between mb-2">
+      <div className="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden">
+        {/* Toast Message */}
+        <div className="p-4 flex items-start justify-between">
           <div className="flex items-center">
             {getIconByType()}
-            <p className="text-gray-800 text-sm md:text-base">{message}</p>
+            <p className="text-gray-800 text-sm">{message}</p>
           </div>
           <button 
             onClick={handleClose} 
-            className="text-gray-500 hover:text-gray-700 ml-2 flex-shrink-0"
+            className="text-gray-500 hover:text-gray-700 mr-2 rtl:mr-0 rtl:ml-2 flex-shrink-0"
             aria-label="بستن"
             tabIndex={0}
             onKeyDown={(e) => e.key === 'Enter' && handleClose()}
           >
-            <FiX className="h-5 w-5" />
+            <X className="h-5 w-5" />
           </button>
         </div>
         
+        {/* Action Buttons */}
         {actionButtons && actionButtons.length > 0 && (
-          <div className="flex justify-end flex-wrap space-x-2 rtl:space-x-reverse mt-2 gap-2">
+          <div className="flex border-t border-gray-100">
             {actionButtons.map((button, index) => (
               <button
                 key={index}
                 onClick={(e) => {
                   e.preventDefault();
-                  // Call the button's click handler and close the toast
                   button.onClick();
-                  handleClose();
+                  if (button.autoDismiss !== false) {
+                    handleClose();
+                  }
                 }}
-                className="px-3 py-1.5 bg-blue-500 text-white rounded-md text-sm font-medium hover:bg-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className={`flex-1 py-3 text-center font-medium text-sm transition-colors
+                  ${index === 0 
+                    ? "text-white bg-blue-500 hover:bg-blue-600" 
+                    : "text-blue-500 bg-white hover:bg-gray-50"}
+                  ${index !== 0 ? "border-r border-gray-100 rtl:border-r-0 rtl:border-l" : ""}
+                `}
                 tabIndex={0}
-                onKeyDown={(e) => e.key === 'Enter' && (button.onClick(), handleClose())}
+                onKeyDown={(e) => e.key === 'Enter' && (
+                  button.onClick(), 
+                  button.autoDismiss !== false && handleClose()
+                )}
               >
                 {button.label}
               </button>
