@@ -998,7 +998,7 @@ export default function CheckoutPage() {
                               alt="پیش‌نمایش فیش"
                               width={300}
                               height={200}
-                              className="max-h-48 mx-auto object-contain rounded"
+                              className="max-h-48 max-w-md mx-auto object-contain rounded"
                             />
                             <p className="text-sm text-blue-600 mt-2">
                               برای تغییر تصویر کلیک کنید

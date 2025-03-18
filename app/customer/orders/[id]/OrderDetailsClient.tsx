@@ -275,7 +275,7 @@ export default function OrderDetailsClient({ id }: OrderDetailsClientProps) {
                         alt="رسید پرداخت"
                         width={300}
                         height={180}
-                        className="w-full h-auto object-contain hover:opacity-90 transition-opacity"
+                        className="w-full h-auto object-contain hover:opacity-90 transition-opacity max-w-md max-h-80 mx-auto"
                       />
                     </a>
                     <div className="mt-2 text-xs text-center text-blue-600">

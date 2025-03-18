@@ -299,7 +299,7 @@ export default function PaymentClient() {
                               alt="پیش‌نمایش فیش" 
                               width={300}
                               height={200}
-                              className="max-h-48 mx-auto object-contain rounded"
+                              className="max-h-48 max-w-md mx-auto object-contain rounded"
                             />
                             <p className="text-sm text-indigo-600 mt-2">برای تغییر تصویر کلیک کنید</p>
                           </div>
