@@ -84,6 +84,51 @@ The project is a Next.js e-commerce application called "Biosell". Key aspects:
 - Images served through CloudFront CDN for better performance
 - Receipt images require authenticated access via signed URLs with expiration
 
+## Receipt Handling
+- Payment receipts are stored in a private S3 bucket requiring authentication
+- The Order model includes a `receiptInfo` JSON field to store receipt metadata
+- Receipt metadata is stored as a stringified JSON object with the following structure:
+  ```typescript
+  {
+    key: string;      // S3 object key
+    bucket: string;   // S3 bucket name
+    filename: string; // Original filename
+    size: number;     // File size in bytes
+    contentType: string; // MIME type
+  }
+  ```
+- When displaying receipts:
+  1. Parse the `receiptInfo` string to a JSON object
+  2. Generate a fresh signed URL with 12-hour expiration (43200 seconds)
+  3. Add the URL to the receipt object before sending to the client
+  4. Handle potential parsing errors gracefully, preserving original data
+- Example implementation pattern:
+  ```typescript
+  // Process receipt info for viewing
+  if (order.receiptInfo) {
+    try {
+      const receiptData = JSON.parse(order.receiptInfo as string);
+      
+      // Generate a fresh signed URL if key exists
+      if (receiptData.key) {
+        const { getSignedReceiptUrl } = await import('@/utils/s3-storage');
+        const signedUrl = await getSignedReceiptUrl(receiptData.key);
+        
+        orderResult.receiptInfo = {
+          ...receiptData,
+          url: signedUrl
+        };
+      } else {
+        orderResult.receiptInfo = receiptData;
+      }
+    } catch (error) {
+      console.error('Error processing receipt info:', error);
+      // Preserve original data on error
+      orderResult.receiptInfo = order.receiptInfo;
+    }
+  }
+  ```
+
 ## Database Structure
 - Prisma schema with models for:
   - User (admin)
@@ -95,6 +140,13 @@ The project is a Next.js e-commerce application called "Biosell". Key aspects:
   - Subscriptions
   - Plans
   - and more
+- JSON fields in Prisma are mapped to MySQL JSON columns:
+  ```prisma
+  model Order {
+    // ...other fields
+    receiptInfo Json? // Stores receipt metadata as JSON
+  }
+  ```
 
 ## Common Patterns
 - Session checking for auth in API routes and protected pages
@@ -103,6 +155,20 @@ The project is a Next.js e-commerce application called "Biosell". Key aspects:
 - Form handling with react-hook-form
 - Date and price formatting utilities
 - Component-based UI architecture
+- Type definitions for complex data structures:
+  ```typescript
+  // Example for Order with receipt info
+  interface OrderWithReceiptInfo extends Record<string, any> {
+    receiptInfo?: string | { 
+      key: string; 
+      url: string; 
+      bucket: string;
+      filename?: string;
+      size?: number;
+      contentType?: string;
+    };
+  }
+  ```
 
 ## UI Components and Animations
 - Custom keyframe animations defined in globals.css for transitions
@@ -119,6 +185,15 @@ The project is a Next.js e-commerce application called "Biosell". Key aspects:
   - Opening new content
   - Changing views
   - Initial component loading
+- Conditional rendering for optional content:
+  ```jsx
+  {order.receiptInfo && order.paymentMethod === 'bank_transfer' && (
+    <div className="mt-4 border rounded-lg p-4">
+      <h3 className="font-medium mb-2">Receipt Image:</h3>
+      <ReceiptImage receiptInfo={order.receiptInfo} />
+    </div>
+  )}
+  ```
 
 ## Common Pitfalls to Avoid
 - Setting state directly from props without useEffect can cause infinite re-renders
@@ -126,6 +201,12 @@ The project is a Next.js e-commerce application called "Biosell". Key aspects:
 - Implement proper null checks for all data that might be undefined
 - Always handle loading states and error conditions in UI
 - Be careful with state updates in component body (outside effects/handlers)
+- Don't create duplicate processing logic across similar API endpoints:
+  - Extract common functionality into utility functions
+  - Maintain consistent naming across related files
+  - Use consistent type definitions for shared data structures
+- JSON parsing should always be wrapped in try/catch blocks
+- Signed URLs have expiration times - always generate fresh URLs when displaying sensitive content
 
 ## Deployment
 - Docker containerization for consistent deployment
@@ -158,3 +239,8 @@ Follow these rules when you write code:
 - When implementing pagination indicators, use appropriate contrast and follow UI design system.
 - When uploading files to S3, always use pre-signed URLs and validate file types/sizes before upload.
 - For private S3 buckets (like receipts), never expose direct URLs; always use signed URLs with expiration.
+- Keep code DRY by removing duplicate logic - especially in API routes handling similar data.
+- When processing JSON data stored in database, always handle potential parsing errors.
+- Use consistent variable naming across similar components and API endpoints.
+- In Next.js App Router, await dynamic route parameters using the Promise type pattern.
+- For S3 signed URLs, use appropriate expiration times (12 hours/43200 seconds for receipts).
