@@ -7,7 +7,7 @@ import authOptions from '@/lib/auth';
 type Params = Promise<{ id: string }>;
 
 export async function GET(
-  req: NextRequest,
+  request: NextRequest,
   { params }: { params: Params }
 ) {
   try {
@@ -17,22 +17,14 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Await the params since it's now a Promise in Next.js 15
-    const resolvedParams = await params;
-    const subscriptionId = resolvedParams.id;
+    // Get subscription ID from params
+    const subscriptionId = (await params).id;
 
-    // Fetch subscription with plan and seller info
+    // Fetch subscription with relations
     const subscription = await prisma.subscription.findUnique({
       where: { id: subscriptionId },
       include: {
-        seller: {
-          select: {
-            id: true,
-            username: true,
-            shopName: true,
-            email: true,
-          },
-        },
+        seller: true,
         plan: true,
       },
     });
@@ -44,34 +36,62 @@ export async function GET(
       );
     }
 
-    // Format the response
-    const formattedSubscription = {
-      id: subscription.id,
-      sellerId: subscription.sellerId,
-      sellerUsername: subscription.seller.username,
-      sellerShopName: subscription.seller.shopName,
-      sellerEmail: subscription.seller.email,
-      planId: subscription.planId,
-      planName: subscription.plan.name,
-      startDate: subscription.startDate.toISOString(),
-      endDate: subscription.endDate.toISOString(),
-      isActive: subscription.isActive,
-      createdAt: subscription.createdAt.toISOString(),
-      updatedAt: subscription.updatedAt.toISOString(),
-    };
+    // Look for a payment record for this subscription
+    // Check orders table for any payment receipt related to this seller
+    const order = await prisma.order.findFirst({
+      where: {
+        sellerId: subscription.sellerId,
+        receiptInfo: { not: null },
+      },
+      select: {
+        receiptInfo: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
 
-    return NextResponse.json(formattedSubscription);
+    // If we found a receipt, process it and add to response
+    let receiptInfo = null;
+    if (order?.receiptInfo) {
+      try {
+        // Parse receipt info from string to JSON
+        const receiptData = JSON.parse(order.receiptInfo as string);
+        
+        // Generate signed URL if there's a key
+        if (receiptData.key) {
+          const { getSignedReceiptUrl } = await import('@/utils/s3-storage');
+          const signedUrl = await getSignedReceiptUrl(receiptData.key);
+          
+          receiptInfo = {
+            ...receiptData,
+            url: signedUrl
+          };
+        } else {
+          receiptInfo = receiptData;
+        }
+      } catch (error) {
+        console.error('Error processing receipt info:', error);
+      }
+    }
+
+    // Return subscription with receipt info if available
+    return NextResponse.json({
+      ...subscription,
+      receiptInfo
+    });
   } catch (error) {
-    console.error('Error fetching subscription:', error);
+    console.error('Error fetching subscription details:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to fetch subscription details' },
       { status: 500 }
     );
   }
 }
 
+// Update subscription status
 export async function PATCH(
-  req: NextRequest,
+  request: NextRequest,
   { params }: { params: Params }
 ) {
   try {
@@ -81,58 +101,38 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Await the params since it's now a Promise in Next.js 15
-    const resolvedParams = await params;
-    const subscriptionId = resolvedParams.id;
-    
-    const body = await req.json();
-    const { planId, endDate, isActive } = body;
+    // Get subscription ID from params
+    const subscriptionId = (await params).id;
 
-    // Check if subscription exists
-    const existingSubscription = await prisma.subscription.findUnique({
+    // Get update data from request body
+    const body = await request.json();
+    const { isActive, planId } = body;
+
+    // Find the subscription
+    const subscription = await prisma.subscription.findUnique({
       where: { id: subscriptionId },
+      include: { plan: true }
     });
 
-    if (!existingSubscription) {
+    if (!subscription) {
       return NextResponse.json(
         { error: 'Subscription not found' },
         { status: 404 }
       );
     }
 
-    // Check if plan exists if plan is being changed
-    if (planId) {
-      const plan = await prisma.plan.findUnique({
-        where: { id: planId },
-      });
-
-      if (!plan) {
-        return NextResponse.json(
-          { error: 'Plan not found' },
-          { status: 404 }
-        );
-      }
-    }
-
-    // Define a proper type for the update data
-    interface SubscriptionUpdateData {
-      planId?: string;
-      endDate?: Date;
-      isActive?: boolean;
-    }
-
     // Prepare update data
-    const updateData: SubscriptionUpdateData = {};
-    if (planId) updateData.planId = planId;
-    if (endDate) updateData.endDate = new Date(endDate);
+    const updateData: any = {};
+
+    // Handle status change
     if (isActive !== undefined) {
       updateData.isActive = isActive;
-      
-      // If activating this subscription, deactivate other active subscriptions for this seller
+
+      // If activating this subscription, deactivate all other subscriptions for this seller
       if (isActive) {
         await prisma.subscription.updateMany({
           where: {
-            sellerId: existingSubscription.sellerId,
+            sellerId: subscription.sellerId,
             id: { not: subscriptionId },
             isActive: true,
           },
@@ -143,28 +143,85 @@ export async function PATCH(
       }
     }
 
-    // Update subscription
+    // Handle plan change
+    if (planId && planId !== subscription.planId) {
+      // Verify that the plan exists
+      const plan = await prisma.plan.findUnique({
+        where: { id: planId }
+      });
+
+      if (!plan) {
+        return NextResponse.json(
+          { error: 'Plan not found' },
+          { status: 404 }
+        );
+      }
+
+      updateData.planId = planId;
+      
+      // We don't change the end date when updating plans
+      // The current subscription end date remains valid
+    }
+
+    // If no updates were requested, return the current subscription
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(subscription);
+    }
+
+    // Update the subscription
     const updatedSubscription = await prisma.subscription.update({
       where: { id: subscriptionId },
       data: updateData,
       include: {
+        seller: true,
         plan: true,
       },
     });
 
+    // Look for receipt info
+    const order = await prisma.order.findFirst({
+      where: {
+        sellerId: updatedSubscription.sellerId,
+        receiptInfo: { not: null },
+      },
+      select: {
+        receiptInfo: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    // Process receipt info if found
+    let receiptInfo = null;
+    if (order?.receiptInfo) {
+      try {
+        const receiptData = JSON.parse(order.receiptInfo as string);
+        
+        if (receiptData.key) {
+          const { getSignedReceiptUrl } = await import('@/utils/s3-storage');
+          const signedUrl = await getSignedReceiptUrl(receiptData.key);
+          
+          receiptInfo = {
+            ...receiptData,
+            url: signedUrl
+          };
+        } else {
+          receiptInfo = receiptData;
+        }
+      } catch (error) {
+        console.error('Error processing receipt info:', error);
+      }
+    }
+
     return NextResponse.json({
-      id: updatedSubscription.id,
-      planId: updatedSubscription.planId,
-      planName: updatedSubscription.plan.name,
-      startDate: updatedSubscription.startDate.toISOString(),
-      endDate: updatedSubscription.endDate.toISOString(),
-      isActive: updatedSubscription.isActive,
-      updatedAt: updatedSubscription.updatedAt.toISOString(),
+      ...updatedSubscription,
+      receiptInfo
     });
   } catch (error) {
     console.error('Error updating subscription:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to update subscription' },
       { status: 500 }
     );
   }

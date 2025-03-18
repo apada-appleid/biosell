@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import authOptions from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     // Verify admin authentication
     const session = await getServerSession(authOptions);
@@ -11,29 +11,19 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch all plans
+    // Fetch all available plans
     const plans = await prisma.plan.findMany({
-      orderBy: {
-        price: 'asc',
-      },
+      orderBy: [
+        { price: 'asc' },
+        { name: 'asc' }
+      ],
     });
 
-    // Format the plans for the response
-    const formattedPlans = plans.map((plan) => ({
-      id: plan.id,
-      name: plan.name,
-      price: plan.price,
-      features: Array.isArray(plan.features) 
-        ? plan.features 
-        : JSON.parse(plan.features as string),
-      maxProducts: plan.maxProducts,
-    }));
-
-    return NextResponse.json(formattedPlans);
+    return NextResponse.json(plans);
   } catch (error) {
     console.error('Error fetching plans:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to fetch plans' },
       { status: 500 }
     );
   }

@@ -48,7 +48,7 @@ interface Order {
   items: OrderItem[];
 }
 
-export default function SellerOrderDetailsClient({ params }: { params: { id: string } }) {
+export default function SellerOrderDetailsClient({ params }: { params: Promise<{ id: string }> }) {
   const { status: sessionStatus } = useSession();
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -62,7 +62,8 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
       
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/seller/orders/${params.id}`);
+        const orderId = (await params).id;
+        const response = await fetch(`/api/seller/orders/${orderId}`);
         
         if (!response.ok) {
           const errorData = await response.json();
@@ -79,16 +80,15 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
       }
     };
     
-    if (params.id) {
-      fetchOrderDetails();
-    }
-  }, [params.id, sessionStatus]);
+    fetchOrderDetails();
+  }, [params, sessionStatus]);
   
   // Update order status
   const updateOrderStatus = async (newStatus: string) => {
     try {
       setIsUpdating(true);
-      const response = await fetch(`/api/seller/orders/${params.id}`, {
+      const orderId = (await params).id;
+      const response = await fetch(`/api/seller/orders/${orderId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { signOut, useSession } from 'next-auth/react';
@@ -10,7 +10,9 @@ import {
   TbBuildingStore,
   TbMenu2,
   TbX,
-  TbLogout
+  TbLogout,
+  TbReceipt,
+  TbShoppingCart
 } from 'react-icons/tb';
 
 // Admin navigation items
@@ -18,6 +20,8 @@ const navigation = [
   { name: 'داشبورد', href: '/admin/dashboard', icon: TbLayoutDashboard },
   { name: 'محصولات', href: '/admin/products', icon: TbShoppingBag },
   { name: 'فروشندگان', href: '/admin/sellers', icon: TbBuildingStore },
+  { name: 'اشتراک‌های فروشندگان', href: '/admin/subscriptions', icon: TbReceipt },
+  { name: 'سفارش‌ها', href: '/admin/orders', icon: TbShoppingCart },
 ];
 
 export default function AdminLayout({
@@ -28,74 +32,87 @@ export default function AdminLayout({
   const pathname = usePathname();
   const { data: session } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Close sidebar when user navigates on mobile
+  useEffect(() => {
+    if (sidebarOpen) {
+      setSidebarOpen(false);
+    }
+  }, [pathname]);
+
+  // Lock body scroll when sidebar is open on mobile
+  useEffect(() => {
+    if (!mounted) return;
+    
+    if (sidebarOpen) {
+      document.body.classList.add('overflow-hidden');
+    } else {
+      document.body.classList.remove('overflow-hidden');
+    }
+    
+    return () => {
+      document.body.classList.remove('overflow-hidden');
+    };
+  }, [sidebarOpen, mounted]);
 
   const handleSignOut = async () => {
     await signOut({ redirect: true, callbackUrl: '/auth/login' });
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="min-h-screen bg-gray-100 flex flex-col">
       {/* Mobile sidebar backdrop */}
       <div 
-        className={`md:hidden fixed inset-0 z-40 bg-gray-600 bg-opacity-75 transition-opacity duration-300 ease-in-out ${
+        className={`fixed inset-0 z-40 bg-gray-600 bg-opacity-75 transition-opacity duration-300 ease-in-out md:hidden ${
           sidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`} 
         onClick={() => setSidebarOpen(false)}
+        aria-hidden="true"
       ></div>
 
-      {/* Sidebar */}
-      <div 
-        className={`fixed inset-y-0 right-0 z-50 w-64 bg-white transition-transform duration-300 ease-in-out transform ${
+      {/* Sidebar for mobile - fixed positioning */}
+      <aside 
+        className={`fixed inset-y-0 right-0 z-50 w-64 bg-white shadow-lg transition-transform duration-300 ease-in-out transform md:hidden ${
           sidebarOpen ? 'translate-x-0' : 'translate-x-full'
-        } md:translate-x-0 md:static md:inset-auto md:w-64 md:flex-shrink-0`}
+        }`}
       >
-        <div className="h-full flex flex-col p-4">
-          <div className="flex justify-between items-center">
-            <div className="text-xl font-bold text-gray-900 mb-6">
+        <div className="h-full flex flex-col overflow-y-auto">
+          <div className="flex items-center justify-between p-4 border-b">
+            <div className="text-xl font-bold text-gray-900">
               پنل مدیریت
             </div>
             <button
-              className="md:hidden text-gray-500 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 p-2"
+              type="button"
+              className="text-gray-500 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 p-2 rounded-md"
               onClick={() => setSidebarOpen(false)}
             >
+              <span className="sr-only">بستن منو</span>
               <TbX className="h-6 w-6" />
             </button>
           </div>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:block space-y-1 mt-5 flex-1">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`group flex items-center px-2 py-2 text-base font-medium rounded-md 
-                ${pathname === item.href ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'} 
-                transition-colors duration-150 ease-in-out`}
-              >
-                <item.icon
-                  className={`ml-3 h-5 w-5 flex-shrink-0 
-                  ${pathname === item.href ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-500'}`}
-                  aria-hidden="true"
-                />
-                {item.name}
-              </Link>
-            ))}
-          </nav>
-
           {/* Mobile Navigation */}
-          <nav className="md:hidden space-y-1 mt-5 flex-1">
+          <nav className="flex-1 px-2 py-4 space-y-1">
             {navigation.map((item) => (
               <Link
                 key={item.name}
                 href={item.href}
-                className={`group flex items-center px-2 py-2 text-base font-medium rounded-md 
-                ${pathname === item.href ? 'bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'} 
-                transition-colors duration-150 ease-in-out`}
+                className={`group flex items-center px-3 py-2.5 text-base font-medium rounded-md transition-colors duration-150 ease-in-out
+                ${pathname === item.href || pathname?.startsWith(item.href + '/') 
+                  ? 'bg-blue-50 text-blue-700' 
+                  : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`}
                 onClick={() => setSidebarOpen(false)}
               >
                 <item.icon
                   className={`ml-3 h-5 w-5 flex-shrink-0 
-                  ${pathname === item.href ? 'text-blue-700' : 'text-gray-400 group-hover:text-gray-500'}`}
+                  ${pathname === item.href || pathname?.startsWith(item.href + '/') 
+                    ? 'text-blue-700' 
+                    : 'text-gray-400 group-hover:text-gray-500'}`}
                   aria-hidden="true"
                 />
                 {item.name}
@@ -103,57 +120,101 @@ export default function AdminLayout({
             ))}
           </nav>
 
-          {/* Logout Button - Desktop */}
-          <div className="hidden md:block border-t border-gray-200 pt-4 mt-auto">
+          {/* Logout Button - Mobile */}
+          <div className="border-t border-gray-200 p-4">
             <div className="flex items-center mb-4">
               <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">
                 {session?.user?.name?.[0] || 'A'}
               </div>
-              <div className="mr-3">
-                <p className="text-sm font-medium text-gray-900">{session?.user?.name || 'مدیر سیستم'}</p>
-                <p className="text-xs text-gray-500">{session?.user?.email || ''}</p>
+              <div className="mr-3 overflow-hidden">
+                <p className="text-sm font-medium text-gray-900 truncate">{session?.user?.name || 'مدیر سیستم'}</p>
+                <p className="text-xs text-gray-500 truncate">{session?.user?.email || ''}</p>
               </div>
             </div>
             <button
               onClick={handleSignOut}
-              className="flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-700 hover:bg-gray-50 hover:text-gray-900 w-full"
+              className="flex w-full items-center px-3 py-2.5 text-base font-medium rounded-md text-gray-700 hover:bg-gray-50 hover:text-gray-900"
             >
               <TbLogout className="ml-3 h-5 w-5 flex-shrink-0 text-gray-400" aria-hidden="true" />
               خروج
             </button>
           </div>
+        </div>
+      </aside>
 
-          {/* Logout Button - Mobile */}
-          <div className="md:hidden border-t border-gray-200 pt-4 mt-auto">
-            <button
-              onClick={handleSignOut}
-              className="flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-700 hover:bg-gray-50 hover:text-gray-900 w-full"
-            >
-              <TbLogout className="ml-3 h-5 w-5 flex-shrink-0 text-gray-400" aria-hidden="true" />
-              خروج
-            </button>
+      {/* Desktop sidebar - fixed positioning with flex layout */}
+      <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 md:z-10">
+        <div className="flex-1 flex flex-col min-h-0 bg-white shadow">
+          <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
+            <div className="flex items-center flex-shrink-0 px-4 mb-5">
+              <h1 className="text-xl font-bold text-gray-900">پنل مدیریت</h1>
+            </div>
+            
+            <nav className="mt-5 flex-1 px-2 space-y-1">
+              {navigation.map((item) => (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={`group flex items-center px-3 py-2.5 text-base font-medium rounded-md 
+                  ${pathname === item.href || pathname?.startsWith(item.href + '/') 
+                    ? 'bg-blue-50 text-blue-700' 
+                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'} 
+                  transition-colors duration-150 ease-in-out`}
+                >
+                  <item.icon
+                    className={`ml-3 h-5 w-5 flex-shrink-0 
+                    ${pathname === item.href || pathname?.startsWith(item.href + '/') 
+                      ? 'text-blue-700' 
+                      : 'text-gray-400 group-hover:text-gray-500'}`}
+                    aria-hidden="true"
+                  />
+                  {item.name}
+                </Link>
+              ))}
+            </nav>
+          </div>
+          
+          <div className="flex-shrink-0 flex border-t border-gray-200 p-4">
+            <div className="flex items-center w-full">
+              <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">
+                {session?.user?.name?.[0] || 'A'}
+              </div>
+              <div className="mr-3 overflow-hidden flex-1">
+                <p className="text-sm font-medium text-gray-900 truncate">{session?.user?.name || 'مدیر سیستم'}</p>
+                <p className="text-xs text-gray-500 truncate">{session?.user?.email || ''}</p>
+              </div>
+              <button
+                onClick={handleSignOut}
+                className="p-1.5 rounded-full text-gray-400 hover:text-gray-500 hover:bg-gray-100"
+                title="خروج"
+              >
+                <TbLogout className="h-5 w-5" aria-hidden="true" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col">
+      <div className="md:pr-64 flex flex-col flex-1">
         {/* Top navbar */}
-        <div className="sticky top-0 z-10 bg-white md:hidden border-b border-gray-200">
+        <div className="sticky top-0 z-10 bg-white md:hidden border-b border-gray-200 shadow-sm">
           <div className="flex items-center justify-between h-16 px-4">
             <button
-              className="text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-gray-500"
+              type="button"
+              className="text-gray-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 p-1.5 rounded-md"
               onClick={() => setSidebarOpen(true)}
             >
+              <span className="sr-only">باز کردن منو</span>
               <TbMenu2 className="h-6 w-6" />
             </button>
-            <div className="text-gray-900 font-medium">پنل مدیریت</div>
-            <div className="w-6"></div> {/* Empty div for balanced layout */}
+            <div className="text-gray-900 font-medium text-lg">پنل مدیریت</div>
+            <div className="h-6 w-6"></div> {/* Empty div for balanced layout */}
           </div>
         </div>
 
         {/* Main content */}
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-4 sm:p-6 bg-gray-100">
           {children}
           <style jsx global>{`
             /* Hide bottom navigation in admin pages */

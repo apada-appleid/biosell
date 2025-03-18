@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import authOptions from '@/lib/auth';
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     // Verify admin authentication
     const session = await getServerSession(authOptions);
@@ -104,16 +104,10 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch all subscriptions with related plan and seller info
+    // Fetch all subscriptions with related seller and plan data
     const subscriptions = await prisma.subscription.findMany({
       include: {
-        seller: {
-          select: {
-            username: true,
-            shopName: true,
-            email: true,
-          },
-        },
+        seller: true,
         plan: true,
       },
       orderBy: {
@@ -121,26 +115,11 @@ export async function GET() {
       },
     });
 
-    // Format the response
-    const formattedSubscriptions = subscriptions.map((subscription) => ({
-      id: subscription.id,
-      sellerId: subscription.sellerId,
-      sellerUsername: subscription.seller.username,
-      sellerShopName: subscription.seller.shopName,
-      sellerEmail: subscription.seller.email,
-      planId: subscription.planId,
-      planName: subscription.plan.name,
-      startDate: subscription.startDate.toISOString(),
-      endDate: subscription.endDate.toISOString(),
-      isActive: subscription.isActive,
-      createdAt: subscription.createdAt.toISOString(),
-    }));
-
-    return NextResponse.json(formattedSubscriptions);
+    return NextResponse.json(subscriptions);
   } catch (error) {
     console.error('Error fetching subscriptions:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to fetch subscriptions' },
       { status: 500 }
     );
   }
