@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { TbArrowRight, TbCalendar, TbClipboard, TbCreditCard } from 'react-icons/tb';
+import { TbArrowRight, TbCalendar, TbClipboard, TbCreditCard, TbReceipt } from 'react-icons/tb';
 
 type OrderItem = {
   id: string;
@@ -32,6 +32,11 @@ type OrderDetails = {
   paymentMethod: string;
   paymentStatus: string;
   shippingAddress: string;
+  receiptInfo?: {
+    key: string;
+    url: string;
+    bucket: string;
+  };
   items: OrderItem[];
   seller: {
     id: string;
@@ -247,6 +252,37 @@ export default function OrderDetailsClient({ id }: OrderDetailsClientProps) {
               <div className="bg-gray-50 px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                 <dt className="text-sm font-medium text-gray-500">آدرس تحویل</dt>
                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{order.shippingAddress}</dd>
+              </div>
+            )}
+            
+            {/* Receipt image section */}
+            {order.receiptInfo && order.paymentMethod === 'bank_transfer' && (
+              <div className="bg-white px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt className="text-sm font-medium text-gray-500 flex items-center">
+                  <TbReceipt className="ml-1" />
+                  رسید پرداخت
+                </dt>
+                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  <div className="relative overflow-hidden rounded border border-gray-200">
+                    <a 
+                      href={order.receiptInfo.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <Image
+                        src={order.receiptInfo.url}
+                        alt="رسید پرداخت"
+                        width={300}
+                        height={180}
+                        className="w-full h-auto object-contain hover:opacity-90 transition-opacity"
+                      />
+                    </a>
+                    <div className="mt-2 text-xs text-center text-blue-600">
+                      برای مشاهده تصویر در اندازه اصلی کلیک کنید
+                    </div>
+                  </div>
+                </dd>
               </div>
             )}
           </dl>

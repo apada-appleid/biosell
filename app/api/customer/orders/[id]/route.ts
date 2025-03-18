@@ -4,6 +4,36 @@ import { getServerSession } from "next-auth";
 import authOptions from "@/lib/auth";
 import { getAuthenticatedUser } from "@/lib/auth-helpers";
 
+// Define Order type with receiptInfo
+type OrderWithReceiptInfo = {
+  id: string;
+  orderNumber: string;
+  createdAt: Date;
+  status: string;
+  total: number;
+  paymentMethod: string;
+  paymentStatus: string;
+  shippingAddress: string | null;
+  receiptInfo: string | null;
+  items: any[];
+  seller: {
+    id: string;
+    shopName: string;
+    username: string;
+  };
+  [key: string]: any; // Allow other properties
+};
+
+// Define a simpler approach that avoids TypeScript errors
+interface OrderResult extends Record<string, any> {
+  receiptInfo?: string | { key: string; url: string; bucket: string };
+}
+
+// A simplified type for order data with receiptInfo
+interface OrderData extends Record<string, any> {
+  receiptInfo?: string;
+}
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -65,7 +95,17 @@ export async function GET(
         id: orderId,
         customerId: customer.id
       },
-      include: {
+      select: {
+        id: true,
+        orderNumber: true,
+        status: true,
+        total: true,
+        paymentMethod: true,
+        paymentStatus: true,
+        shippingAddress: true,
+        createdAt: true,
+        updatedAt: true,
+        receiptInfo: true,
         items: {
           include: {
             product: {
@@ -105,7 +145,34 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(order);
+    // Process receipt info and prepare for client
+    let orderResult: any = { ...order };
+    
+    // Check if receipt info exists and process it
+    if (order.receiptInfo) {
+      try {
+        const receiptData = JSON.parse(order.receiptInfo as string);
+        
+        // Generate a fresh signed URL if there's a key
+        if (receiptData.key) {
+          const { getSignedReceiptUrl } = await import('@/utils/s3-storage');
+          const signedUrl = await getSignedReceiptUrl(receiptData.key);
+          
+          orderResult.receiptInfo = {
+            ...receiptData,
+            url: signedUrl
+          };
+        } else {
+          orderResult.receiptInfo = receiptData;
+        }
+      } catch (error) {
+        console.error('Error processing receipt info:', error);
+        // Keep the original receipt info as is
+        orderResult.receiptInfo = order.receiptInfo;
+      }
+    }
+
+    return NextResponse.json(orderResult);
   } catch (error) {
     console.error("Error fetching order details:", error);
     return NextResponse.json(

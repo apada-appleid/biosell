@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import authOptions from '@/lib/auth';
 
@@ -76,13 +76,13 @@ export async function POST(request: NextRequest) {
     
     await s3Client.send(putCommand);
     
-    // Generate a signed URL for the uploaded file (valid for 1 hour)
-    const getCommand = new PutObjectCommand({
+    // Generate a signed URL for viewing the uploaded file (valid for 12 hours)
+    const getCommand = new GetObjectCommand({
       Bucket: S3_RECEIPTS_BUCKET_NAME,
       Key: fileName
     });
     
-    const signedUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: 3600 });
+    const signedUrl = await getSignedUrl(s3Client, getCommand, { expiresIn: 43200 });
     
     return NextResponse.json({
       success: true,

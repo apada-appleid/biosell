@@ -50,7 +50,17 @@ export async function GET(
         id: orderId,
         sellerId
       },
-      include: {
+      select: {
+        id: true,
+        orderNumber: true,
+        status: true,
+        total: true,
+        paymentMethod: true,
+        paymentStatus: true,
+        shippingAddress: true,
+        createdAt: true,
+        updatedAt: true,
+        receiptInfo: true,
         items: {
           include: {
             product: {
@@ -90,7 +100,34 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(order);
+    // Process order receipt info for viewing
+    let processedOrder: any = { ...order };
+    
+    // Generate fresh signed URL for receipt images if available
+    if (order.receiptInfo) {
+      try {
+        const receiptData = JSON.parse(order.receiptInfo as string);
+        
+        // Generate a fresh signed URL for the S3 object
+        if (receiptData.key) {
+          const { getSignedReceiptUrl } = await import('@/utils/s3-storage');
+          const signedUrl = await getSignedReceiptUrl(receiptData.key);
+          
+          processedOrder.receiptInfo = {
+            ...receiptData,
+            url: signedUrl
+          };
+        } else {
+          processedOrder.receiptInfo = receiptData;
+        }
+      } catch (error) {
+        console.error('Error processing receipt info:', error);
+        // Keep the original receipt info
+        processedOrder.receiptInfo = order.receiptInfo;
+      }
+    }
+
+    return NextResponse.json(processedOrder);
   } catch (error) {
     console.error("Error fetching order details:", error);
     return NextResponse.json(

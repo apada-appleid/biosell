@@ -175,6 +175,7 @@ model Order {
   addressId       String?     @map("address_id")
   trackingNumber  String?     @map("tracking_number") @db.VarChar(100)
   shippingProvider String?    @map("shipping_provider") @db.VarChar(100)
+  receiptInfo     String?     @map("receipt_info") @db.Text // Store receipt information as JSON string
   processedAt     DateTime?   @map("processed_at")
   shippedAt       DateTime?   @map("shipped_at")
   deliveredAt     DateTime?   @map("delivered_at")

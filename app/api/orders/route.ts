@@ -36,6 +36,7 @@ interface OrderData {
   paymentMethod: string;
   shippingAddress: string | null;
   addressId?: string; // Optional addressId field
+  receiptInfo?: string; // Receipt information as JSON string
   items: {
     create: {
       productId: string;
@@ -97,7 +98,16 @@ interface OrderWithRelations {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { customerData, cartItems, total, sellerId, paymentMethod, addressId } = body;
+    const {
+      customerData,
+      cartItems,
+      total,
+      sellerId,
+      paymentMethod,
+      shippingAddress,
+      addressId,
+      receiptInfo,
+    } = body;
     
     // Enhanced validation
     if (!customerData || !cartItems || !Array.isArray(cartItems) || cartItems.length === 0 || !total || !sellerId) {
@@ -254,6 +264,11 @@ export async function POST(request: NextRequest) {
       } else {
         console.warn(`Address ID ${addressId} not found for customer ${customerId} or is deleted`);
       }
+    }
+    
+    // Add receipt info if available
+    if (receiptInfo) {
+      orderData.receiptInfo = JSON.stringify(receiptInfo);
     }
     
     // Create the order

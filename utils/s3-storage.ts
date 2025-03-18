@@ -130,10 +130,10 @@ const fileToBase64 = (file: File): Promise<string> => {
 /**
  * Generate a signed URL for a private receipt
  * @param key The S3 object key
- * @param expiresIn Number of seconds the URL will be valid (default: 900 seconds = 15 minutes)
+ * @param expiresIn Number of seconds the URL will be valid (default: 43200 seconds = 12 hours)
  * @returns Signed URL with temporary access
  */
-export async function getSignedReceiptUrl(key: string, expiresIn = 900): Promise<string> {
+export async function getSignedReceiptUrl(key: string, expiresIn = 43200): Promise<string> {
   try {
     const command = new GetObjectCommand({
       Bucket: S3_RECEIPTS_BUCKET_NAME,
@@ -149,25 +149,21 @@ export async function getSignedReceiptUrl(key: string, expiresIn = 900): Promise
 }
 
 /**
- * Check if a URL is from our S3 buckets
+ * Check if a URL is an S3 URL
+ * @param url The URL to check
+ * @returns True if the URL is an S3 URL
  */
 export function isS3Url(url: string): boolean {
-  return url.includes('arvanstorage.ir');
+  return url.includes('s3.') || url.includes('arvanstorage.ir');
 }
 
 /**
- * Ensure an image URL is valid
+ * Ensure a valid image URL is returned, with a fallback
+ * @param url The image URL to validate
+ * @returns A valid image URL or a fallback
  */
 export function ensureValidImageUrl(url: string | null | undefined): string {
-  if (!url) {
-    return '/images/default-product-image.png';
-  }
-  
-  // Already an S3 URL or external URL
-  if (url.startsWith('http')) {
-    return url;
-  }
-  
-  // Local URL (for backward compatibility)
-  return url;
+  return url && (url.startsWith('http') || url.startsWith('/'))
+    ? url
+    : '/images/placeholder.jpg';
 } 

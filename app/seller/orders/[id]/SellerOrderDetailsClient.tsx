@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { FiArrowLeft, FiUser, FiMail, FiPhone, FiCalendar, FiCreditCard } from 'react-icons/fi';
+import { FiArrowLeft, FiUser, FiMail, FiPhone, FiCalendar, FiCreditCard, FiFileText } from 'react-icons/fi';
 
 interface OrderItem {
   id: string;
@@ -39,6 +39,11 @@ interface Order {
   paymentStatus: string;
   createdAt: string;
   shippingAddress: string;
+  receiptInfo?: {
+    key: string;
+    url: string;
+    bucket: string;
+  };
   customer: Customer;
   items: OrderItem[];
 }
@@ -418,6 +423,52 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
               لغو سفارش
             </button>
           </div>
+        </div>
+      </div>
+      
+      {/* اطلاعات رسید */}
+      <div className="bg-white shadow overflow-hidden sm:rounded-lg mt-6">
+        <div className="px-4 py-5 sm:px-6">
+          <h3 className="text-lg leading-6 font-medium text-gray-900">
+            اطلاعات رسید
+          </h3>
+        </div>
+        <div className="border-t border-gray-200">
+          <dl>
+            <div className="bg-gray-50 px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+              <dt className="text-sm font-medium text-gray-500 flex items-center">
+                <FiFileText className="ml-1" />
+                رسید سفارش
+              </dt>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                {order.receiptInfo?.key ? (
+                  <div className="relative overflow-hidden rounded border border-gray-200">
+                    <a 
+                      href={order.receiptInfo.url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <Image
+                        src={order.receiptInfo.url}
+                        alt="رسید پرداخت"
+                        width={300}
+                        height={180}
+                        className="w-full h-auto object-contain hover:opacity-90 transition-opacity"
+                      />
+                    </a>
+                    <div className="mt-2 text-xs text-center text-blue-600">
+                      برای مشاهده تصویر در اندازه اصلی کلیک کنید
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-gray-500">
+                    {order.paymentMethod === 'bank_transfer' ? 'رسید سفارش بارگذاری نشده است' : 'این سفارش نیازی به رسید پرداخت ندارد'}
+                  </span>
+                )}
+              </dd>
+            </div>
+          </dl>
         </div>
       </div>
     </div>
