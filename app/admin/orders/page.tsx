@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import OrdersClient from './OrdersClient';
 import SubscriptionsClient from './SubscriptionsClient';
 
@@ -38,7 +38,15 @@ export default function AdminOrdersPage() {
       </div>
 
       {/* Content */}
-      {activeTab === 'orders' ? <OrdersClient /> : <SubscriptionsClient />}
+      {activeTab === 'orders' ? (
+        <Suspense fallback={<div className="flex justify-center py-10">در حال بارگذاری سفارش‌ها...</div>}>
+          <OrdersClient />
+        </Suspense>
+      ) : (
+        <Suspense fallback={<div className="flex justify-center py-10">در حال بارگذاری اشتراک‌ها...</div>}>
+          <SubscriptionsClient />
+        </Suspense>
+      )}
     </div>
   )
 } 

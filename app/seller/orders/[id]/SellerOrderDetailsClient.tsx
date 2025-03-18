@@ -48,7 +48,7 @@ interface Order {
   items: OrderItem[];
 }
 
-export default function SellerOrderDetailsClient({ params }: { params: Promise<{ id: string }> }) {
+export default function SellerOrderDetailsClient({ params }: { params: { id: string } }) {
   const { status: sessionStatus } = useSession();
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -62,7 +62,7 @@ export default function SellerOrderDetailsClient({ params }: { params: Promise<{
       
       try {
         setIsLoading(true);
-        const orderId = (await params).id;
+        const orderId = params.id;
         const response = await fetch(`/api/seller/orders/${orderId}`);
         
         if (!response.ok) {
@@ -87,7 +87,7 @@ export default function SellerOrderDetailsClient({ params }: { params: Promise<{
   const updateOrderStatus = async (newStatus: string) => {
     try {
       setIsUpdating(true);
-      const orderId = (await params).id;
+      const orderId = params.id;
       const response = await fetch(`/api/seller/orders/${orderId}`, {
         method: 'PATCH',
         headers: {
