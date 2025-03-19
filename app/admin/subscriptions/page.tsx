@@ -62,7 +62,7 @@ export default function AdminSubscriptionsPage() {
       return;
     }
     
-    if (status === 'authenticated' && session?.user?.role !== 'admin') {
+    if (status === 'authenticated' && session?.user?.type !== 'admin') {
       router.push('/');
       return;
     }

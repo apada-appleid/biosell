@@ -13,7 +13,7 @@ export async function POST(
     // Check if user is authenticated and is an admin
     const session = await getServerSession(authOptions);
     
-    if (!session || session.user.role !== 'admin') {
+    if (!session || session.user.type !== 'admin') {
       return NextResponse.json(
         { success: false, message: 'Unauthorized' },
         { status: 401 }
@@ -54,6 +54,15 @@ export async function POST(
         { success: false, message: 'Payment not found' },
         { status: 404 }
       );
+    }
+    
+    // If payment is already in the requested status, return successfully without changes
+    if (payment.status === status) {
+      return NextResponse.json({
+        success: true,
+        message: `Payment is already ${status}`,
+        payment: payment
+      });
     }
     
     // Update payment status

@@ -12,11 +12,20 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch all sellers with their active subscriptions
+    // Fetch all sellers
     const sellers = await prisma.seller.findMany({
-      include: {
-        subscriptions: {
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    // For each seller, get active and pending subscriptions
+    const formattedSellers = await Promise.all(
+      sellers.map(async (seller) => {
+        // Get active subscription
+        const activeSubscription = await prisma.subscription.findFirst({
           where: {
+            sellerId: seller.id,
             isActive: true,
             endDate: {
               gte: new Date(),
@@ -28,37 +37,75 @@ export async function GET() {
           orderBy: {
             endDate: 'desc',
           },
-          take: 1,
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+        });
 
-    // Format the response
-    const formattedSellers = sellers.map((seller) => {
-      const activeSubscription = seller.subscriptions[0];
-      
-      return {
-        id: seller.id,
-        username: seller.username,
-        email: seller.email,
-        shopName: seller.shopName,
-        bio: seller.bio,
-        profileImage: seller.profileImage,
-        isActive: seller.isActive,
-        createdAt: seller.createdAt.toISOString(),
-        updatedAt: seller.updatedAt.toISOString(),
-        subscription: activeSubscription
-          ? {
-              planName: activeSubscription.plan.name,
-              endDate: activeSubscription.endDate.toISOString(),
-              isActive: activeSubscription.isActive,
-            }
-          : null,
-      };
-    });
+        // Get pending subscription with payment status
+        const pendingSubscription = await prisma.subscription.findFirst({
+          where: {
+            sellerId: seller.id,
+            isActive: false,
+          },
+          include: {
+            plan: true,
+            payments: {
+              orderBy: {
+                createdAt: 'desc',
+              },
+              take: 1,
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        });
+
+        return {
+          id: seller.id,
+          username: seller.username,
+          email: seller.email,
+          shopName: seller.shopName,
+          bio: seller.bio,
+          profileImage: seller.profileImage,
+          isActive: seller.isActive,
+          createdAt: seller.createdAt.toISOString(),
+          updatedAt: seller.updatedAt.toISOString(),
+          // Active subscription info
+          subscription: activeSubscription
+            ? {
+                id: activeSubscription.id,
+                planId: activeSubscription.planId,
+                planName: activeSubscription.plan.name,
+                startDate: activeSubscription.startDate.toISOString(),
+                endDate: activeSubscription.endDate.toISOString(),
+                isActive: activeSubscription.isActive,
+                maxProducts: activeSubscription.plan.maxProducts,
+              }
+            : null,
+          // Pending subscription info
+          pendingSubscription: pendingSubscription
+            ? {
+                id: pendingSubscription.id,
+                planId: pendingSubscription.planId,
+                planName: pendingSubscription.plan.name,
+                startDate: pendingSubscription.startDate.toISOString(),
+                endDate: pendingSubscription.endDate.toISOString(),
+                isActive: pendingSubscription.isActive,
+                maxProducts: pendingSubscription.plan.maxProducts,
+                paymentStatus: pendingSubscription.payments[0]?.status || 'pending',
+                paymentId: pendingSubscription.payments[0]?.id || null,
+                payment: pendingSubscription.payments[0] 
+                  ? {
+                      id: pendingSubscription.payments[0].id,
+                      status: pendingSubscription.payments[0].status,
+                      amount: pendingSubscription.payments[0].amount,
+                      createdAt: pendingSubscription.payments[0].createdAt.toISOString(),
+                    }
+                  : null,
+              }
+            : null,
+        };
+      })
+    );
 
     return NextResponse.json(formattedSellers);
   } catch (error) {
