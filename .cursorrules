@@ -244,3 +244,4 @@ Follow these rules when you write code:
 - Use consistent variable naming across similar components and API endpoints.
 - In Next.js App Router, await dynamic route parameters using the Promise type pattern.
 - For S3 signed URLs, use appropriate expiration times (12 hours/43200 seconds for receipts).
+- Never import modules that aren't used in the component or file. Regularly clean up unused imports to keep code clean and performance optimal.
