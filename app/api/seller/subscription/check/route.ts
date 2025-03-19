@@ -15,7 +15,7 @@ export async function GET() {
     const sellerId = session.user.id;
     
     // Check for active subscription
-    const subscription = await prisma.subscription.findFirst({
+    const activeSubscription = await prisma.subscription.findFirst({
       where: {
         sellerId: sellerId,
         isActive: true,
@@ -25,19 +25,46 @@ export async function GET() {
       }
     });
 
+    // If no active subscription is found, check for pending subscriptions
+    let pendingSubscription = null;
+    if (!activeSubscription) {
+      pendingSubscription = await prisma.subscription.findFirst({
+        where: {
+          sellerId: sellerId,
+          isActive: false
+        },
+        include: {
+          payments: {
+            orderBy: {
+              createdAt: 'desc'
+            },
+            take: 1
+          }
+        }
+      });
+    }
+
     return NextResponse.json({
-      hasActiveSubscription: !!subscription,
-      subscription: subscription ? {
-        id: subscription.id,
-        planId: subscription.planId,
-        endDate: subscription.endDate
+      hasActiveSubscription: !!activeSubscription,
+      hasPendingSubscription: !!pendingSubscription,
+      pendingPaymentStatus: pendingSubscription?.payments[0]?.status || null,
+      subscription: activeSubscription ? {
+        id: activeSubscription.id,
+        planId: activeSubscription.planId,
+        endDate: activeSubscription.endDate
+      } : null,
+      pendingSubscription: pendingSubscription ? {
+        id: pendingSubscription.id,
+        planId: pendingSubscription.planId,
+        status: pendingSubscription.payments[0]?.status || 'pending',
+        endDate: pendingSubscription.endDate
       } : null
     });
     
   } catch (error) {
     console.error('Error checking subscription:', error);
     return NextResponse.json(
-      { error: 'Failed to check subscription', hasActiveSubscription: false },
+      { error: 'Failed to check subscription', hasActiveSubscription: false, hasPendingSubscription: false },
       { status: 500 }
     );
   }

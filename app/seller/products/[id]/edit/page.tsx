@@ -53,6 +53,36 @@ export default function EditProductPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [hasSubscription, setHasSubscription] = useState<boolean | null>(null);
+  const [hasPendingSubscription, setHasPendingSubscription] = useState<boolean>(false);
+  const [pendingSubscriptionStatus, setPendingSubscriptionStatus] = useState<string | null>(null);
+  const [checkingSubscription, setCheckingSubscription] = useState(true);
+
+  // Check subscription status
+  useEffect(() => {
+    const checkSubscription = async () => {
+      if (status === 'authenticated') {
+        try {
+          const response = await fetch('/api/seller/subscription/check');
+          const data = await response.json();
+          
+          setHasSubscription(data.hasActiveSubscription);
+          setHasPendingSubscription(data.hasPendingSubscription || false);
+          setPendingSubscriptionStatus(data.pendingPaymentStatus);
+        } catch (error) {
+          console.error('Error checking subscription:', error);
+          setHasSubscription(false);
+          setHasPendingSubscription(false);
+        } finally {
+          setCheckingSubscription(false);
+        }
+      }
+    };
+    
+    if (status === 'authenticated') {
+      checkSubscription();
+    }
+  }, [status]);
 
   // Fetch product data
   useEffect(() => {
@@ -311,10 +341,72 @@ export default function EditProductPage() {
     }
   };
 
-  if (status === 'loading' || isLoading) {
+  if (status === 'loading' || isLoading || checkingSubscription) {
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
         <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  // Show subscription message if user doesn't have an active subscription
+  if (hasSubscription === false) {
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">ویرایش محصول</h1>
+        </div>
+        
+        {hasPendingSubscription ? (
+          <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6 text-center">
+            <div className="mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-yellow-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <h2 className="text-xl font-bold text-gray-900 mb-2">اشتراک در انتظار تایید</h2>
+              <p className="text-gray-700 mb-4">
+                {pendingSubscriptionStatus === 'pending' ? 
+                  'اشتراک شما در انتظار تایید پرداخت است. پس از تایید پرداخت توسط ادمین، می‌توانید محصولات خود را ویرایش کنید.' :
+                  pendingSubscriptionStatus === 'rejected' ?
+                  'متاسفانه پرداخت شما تایید نشده است. لطفا با پشتیبانی تماس بگیرید یا مجددا اقدام به خرید اشتراک نمایید.' :
+                  'اشتراک شما هنوز فعال نشده است. لطفا مجددا تلاش کنید یا با پشتیبانی تماس بگیرید.'}
+              </p>
+              
+              <button
+                onClick={() => router.push('/seller/dashboard')}
+                className="px-5 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium mx-2"
+              >
+                بازگشت به داشبورد
+              </button>
+              
+              {pendingSubscriptionStatus === 'rejected' && (
+                <button
+                  onClick={() => router.push('/seller/plans')}
+                  className="px-5 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium mx-2 mt-2 sm:mt-0"
+                >
+                  خرید اشتراک جدید
+                </button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6 text-center">
+            <div className="mb-4">
+              <XCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+              <h2 className="text-xl font-bold text-gray-900 mb-2">نیاز به اشتراک فعال</h2>
+              <p className="text-gray-700 mb-6">
+                برای ویرایش محصولات، شما نیاز به یک اشتراک فعال دارید. لطفا ابتدا یک پلن اشتراک را انتخاب کنید.
+              </p>
+              
+              <button
+                onClick={() => router.push('/seller/plans')}
+                className="px-5 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium"
+              >
+                مشاهده پلن‌های اشتراک
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

@@ -64,6 +64,26 @@ export async function GET() {
       }
     });
 
+    // If no active subscription is found, check for pending subscriptions
+    let pendingSubscription = null;
+    if (!subscription) {
+      pendingSubscription = await prisma.subscription.findFirst({
+        where: {
+          sellerId: sellerId,
+          isActive: false
+        },
+        include: {
+          plan: true,
+          payments: {
+            orderBy: {
+              createdAt: 'desc'
+            },
+            take: 1
+          }
+        }
+      });
+    }
+
     // Mock data for sales metrics since we don't have an order model yet
     // In a real implementation, these would be fetched from the database
     const totalSales = 0;
@@ -75,7 +95,7 @@ export async function GET() {
     // Calculate product limit progress
     const productLimitPercentage = subscription 
       ? Math.round((totalProducts / subscription.plan.maxProducts) * 100)
-      : 0;
+      : (pendingSubscription ? Math.round((totalProducts / pendingSubscription.plan.maxProducts) * 100) : 0);
 
     return NextResponse.json({
       totalProducts,
@@ -87,7 +107,13 @@ export async function GET() {
         maxProducts: subscription.plan.maxProducts,
         endDate: subscription.endDate,
         isActive: subscription.isActive
-      } : null,
+      } : (pendingSubscription ? {
+        planName: pendingSubscription.plan.name,
+        maxProducts: pendingSubscription.plan.maxProducts,
+        endDate: pendingSubscription.endDate,
+        isActive: pendingSubscription.isActive,
+        status: pendingSubscription.payments[0]?.status || 'pending'
+      } : null),
       productLimitPercentage,
       recentOrders
     });

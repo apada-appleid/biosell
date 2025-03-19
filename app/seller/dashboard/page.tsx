@@ -22,6 +22,7 @@ interface Subscription {
   maxProducts: number;
   endDate: string;
   isActive: boolean;
+  status?: string; // Add status field for pending subscriptions
 }
 
 interface Order {
@@ -288,11 +289,21 @@ export default function SellerDashboardPage() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">وضعیت</p>
-                <span className={`inline-block px-2 py-1 rounded text-xs ${
-                  stats.subscription.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                }`}>
-                  {stats.subscription.isActive ? 'فعال' : 'غیرفعال'}
-                </span>
+                {stats.subscription.isActive ? (
+                  <span className="inline-block px-2 py-1 rounded text-xs bg-green-100 text-green-800">
+                    فعال
+                  </span>
+                ) : (
+                  <span className={`inline-block px-2 py-1 rounded text-xs ${
+                    stats.subscription.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 
+                    stats.subscription.status === 'approved' ? 'bg-green-100 text-green-800' : 
+                    'bg-red-100 text-red-800'
+                  }`}>
+                    {stats.subscription.status === 'pending' ? 'در انتظار تایید' : 
+                     stats.subscription.status === 'approved' ? 'تایید شده' : 
+                     stats.subscription.status === 'rejected' ? 'رد شده' : 'غیرفعال'}
+                  </span>
+                )}
               </div>
               <div>
                 <p className="text-sm text-gray-500">تاریخ انقضا</p>
@@ -316,6 +327,30 @@ export default function SellerDashboardPage() {
                 ></div>
               </div>
             </div>
+            
+            {/* Show a note for pending subscriptions */}
+            {!stats.subscription.isActive && stats.subscription.status === 'pending' && (
+              <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                <p className="text-sm text-yellow-800">
+                  اشتراک شما در انتظار تایید پرداخت از سوی مدیر سیستم است. پس از تایید، اشتراک شما فعال خواهد شد.
+                </p>
+              </div>
+            )}
+            
+            {/* Show a note for rejected subscriptions */}
+            {!stats.subscription.isActive && stats.subscription.status === 'rejected' && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-sm text-red-800">
+                  پرداخت شما تایید نشده است. لطفا با پشتیبانی تماس بگیرید یا مجددا اقدام به خرید اشتراک نمایید.
+                </p>
+                <Link 
+                  href="/seller/plans" 
+                  className="mt-2 px-3 py-1 bg-blue-600 text-white text-xs rounded-md inline-flex items-center hover:bg-blue-700 transition"
+                >
+                  خرید اشتراک جدید
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       )}
