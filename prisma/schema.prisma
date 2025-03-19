@@ -42,6 +42,25 @@ model Plan {
   @@map("plans")
 }
 
+// مدل پرداخت‌های پلن (جدید)
+model PlanPayment {
+  id             String       @id @default(uuid())
+  subscriptionId String       @map("subscription_id")
+  sellerId       String       @map("seller_id")
+  amount         Int
+  status         String       @default("pending") @db.VarChar(50) // pending, approved, rejected
+  receiptInfo    String?      @map("receipt_info") @db.Text // JSON string with receipt metadata
+  reviewedAt     DateTime?    @map("reviewed_at")
+  reviewedBy     String?      @map("reviewed_by")
+  notes          String?      @db.Text
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  seller         Seller       @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  @@map("plan_payments")
+}
+
 // مدل فروشندگان
 model Seller {
   id            String         @id @default(uuid())
@@ -57,22 +76,24 @@ model Seller {
   products      Product[]
   subscriptions Subscription[]
   orders        Order[] // ارتباط با سفارش‌ها
+  planPayments  PlanPayment[]
 
   @@map("sellers")
 }
 
 // مدل اشتراک‌ها
 model Subscription {
-  id        String   @id @default(uuid())
-  sellerId  String   @map("seller_id")
-  planId    String   @map("plan_id")
-  startDate DateTime @default(now()) @map("start_date")
-  endDate   DateTime @map("end_date")
-  isActive  Boolean  @default(true) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  seller    Seller   @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  plan      Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  id          String        @id @default(uuid())
+  sellerId    String        @map("seller_id")
+  planId      String        @map("plan_id")
+  startDate   DateTime      @default(now()) @map("start_date")
+  endDate     DateTime      @map("end_date")
+  isActive    Boolean       @default(true) @map("is_active")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  seller      Seller        @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  plan        Plan          @relation(fields: [planId], references: [id], onDelete: Cascade)
+  payments    PlanPayment[]
 
   @@map("subscriptions")
 }

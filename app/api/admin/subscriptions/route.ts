@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth/next';
 import authOptions from '@/lib/auth';
+import { getSignedReceiptUrl } from '@/utils/s3-storage';
 
 export async function POST(request: Request) {
   try {
@@ -98,28 +99,88 @@ export async function POST(request: Request) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify admin authentication
+    // Check if user is authenticated and is an admin
     const session = await getServerSession(authOptions);
-    if (!session || session.user.type !== 'admin') {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    
+    if (!session || session.user.role !== 'admin') {
+      return NextResponse.json(
+        { success: false, message: 'Unauthorized' },
+        { status: 401 }
+      );
     }
-
-    // Fetch all subscriptions with related seller and plan data
-    const subscriptions = await prisma.subscription.findMany({
+    
+    // Get all payments with related data
+    const payments = await prisma.planPayment.findMany({
       include: {
-        seller: true,
-        plan: true,
+        seller: {
+          select: {
+            id: true,
+            username: true,
+            shopName: true,
+            email: true,
+          }
+        },
+        subscription: {
+          include: {
+            plan: {
+              select: {
+                id: true,
+                name: true,
+                price: true,
+              }
+            }
+          }
+        }
       },
       orderBy: {
-        createdAt: 'desc',
-      },
+        createdAt: 'desc'
+      }
     });
-
-    return NextResponse.json(subscriptions);
+    
+    // Process receipt info for each payment
+    const processedPayments = await Promise.all(payments.map(async (payment: any) => {
+      const paymentResult = { ...payment };
+      
+      if (payment.receiptInfo) {
+        try {
+          // Parse receipt info
+          const receiptData = typeof payment.receiptInfo === 'string' 
+            ? JSON.parse(payment.receiptInfo as string)
+            : payment.receiptInfo;
+          
+          // Generate a fresh signed URL if key exists
+          if (receiptData.key) {
+            const signedUrl = await getSignedReceiptUrl(receiptData.key);
+            
+            paymentResult.receiptInfo = {
+              ...receiptData,
+              url: signedUrl
+            };
+          } else {
+            paymentResult.receiptInfo = receiptData;
+          }
+        } catch (error) {
+          console.error('Error processing receipt info:', error);
+          // Preserve original data on error
+          paymentResult.receiptInfo = payment.receiptInfo;
+        }
+      }
+      
+      return paymentResult;
+    }));
+    
+    return NextResponse.json({
+      success: true,
+      payments: processedPayments
+    });
+    
   } catch (error) {
     console.error('Error fetching subscriptions:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch subscriptions' },
+      { 
+        success: false, 
+        message: error instanceof Error ? error.message : 'Unknown server error' 
+      },
       { status: 500 }
     );
   }
