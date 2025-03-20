@@ -11,8 +11,14 @@ import axios from 'axios';
 
 const registerSchema = z.object({
   shopName: z.string().min(3, 'نام فروشگاه باید حداقل 3 کاراکتر باشد'),
-  username: z.string().min(3, 'نام کاربری باید حداقل 3 کاراکتر باشد')
-    .regex(/^[a-z0-9_]+$/, 'نام کاربری فقط می‌تواند شامل حروف کوچک انگلیسی، اعداد و زیرخط باشد'),
+  username: z.preprocess(
+    (val) => typeof val === 'string' ? val.toLowerCase() : val,
+    z.string()
+      .min(3, 'نام کاربری باید حداقل 3 کاراکتر باشد')
+      .regex(/^[a-z0-9._]+$/, 'نام کاربری فقط می‌تواند شامل حروف انگلیسی، اعداد، نقطه و زیرخط باشد')
+      .regex(/^(?!.*\.\.)/, 'نام کاربری نمی‌تواند شامل نقطه‌های پشت سر هم باشد')
+      .max(30, 'نام کاربری نمی‌تواند بیشتر از 30 کاراکتر باشد')
+  ),
   email: z.string().email('ایمیل معتبر وارد کنید'),
   password: z.string().min(8, 'رمز عبور باید حداقل 8 کاراکتر باشد'),
   mobileNumber: z.string().regex(/^09\d{9}$/, 'شماره موبایل معتبر وارد کنید'),
@@ -146,7 +152,7 @@ export default function SellerRegisterPage() {
               {...register('shopName', { required: true })}
             />
             {errors.shopName && (
-              <p className="mt-1 text-sm text-red-600">نام فروشگاه الزامی است</p>
+              <p className="mt-1 text-sm text-red-600">{errors.shopName.message}</p>
             )}
           </div>
 
@@ -161,7 +167,7 @@ export default function SellerRegisterPage() {
               {...register('username', { required: true })}
             />
             {errors.username && (
-              <p className="mt-1 text-sm text-red-600">نام کاربری الزامی است</p>
+              <p className="mt-1 text-sm text-red-600">{errors.username.message}</p>
             )}
           </div>
 
@@ -179,10 +185,7 @@ export default function SellerRegisterPage() {
               })}
             />
             {errors.email && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.email.type === 'required' && 'ایمیل الزامی است'}
-                {errors.email.type === 'pattern' && 'ایمیل نامعتبر است'}
-              </p>
+              <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
             )}
           </div>
 
@@ -197,7 +200,7 @@ export default function SellerRegisterPage() {
               {...register('mobileNumber', { required: true })}
             />
             {errors.mobileNumber && (
-              <p className="mt-1 text-sm text-red-600">شماره تماس الزامی است</p>
+              <p className="mt-1 text-sm text-red-600">{errors.mobileNumber.message}</p>
             )}
           </div>
 
@@ -212,10 +215,7 @@ export default function SellerRegisterPage() {
               {...register('password', { required: true, minLength: 6 })}
             />
             {errors.password && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.password.type === 'required' && 'رمز عبور الزامی است'}
-                {errors.password.type === 'minLength' && 'رمز عبور باید حداقل 6 کاراکتر باشد'}
-              </p>
+              <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
             )}
           </div>
 
