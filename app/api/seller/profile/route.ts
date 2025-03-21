@@ -44,7 +44,6 @@ export async function GET(request: NextRequest) {
         createdAt: true,
         shops: {
           where: {
-            isDefault: true,
           },
           select: {
             id: true,
@@ -198,8 +197,7 @@ export async function PATCH(request: NextRequest) {
         // Find the default shop
         const defaultShop = await tx.sellerShop.findFirst({
           where: {
-            sellerId,
-            isDefault: true
+            sellerId
           }
         });
         
@@ -215,7 +213,6 @@ export async function PATCH(request: NextRequest) {
             data: {
               sellerId,
               shopName,
-              isDefault: true,
               isActive: true
             }
           });
@@ -228,8 +225,7 @@ export async function PATCH(request: NextRequest) {
     // Fetch the updated shop to include in the response
     const defaultShop = await prisma.sellerShop.findFirst({
       where: {
-        sellerId,
-        isDefault: true
+        sellerId
       },
       select: {
         id: true,

@@ -82,7 +82,6 @@ export async function GET(
     const shop = await prisma.sellerShop.findFirst({
       where: {
         sellerId: seller.id,
-        isDefault: true,
         isActive: true,
         deletedAt: null
       },

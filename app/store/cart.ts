@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Cart, CartItem, Product } from '../types';
+import { CartItem, Product } from '../types';
+
+interface Cart {
+  items: CartItem[];
+  total: number;
+}
 
 interface LastRemovedItem {
   product: Product;

@@ -17,7 +17,7 @@ export async function GET() {
       include: {
         shops: {
           where: {
-            isDefault: true,
+            isActive: true,
           },
           take: 1,
         }
@@ -210,7 +210,6 @@ export async function POST(request: Request) {
         data: {
           sellerId: seller.id,
           shopName,
-          isDefault: true,
           isActive: true,
         },
       });

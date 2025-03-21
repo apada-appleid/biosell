@@ -39,7 +39,6 @@ export async function GET(request: NextRequest) {
           id: true,
           shopName: true,
           instagramId: true,
-          isDefault: true,
           isActive: true,
           deletedAt: true
         }
@@ -58,7 +57,6 @@ export async function GET(request: NextRequest) {
         shopName: true,
         sellerId: true,
         instagramId: true,
-        isDefault: true,
         isActive: true,
         deletedAt: true
       }
@@ -73,7 +71,6 @@ export async function GET(request: NextRequest) {
         shopName: true,
         sellerId: true,
         instagramId: true,
-        isDefault: true,
         isActive: true,
         deletedAt: true
       }

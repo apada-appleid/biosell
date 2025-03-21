@@ -75,7 +75,6 @@ export async function POST(request: NextRequest) {
         shopName,
         instagramId,
         description,
-        isDefault: existingShopsCount === 0, // Make default if it's the first shop
       },
     });
 

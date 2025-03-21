@@ -13,7 +13,6 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             shopName: true,
-            isDefault: true,
             isActive: true,
             deletedAt: true
           }

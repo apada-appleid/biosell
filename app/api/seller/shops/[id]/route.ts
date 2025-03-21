@@ -77,7 +77,7 @@ export async function PUT(
     const shopId = (await params).id;
     const body = await request.json();
 
-    const { shopName, instagramId, description, isDefault, isActive } = body;
+    const { shopName, instagramId, description, isActive } = body;
 
     // Verify shop exists and belongs to this seller
     const shop = await prisma.sellerShop.findFirst({
@@ -107,31 +107,6 @@ export async function PUT(
         isActive,
       },
     });
-
-    // If setting as default, unset default status for all other shops
-    if (isDefault) {
-      await prisma.sellerShop.updateMany({
-        where: {
-          sellerId,
-          id: {
-            not: shopId,
-          },
-        },
-        data: {
-          isDefault: false,
-        },
-      });
-
-      // Set this shop as default
-      await prisma.sellerShop.update({
-        where: {
-          id: shopId,
-        },
-        data: {
-          isDefault: true,
-        },
-      });
-    }
 
     return NextResponse.json({ 
       message: "Shop updated successfully", 
@@ -183,14 +158,6 @@ export async function DELETE(
       return NextResponse.json(
         { message: "Shop not found" },
         { status: 404 }
-      );
-    }
-
-    // Check if this is the default shop
-    if (shop.isDefault) {
-      return NextResponse.json(
-        { message: "Cannot delete the default shop" },
-        { status: 400 }
       );
     }
 

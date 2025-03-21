@@ -236,7 +236,6 @@ export async function POST(request: NextRequest) {
     const sellerDefaultShop = await prisma.sellerShop.findFirst({
       where: {
         sellerId,
-        isDefault: true,
       },
     });
     

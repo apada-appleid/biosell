@@ -64,7 +64,6 @@ export async function GET(req: NextRequest) {
           isActive: true,
           shops: {
             where: {
-              isDefault: true,
             },
             select: {
               id: true,

@@ -83,7 +83,6 @@ export async function POST(req: NextRequest) {
         data: {
           sellerId: newSeller.id,
           shopName,
-          isDefault: true,
           isActive: true
         }
       });

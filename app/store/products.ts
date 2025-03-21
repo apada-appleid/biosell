@@ -1,6 +1,33 @@
 import { create } from 'zustand';
-import { Product } from '../types';
 import axios from 'axios';
+
+interface ProductImage {
+  id: string;
+  imageUrl: string;
+  order?: number;
+}
+
+interface Product {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  imageUrl: string;
+  instagramPostUrl?: string;
+  available: boolean;
+  createdAt: string;
+  images?: ProductImage[];
+  inventory?: number;
+  isActive?: boolean;
+  likes_count?: number;
+  likesCount?: number;
+  sellerId?: string;
+  seller?: {
+    id: string;
+    username: string;
+    shopName: string;
+  };
+}
 
 interface ProductsState {
   products: Product[];

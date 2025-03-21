@@ -2,12 +2,19 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { useCartStore } from '@/app/store/cart';
-import { User, CustomerAddress } from '@/app/types';
+import { CustomerAddress } from '@/app/types';
 import { FiPlus, FiCheck, FiChevronDown, FiChevronUp, FiEdit, FiX, FiStar } from 'react-icons/fi';
 import { TbLoader } from 'react-icons/tb';
 
+interface UserInfo {
+  id?: string;
+  name?: string;
+  email?: string;
+  mobile?: string;
+}
+
 interface CheckoutFormProps {
-  user: User | undefined;
+  user: UserInfo | undefined;
   updateUserData?: (field: string, value: string) => void;
 }
 
@@ -329,7 +336,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
       }
 
       // Get the seller ID from cart items
-      const sellerId = cart.items[0]?.product.sellerId;
+      const sellerId = cart.items[0]?.product.seller?.id;
       
       // Check if sellerId exists
       if (!sellerId) {

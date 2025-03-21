@@ -15,7 +15,7 @@ import {
 } from "react-icons/fi";
 import { TbLoader, TbPlus, TbCheck, TbMapPin, TbX } from "react-icons/tb";
 import { uploadReceiptToS3 } from "@/utils/s3-storage";
-import { CustomerAddress } from "@/app/types";
+import { CustomerAddress, CartItem } from "@/app/types";
 
 interface UserInfo {
   id: string;
@@ -617,7 +617,7 @@ export default function CheckoutPage() {
           </h2>
 
           <div className="space-y-4 mb-4">
-            {cart.items.map((item) => (
+            {cart.items.map((item: CartItem) => (
               <div
                 key={`${item.product.id}-${item.quantity}`}
                 className="flex items-start space-x-3 space-x-reverse"
@@ -1171,7 +1171,7 @@ export default function CheckoutPage() {
             </h2>
 
             <div className="divide-y divide-gray-200">
-              {cart.items.map((item) => (
+              {cart.items.map((item: CartItem) => (
                 <div
                   key={`${item.product.id}-${item.quantity}`}
                   className="py-3 flex items-start space-x-3 space-x-reverse"

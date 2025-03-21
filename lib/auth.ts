@@ -159,8 +159,7 @@ const authOptions: NextAuthOptions = {
             // Find default shop for this seller
             const defaultShop = await prisma.sellerShop.findFirst({
               where: {
-                sellerId: seller.id,
-                isDefault: true
+                sellerId: seller.id
               }
             });
 

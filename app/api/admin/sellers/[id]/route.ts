@@ -30,7 +30,7 @@ export async function GET(
       include: {
         shops: {
           where: {
-            isDefault: true,
+            isActive: true,
           },
           take: 1,
         },
@@ -172,8 +172,7 @@ export async function PATCH(
       // First find the default shop for this seller
       const defaultShop = await prisma.sellerShop.findFirst({
         where: {
-          sellerId,
-          isDefault: true
+          sellerId
         }
       });
       
@@ -189,7 +188,6 @@ export async function PATCH(
           data: {
             sellerId,
             shopName: body.shopName,
-            isDefault: true,
             isActive: true
           }
         });

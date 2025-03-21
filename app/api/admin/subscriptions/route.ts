@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
             email: true,
             shops: {
               where: {
-                isDefault: true,
+                isActive: true,
               },
               select: {
                 id: true,
