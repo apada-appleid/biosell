@@ -13,13 +13,20 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch all products with their seller and images data
+    // Fetch all products with their shop, seller and images data
     const products = await prisma.product.findMany({
       include: {
-        seller: {
+        shop: {
           select: {
             id: true,
             shopName: true,
+            seller: {
+              select: {
+                id: true,
+                username: true,
+                email: true,
+              },
+            },
           },
         },
         images: {

@@ -14,16 +14,28 @@ export async function GET(
       return NextResponse.json({ error: 'Username is required' }, { status: 400 });
     }
     
-    // یافتن فروشنده با نام کاربری
+    // یافتن فروشنده با نام کاربری و فروشگاه پیش‌فرض او
     const seller = await prisma.seller.findUnique({
       where: { username },
       select: {
         id: true,
         username: true,
-        shopName: true,
         bio: true,
         profileImage: true,
-        isActive: true
+        isActive: true,
+        shops: {
+          where: {
+            isDefault: true,
+          },
+          select: {
+            id: true,
+            shopName: true,
+            description: true,
+            instagramId: true,
+            isActive: true,
+          },
+          take: 1
+        }
       }
     });
     
@@ -31,14 +43,35 @@ export async function GET(
       return NextResponse.json({ error: 'Seller not found' }, { status: 404 });
     }
     
-    // بررسی فعال بودن فروشگاه
+    // بررسی فعال بودن فروشنده
     if (!seller.isActive) {
+      return NextResponse.json({ error: 'This seller is currently not active' }, { status: 403 });
+    }
+    
+    // بررسی وجود فروشگاه پیش‌فرض
+    if (!seller.shops || seller.shops.length === 0) {
+      return NextResponse.json({ error: 'This seller has no active shop' }, { status: 404 });
+    }
+    
+    // بررسی فعال بودن فروشگاه پیش‌فرض
+    if (!seller.shops[0].isActive) {
       return NextResponse.json({ error: 'This shop is currently not active' }, { status: 403 });
     }
     
+    // استخراج اطلاعات فروشگاه پیش‌فرض
+    const defaultShop = seller.shops[0];
+    
     // بازگرداندن اطلاعات فروشنده با فرمت مورد انتظار
     return NextResponse.json({
-      seller: seller
+      seller: {
+        id: seller.id,
+        username: seller.username,
+        bio: seller.bio,
+        profileImage: seller.profileImage,
+        isActive: seller.isActive,
+        shopId: defaultShop.id,
+        shopName: defaultShop.shopName,
+      }
     });
     
   } catch (error) {

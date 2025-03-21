@@ -18,8 +18,11 @@ type OrderWithReceiptInfo = {
   items: any[];
   seller: {
     id: string;
-    shopName: string;
     username: string;
+  };
+  shop: {
+    id: string;
+    shopName: string;
   };
   [key: string]: any; // Allow other properties
 };
@@ -131,8 +134,13 @@ export async function GET(
         seller: {
           select: {
             id: true,
-            shopName: true,
             username: true
+          }
+        },
+        shop: {
+          select: {
+            id: true,
+            shopName: true
           }
         }
       }

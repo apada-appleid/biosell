@@ -35,17 +35,46 @@ export async function GET() {
 
     const sellerId = session.user.id;
 
-    // Get total number of products
+    // Get seller shops
+    const shops = await prisma.sellerShop.findMany({
+      where: {
+        sellerId
+      },
+      select: {
+        id: true
+      }
+    });
+
+    // Extract shop IDs
+    const shopIds = shops.map(shop => shop.id);
+
+    if (shopIds.length === 0) {
+      return NextResponse.json({
+        totalProducts: 0,
+        activeProducts: 0,
+        totalSales: 0,
+        totalRevenue: 0,
+        subscription: null,
+        productLimitPercentage: 0,
+        recentOrders: []
+      });
+    }
+
+    // Get total number of products across all shops
     const totalProducts = await prisma.product.count({
       where: {
-        sellerId: sellerId,
+        shopId: {
+          in: shopIds
+        }
       },
     });
 
-    // Get number of active products
+    // Get number of active products across all shops
     const activeProducts = await prisma.product.count({
       where: {
-        sellerId: sellerId,
+        shopId: {
+          in: shopIds
+        },
         isActive: true,
       },
     });

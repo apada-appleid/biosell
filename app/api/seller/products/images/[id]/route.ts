@@ -33,7 +33,13 @@ export async function DELETE(
       include: {
         product: {
           select: {
-            sellerId: true,
+            id: true,
+            shop: {
+              select: {
+                id: true,
+                sellerId: true
+              }
+            }
           },
         },
       },
@@ -43,7 +49,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Image not found' }, { status: 404 });
     }
 
-    if (image.product.sellerId !== sellerId) {
+    if (image.product.shop.sellerId !== sellerId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 

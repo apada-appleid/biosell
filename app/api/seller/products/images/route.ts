@@ -35,16 +35,28 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verify that the product exists and belongs to the seller
+    // Verify that the product exists and belongs to one of the seller's shops
     const product = await prisma.product.findUnique({
       where: {
         id: productId,
-        sellerId: sellerId,
       },
+      include: {
+        shop: {
+          select: {
+            id: true,
+            sellerId: true
+          }
+        }
+      }
     });
 
     if (!product) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+
+    // Verify the product belongs to one of this seller's shops
+    if (product.shop.sellerId !== sellerId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const savedImages: ProductImage[] = [];

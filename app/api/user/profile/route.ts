@@ -59,12 +59,42 @@ export async function GET(req: NextRequest) {
           id: true,
           username: true,
           email: true,
-          shopName: true,
           bio: true,
           profileImage: true,
           isActive: true,
+          shops: {
+            where: {
+              isDefault: true,
+            },
+            select: {
+              id: true,
+              shopName: true,
+              instagramId: true,
+              isActive: true,
+            },
+            take: 1
+          }
         },
       });
+
+      // Process the profile to include default shop information in a more accessible format
+      if (profile && profile.shops && profile.shops.length > 0) {
+        const defaultShop = profile.shops[0];
+        const profileWithShop: any = {
+          ...profile,
+          shopId: defaultShop.id,
+          shopName: defaultShop.shopName, // For backward compatibility
+          defaultShop: {
+            id: defaultShop.id,
+            shopName: defaultShop.shopName,
+            instagramId: defaultShop.instagramId,
+            isActive: defaultShop.isActive
+          }
+        };
+        // Remove shops array to keep response clean
+        delete profileWithShop.shops;
+        profile = profileWithShop;
+      }
     }
     else if (userType === 'customer') {
       profile = await prisma.customer.findUnique({

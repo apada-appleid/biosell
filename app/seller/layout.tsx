@@ -10,11 +10,13 @@ import {
   TbLogout, 
   TbMenu2,
   TbX,
-  TbClipboardList
+  TbClipboardList,
+  TbBuildingStore
 } from 'react-icons/tb';
 
 const navigation = [
   { name: 'داشبورد', href: '/seller/dashboard', icon: TbLayoutDashboard },
+  { name: 'فروشگاه‌ها', href: '/seller/shops', icon: TbBuildingStore },
   { name: 'محصولات', href: '/seller/products', icon: TbShoppingBag },
   { name: 'مشاهده سفارش‌ها', href: '/seller/orders', icon: TbClipboardList },
 ];

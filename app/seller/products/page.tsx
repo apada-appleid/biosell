@@ -22,10 +22,17 @@ interface Product {
   isActive: boolean;
   images: ProductImage[];
   createdAt?: string;
+  shopId: string;
+}
+
+interface Shop {
+  id: string;
+  shopName: string;
+  isDefault: boolean;
 }
 
 export default function SellerProductsPage() {
-  const { status } = useSession();
+  const { status, data: session } = useSession();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +42,37 @@ export default function SellerProductsPage() {
   const [hasPendingSubscription, setHasPendingSubscription] = useState<boolean>(false);
   const [pendingSubscriptionStatus, setPendingSubscriptionStatus] = useState<string | null>(null);
   const [checkingSubscription, setCheckingSubscription] = useState(true);
+  const [shops, setShops] = useState<Shop[]>([]);
+  const [selectedShopId, setSelectedShopId] = useState<string | null>(null);
+  const [loadingShops, setLoadingShops] = useState(true);
   const router = useRouter();
+
+  // Fetch shops
+  useEffect(() => {
+    const fetchShops = async () => {
+      if (status === 'authenticated') {
+        try {
+          setLoadingShops(true);
+          const response = await fetch('/api/seller/shops');
+          const data = await response.json();
+          
+          if (data.shops && data.shops.length > 0) {
+            setShops(data.shops);
+            
+            // Find default shop or use the first one
+            const defaultShop = data.shops.find((shop: Shop) => shop.isDefault) || data.shops[0];
+            setSelectedShopId(defaultShop.id);
+          }
+        } catch (error) {
+          console.error('Error fetching shops:', error);
+        } finally {
+          setLoadingShops(false);
+        }
+      }
+    };
+    
+    fetchShops();
+  }, [status]);
 
   // Check subscription status
   useEffect(() => {
@@ -63,64 +100,35 @@ export default function SellerProductsPage() {
     }
   }, [status]);
 
+  // Update fetchProducts to filter by selected shop
   useEffect(() => {
     const fetchProducts = async () => {
-      try {
-        // Try to fetch products from API
-        const response = await fetch('/api/seller/products');
-        
-        if (response.ok) {
+      if (status === 'authenticated' && selectedShopId) {
+        try {
+          setIsLoading(true);
+          setError(null);
+          
+          const response = await fetch(`/api/seller/products?shopId=${selectedShopId}`);
+          
+          if (!response.ok) {
+            throw new Error('Failed to fetch products');
+          }
+          
           const data = await response.json();
-          setProducts(data);
-        } else {
-          // If API fails, use mock data
-          console.error('API returned error:', response.status);
-          throw new Error('Failed to fetch products');
+          setProducts(data.products || []);
+        } catch (err) {
+          setError((err as Error).message);
+          console.error('Error fetching products:', err);
+        } finally {
+          setIsLoading(false);
         }
-      } catch (error) {
-        console.error('Error fetching products:', error);
-        setError('خطا در بارگذاری محصولات. لطفا دوباره تلاش کنید.');
-        
-        // Mock data as fallback
-        setProducts([
-          {
-            id: '1',
-            title: 'کفش اسپرت سفید',
-            price: 450000,
-            inventory: 12,
-            isActive: true,
-            images: [
-              {
-                id: 'img1',
-                imageUrl: 'https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb',
-              },
-            ],
-            createdAt: new Date().toISOString(),
-          },
-          {
-            id: '2',
-            title: 'کیف دستی چرم',
-            price: 780000,
-            inventory: 5,
-            isActive: true,
-            images: [
-              {
-                id: 'img2',
-                imageUrl: 'https://images.unsplash.com/photo-1590874103328-eac38a683ce7',
-              },
-            ],
-            createdAt: new Date().toISOString(),
-          },
-        ]);
-      } finally {
-        setIsLoading(false);
       }
     };
-
-    if (status === 'authenticated') {
+    
+    if (!loadingShops && selectedShopId) {
       fetchProducts();
     }
-  }, [status]);
+  }, [status, selectedShopId, loadingShops]);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -164,6 +172,11 @@ export default function SellerProductsPage() {
   const filteredProducts = products.filter((product) =>
     product.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Handler for shop selection change
+  const handleShopChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedShopId(e.target.value);
+  };
 
   if (status === 'loading' || (isLoading && products.length === 0) || checkingSubscription) {
     return (
@@ -235,37 +248,83 @@ export default function SellerProductsPage() {
     );
   }
 
-  return (
-    <div>
-      <div className="pb-5 border-b border-gray-200 sm:flex sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-bold leading-tight text-gray-900">محصولات من</h1>
-        <div className="mt-3 sm:mt-0 sm:mr-4">
-          <Link
-            href="/seller/products/new"
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <Plus className="ml-2 h-4 w-4" aria-hidden="true" />
-            افزودن محصول
-          </Link>
-        </div>
-      </div>
-
-      {/* Search */}
-      <div className="mt-6 max-w-lg">
-        <div className="relative rounded-md shadow-sm">
-          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-            <Search className="h-5 w-5 text-gray-400" />
+  // UI for no shops case
+  if (!loadingShops && shops.length === 0) {
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-6">محصولات</h1>
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg p-4 mb-6">
+          <div className="flex items-center">
+            <AlertTriangle className="h-5 w-5 ml-2" />
+            <p>شما هنوز هیچ فروشگاهی ندارید. ابتدا یک فروشگاه ایجاد کنید.</p>
           </div>
-          <input
-            type="text"
-            className="block w-full pr-10 py-2 text-gray-900 bg-white rounded-md border border-gray-300 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-            placeholder="جستجوی محصول..."
-            value={searchQuery}
-            onChange={handleSearchChange}
-          />
+        </div>
+        <Link 
+          href="/seller/shops/new"
+          className="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
+        >
+          <Plus className="h-4 w-4 ml-2" />
+          ایجاد فروشگاه جدید
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+        <h1 className="text-2xl font-bold mb-4 md:mb-0">محصولات</h1>
+        <div className="flex flex-col md:flex-row md:items-center">
+          {/* Shop Selection Dropdown */}
+          {!loadingShops && shops.length > 0 && (
+            <div className="mb-4 md:mb-0 md:ml-4">
+              <select
+                value={selectedShopId || ''}
+                onChange={handleShopChange}
+                className="block w-full md:w-auto px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                {shops.map(shop => (
+                  <option key={shop.id} value={shop.id}>
+                    {shop.shopName} {shop.isDefault ? '(پیش‌فرض)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          
+          {/* Search Input */}
+          <div className="relative mb-4 md:mb-0">
+            <input
+              type="text"
+              placeholder="جستجو..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="block w-full px-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+            <Search className="absolute right-3 top-2.5 h-5 w-5 text-gray-400" />
+            {searchQuery && (
+              <button 
+                onClick={() => setSearchQuery('')}
+                className="absolute left-3 top-2.5 text-gray-400 hover:text-gray-600"
+              >
+                <XCircle className="h-5 w-5" />
+              </button>
+            )}
+          </div>
+          
+          {/* Add Product Button */}
+          {hasSubscription === true && selectedShopId && (
+            <Link 
+              href={`/seller/products/new?shopId=${selectedShopId}`} 
+              className="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
+            >
+              <Plus className="h-4 w-4 ml-2" />
+              افزودن محصول
+            </Link>
+          )}
         </div>
       </div>
-
+      
       {/* Error Alert */}
       {error && (
         <div className="mt-4 rounded-md bg-red-50 p-4">

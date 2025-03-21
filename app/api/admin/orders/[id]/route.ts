@@ -24,9 +24,15 @@ export async function GET(
         seller: {
           select: {
             id: true,
-            shopName: true,
             username: true,
             email: true,
+          },
+        },
+        shop: {
+          select: {
+            id: true,
+            shopName: true,
+            instagramId: true,
           },
         },
         customer: {

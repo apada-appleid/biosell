@@ -116,8 +116,17 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             username: true,
-            shopName: true,
             email: true,
+            shops: {
+              where: {
+                isDefault: true,
+              },
+              select: {
+                id: true,
+                shopName: true,
+              },
+              take: 1,
+            },
           }
         },
         subscription: {

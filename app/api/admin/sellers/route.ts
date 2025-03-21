@@ -12,8 +12,16 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch all sellers
+    // Fetch all sellers with their default shops
     const sellers = await prisma.seller.findMany({
+      include: {
+        shops: {
+          where: {
+            isDefault: true,
+          },
+          take: 1,
+        }
+      },
       orderBy: {
         createdAt: 'desc',
       },
@@ -22,6 +30,9 @@ export async function GET() {
     // For each seller, get active and pending subscriptions
     const formattedSellers = await Promise.all(
       sellers.map(async (seller) => {
+        // Get the default shop if available
+        const defaultShop = seller.shops.length > 0 ? seller.shops[0] : null;
+        
         // Get active subscription
         const activeSubscription = await prisma.subscription.findFirst({
           where: {
@@ -63,12 +74,19 @@ export async function GET() {
           id: seller.id,
           username: seller.username,
           email: seller.email,
-          shopName: seller.shopName,
           bio: seller.bio,
           profileImage: seller.profileImage,
           isActive: seller.isActive,
           createdAt: seller.createdAt.toISOString(),
           updatedAt: seller.updatedAt.toISOString(),
+          // Shop information
+          shopName: defaultShop?.shopName || null, // For backward compatibility
+          shop: defaultShop ? {
+            id: defaultShop.id,
+            shopName: defaultShop.shopName,
+            instagramId: defaultShop.instagramId,
+            isActive: defaultShop.isActive,
+          } : null,
           // Active subscription info
           subscription: activeSubscription
             ? {
@@ -171,7 +189,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create seller with transaction to ensure both seller and subscription are created
+    // Create seller with transaction to ensure all entities are created
     const result = await prisma.$transaction(async (tx) => {
       // Hash password using bcrypt
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -182,8 +200,17 @@ export async function POST(request: Request) {
           username,
           email,
           password: hashedPassword,
-          shopName,
           bio,
+          isActive: true,
+        },
+      });
+
+      // Create the default shop
+      const shop = await tx.sellerShop.create({
+        data: {
+          sellerId: seller.id,
+          shopName,
+          isDefault: true,
           isActive: true,
         },
       });
@@ -203,7 +230,7 @@ export async function POST(request: Request) {
         },
       });
 
-      return { seller, subscription };
+      return { seller, shop, subscription };
     });
 
     return NextResponse.json(
@@ -211,8 +238,11 @@ export async function POST(request: Request) {
         id: result.seller.id,
         username: result.seller.username,
         email: result.seller.email,
-        shopName: result.seller.shopName,
         isActive: result.seller.isActive,
+        shop: {
+          id: result.shop.id,
+          shopName: result.shop.shopName,
+        },
         subscription: {
           planId: result.subscription.planId,
           endDate: result.subscription.endDate,

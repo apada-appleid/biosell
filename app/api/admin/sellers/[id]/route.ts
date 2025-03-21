@@ -24,10 +24,16 @@ export async function GET(
     const resolvedParams = await params;
     const sellerId = resolvedParams.id;
 
-    // Fetch seller with active subscription
+    // Fetch seller with active subscription and default shop
     const seller = await prisma.seller.findUnique({
       where: { id: sellerId },
       include: {
+        shops: {
+          where: {
+            isDefault: true,
+          },
+          take: 1,
+        },
         subscriptions: {
           where: {
             isActive: true,
@@ -50,18 +56,27 @@ export async function GET(
       return NextResponse.json({ error: 'Seller not found' }, { status: 404 });
     }
 
+    // Get default shop info
+    const defaultShop = seller.shops.length > 0 ? seller.shops[0] : null;
+
     // Format the response
     const activeSubscription = seller.subscriptions[0];
     const formattedSeller = {
       id: seller.id,
       username: seller.username,
       email: seller.email,
-      shopName: seller.shopName,
       bio: seller.bio,
       profileImage: seller.profileImage,
       isActive: seller.isActive,
       createdAt: seller.createdAt.toISOString(),
       updatedAt: seller.updatedAt.toISOString(),
+      // Include shop details
+      defaultShop: defaultShop ? {
+        id: defaultShop.id,
+        shopName: defaultShop.shopName,
+        instagramId: defaultShop.instagramId,
+        isActive: defaultShop.isActive,
+      } : null,
       subscription: activeSubscription
         ? {
             id: activeSubscription.id,
@@ -95,98 +110,111 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Await the params since it's now a Promise in Next.js 15
+    // Get the seller ID from params
     const resolvedParams = await params;
     const sellerId = resolvedParams.id;
-    
+
+    // Parse request body
     const body = await req.json();
-    const { username, email, password, shopName, bio, isActive } = body;
-
-    // Check if seller exists
-    const existingSeller = await prisma.seller.findUnique({
-      where: { id: sellerId },
-    });
-
-    if (!existingSeller) {
-      return NextResponse.json({ error: 'Seller not found' }, { status: 404 });
-    }
-
-    // Check for email uniqueness if email is being changed
-    if (email && email !== existingSeller.email) {
-      const sellerWithEmail = await prisma.seller.findUnique({
-        where: { email },
-      });
-      if (sellerWithEmail) {
-        return NextResponse.json(
-          { error: 'Email already in use' },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Check for username uniqueness and validity if username is being changed
-    if (username && username !== existingSeller.username) {
-      // Check if username is valid (not reserved or has invalid format)
-      const usernameError = validateUsername(username);
+    
+    // Prepare data for update
+    const updateData: any = {};
+    
+    // Handle username update
+    if (body.username) {
+      // Validate the username format
+      const usernameError = validateUsername(body.username);
       if (usernameError) {
-        return NextResponse.json({
-          error: usernameError
-        }, { status: 400 });
+        return NextResponse.json({ error: usernameError }, { status: 400 });
       }
       
-      const sellerWithUsername = await prisma.seller.findUnique({
-        where: { username },
+      // Check if username is already taken
+      const existingUser = await prisma.seller.findUnique({
+        where: { username: body.username },
       });
-      if (sellerWithUsername) {
-        return NextResponse.json(
-          { error: 'Username already in use' },
-          { status: 400 }
-        );
+      
+      if (existingUser && existingUser.id !== sellerId) {
+        return NextResponse.json({ error: 'Username already taken' }, { status: 400 });
+      }
+      
+      updateData.username = body.username;
+    }
+    
+    // Handle email update
+    if (body.email) {
+      // Check if email is already in use
+      const existingEmail = await prisma.seller.findUnique({
+        where: { email: body.email },
+      });
+      
+      if (existingEmail && existingEmail.id !== sellerId) {
+        return NextResponse.json({ error: 'Email already in use' }, { status: 400 });
+      }
+      
+      updateData.email = body.email;
+    }
+    
+    // Handle password update
+    if (body.password) {
+      if (body.password.length < 8) {
+        return NextResponse.json({ error: 'Password must be at least 8 characters long' }, { status: 400 });
+      }
+      
+      updateData.password = await bcrypt.hash(body.password, 10);
+    }
+    
+    // Handle other fields: bio, isActive, shopName
+    if (body.bio !== undefined) updateData.bio = body.bio;
+    if (body.isActive !== undefined) updateData.isActive = body.isActive;
+    
+    // Handle shop name update
+    if (body.shopName) {
+      // First find the default shop for this seller
+      const defaultShop = await prisma.sellerShop.findFirst({
+        where: {
+          sellerId,
+          isDefault: true
+        }
+      });
+      
+      if (defaultShop) {
+        // Update the shop name
+        await prisma.sellerShop.update({
+          where: { id: defaultShop.id },
+          data: { shopName: body.shopName }
+        });
+      } else {
+        // Create a new default shop if none exists
+        await prisma.sellerShop.create({
+          data: {
+            sellerId,
+            shopName: body.shopName,
+            isDefault: true,
+            isActive: true
+          }
+        });
       }
     }
-
-    // Define a proper type for the update data
-    interface SellerUpdateData {
-      username?: string;
-      email?: string;
-      shopName?: string;
-      bio?: string | null;
-      isActive?: boolean;
-      password?: string;
-    }
-
-    // Prepare update data
-    const updateData: SellerUpdateData = {};
-    if (username) updateData.username = username;
-    if (email) updateData.email = email;
-    if (shopName) updateData.shopName = shopName;
-    if (bio !== undefined) updateData.bio = bio;
-    if (isActive !== undefined) updateData.isActive = isActive;
-
-    // Hash password if provided
-    if (password) {
-      updateData.password = await bcrypt.hash(password, 10);
-    }
-
-    // Update seller
+    
+    // Update the seller
     const updatedSeller = await prisma.seller.update({
       where: { id: sellerId },
       data: updateData,
     });
-
+    
+    // Return updated seller without sensitive fields
     return NextResponse.json({
       id: updatedSeller.id,
       username: updatedSeller.username,
       email: updatedSeller.email,
-      shopName: updatedSeller.shopName,
       bio: updatedSeller.bio,
       isActive: updatedSeller.isActive,
-      updatedAt: updatedSeller.updatedAt,
     });
+    
   } catch (error) {
     console.error('Error updating seller:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to update seller' },
       { status: 500 }
     );
   }

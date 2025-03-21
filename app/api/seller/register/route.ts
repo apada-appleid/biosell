@@ -65,17 +65,30 @@ export async function POST(req: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
     
-    // Create new seller
-    const seller = await prisma.seller.create({
-      data: {
-        username,
-        email,
-        password: hashedPassword,
-        shopName,
-        // Save mobile number in bio temporarily as it's not in the schema
-        bio: `Mobile: ${mobile}`,
-        isActive: true
-      }
+    // Create new seller with transaction to ensure both seller and shop are created
+    const seller = await prisma.$transaction(async (tx) => {
+      // Create the seller
+      const newSeller = await tx.seller.create({
+        data: {
+          username,
+          email,
+          password: hashedPassword,
+          bio: `Mobile: ${mobile}`,
+          isActive: true
+        }
+      });
+      
+      // Create the first shop for this seller
+      await tx.sellerShop.create({
+        data: {
+          sellerId: newSeller.id,
+          shopName,
+          isDefault: true,
+          isActive: true
+        }
+      });
+      
+      return newSeller;
     });
     
     // Return seller data without sensitive information
@@ -84,8 +97,7 @@ export async function POST(req: NextRequest) {
       seller: {
         id: seller.id,
         username: seller.username,
-        email: seller.email,
-        shopName: seller.shopName
+        email: seller.email
       }
     });
     

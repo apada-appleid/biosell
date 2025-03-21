@@ -11,6 +11,8 @@ declare module 'next-auth/jwt' {
     type: 'admin' | 'seller' | 'customer';
     username?: string;
     mobile?: string | null;
+    shopId?: string | null; // Default shop ID for sellers
+    shopName?: string | null; // Default shop name for sellers
   }
 }
 
@@ -22,6 +24,8 @@ declare module 'next-auth' {
     type: 'admin' | 'seller' | 'customer';
     username?: string;
     mobile?: string | null;
+    shopId?: string | null; // Default shop ID for sellers
+    shopName?: string | null; // Default shop name for sellers
   }
   
   interface Session {
@@ -34,6 +38,8 @@ declare module 'next-auth' {
       type: 'admin' | 'seller' | 'customer';
       username?: string;
       mobile?: string | null;
+      shopId?: string | null; // Default shop ID for sellers
+      shopName?: string | null; // Default shop name for sellers
     }
   }
 }
@@ -150,12 +156,22 @@ const authOptions: NextAuthOptions = {
               throw new Error('Invalid credentials');
             }
 
+            // Find default shop for this seller
+            const defaultShop = await prisma.sellerShop.findFirst({
+              where: {
+                sellerId: seller.id,
+                isDefault: true
+              }
+            });
+
             return {
               id: seller.id,
-              name: seller.shopName,
+              name: defaultShop?.shopName || seller.username,
               email: seller.email,
               username: seller.username,
-              type: 'seller'
+              type: 'seller',
+              shopId: defaultShop?.id || null,
+              shopName: defaultShop?.shopName || null
             };
           }
         } catch (error) {
@@ -181,6 +197,8 @@ const authOptions: NextAuthOptions = {
         token.type = user.type;
         token.username = user.username;
         token.mobile = user.mobile || undefined;
+        token.shopId = user.shopId || undefined;
+        token.shopName = user.shopName || undefined;
       }
       return token;
     },
@@ -191,6 +209,8 @@ const authOptions: NextAuthOptions = {
         session.user.type = token.type;
         session.user.username = token.username;
         session.user.mobile = token.mobile;
+        session.user.shopId = token.shopId;
+        session.user.shopName = token.shopName;
       }
       return session;
     }

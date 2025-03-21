@@ -39,10 +39,21 @@ export async function GET(request: NextRequest) {
         id: true,
         username: true,
         email: true,
-        shopName: true,
         bio: true,
         profileImage: true,
         createdAt: true,
+        shops: {
+          where: {
+            isDefault: true,
+          },
+          select: {
+            id: true,
+            shopName: true,
+            instagramId: true,
+            isActive: true,
+          },
+          take: 1,
+        },
         subscriptions: {
           where: {
             isActive: true,
@@ -68,20 +79,43 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get additional stats
-    const productCount = await prisma.product.count({
-      where: { sellerId },
+    // Get the default shop info
+    const defaultShop = seller.shops && seller.shops.length > 0 ? seller.shops[0] : null;
+
+    // Get all shops for this seller
+    const shops = await prisma.sellerShop.findMany({
+      where: {
+        sellerId
+      },
+      select: {
+        id: true
+      }
     });
 
+    // Extract shop IDs
+    const shopIds = shops.map(shop => shop.id);
+
+    // Get product count across all shops
+    const productCount = await prisma.product.count({
+      where: { 
+        shopId: {
+          in: shopIds
+        }
+      },
+    });
+
+    // Get order count
     const orderCount = await prisma.order.count({
       where: { sellerId },
     });
 
     return NextResponse.json({
       ...seller,
+      defaultShop,
       stats: {
         productCount,
         orderCount,
+        shopsCount: shops.length
       },
     });
   } catch (error) {
@@ -135,32 +169,80 @@ export async function PATCH(request: NextRequest) {
 
     // Define a proper type for seller update data
     interface SellerUpdateData {
-      shopName?: string;
       bio?: string;
       email?: string;
     }
 
     // Create update object with only provided fields
     const updateData: SellerUpdateData = {};
-    if (shopName) updateData.shopName = shopName;
-    if (bio) updateData.bio = bio;
+    if (bio !== undefined) updateData.bio = bio;
     if (email) updateData.email = email;
 
     // Update seller profile
-    const updatedSeller = await prisma.seller.update({
-      where: { id: sellerId },
-      data: updateData,
-      select: {
-        id: true,
-        username: true,
-        email: true,
-        shopName: true,
-        bio: true,
-        profileImage: true,
-      },
+    const updatedSeller = await prisma.$transaction(async (tx) => {
+      // Update the seller
+      const seller = await tx.seller.update({
+        where: { id: sellerId },
+        data: updateData,
+        select: {
+          id: true,
+          username: true,
+          email: true,
+          bio: true,
+          profileImage: true,
+        },
+      });
+      
+      // Update the default shop name if provided
+      if (shopName) {
+        // Find the default shop
+        const defaultShop = await tx.sellerShop.findFirst({
+          where: {
+            sellerId,
+            isDefault: true
+          }
+        });
+        
+        if (defaultShop) {
+          // Update the shop name
+          await tx.sellerShop.update({
+            where: { id: defaultShop.id },
+            data: { shopName }
+          });
+        } else {
+          // Create a new default shop if none exists
+          await tx.sellerShop.create({
+            data: {
+              sellerId,
+              shopName,
+              isDefault: true,
+              isActive: true
+            }
+          });
+        }
+      }
+      
+      return seller;
     });
 
-    return NextResponse.json(updatedSeller);
+    // Fetch the updated shop to include in the response
+    const defaultShop = await prisma.sellerShop.findFirst({
+      where: {
+        sellerId,
+        isDefault: true
+      },
+      select: {
+        id: true,
+        shopName: true,
+        instagramId: true,
+        isActive: true
+      }
+    });
+
+    return NextResponse.json({
+      ...updatedSeller,
+      defaultShop
+    });
   } catch (error) {
     console.error("Error updating seller profile:", error);
     return NextResponse.json(

@@ -31,6 +31,7 @@ interface OrderData {
   orderNumber: string;
   customerId: string;
   sellerId: string;
+  shopId: string;
   status: string;
   total: number;
   paymentMethod: string;
@@ -71,6 +72,7 @@ interface OrderWithRelations {
   orderNumber: string;
   customerId: string;
   sellerId: string;
+  shopId: string;
   status: string;
   total: number;
   paymentMethod: string;
@@ -90,8 +92,11 @@ interface OrderWithRelations {
   };
   seller?: {
     id: string;
-    shopName: string;
     username: string;
+  };
+  shop?: {
+    id: string;
+    shopName: string;
   };
 }
 
@@ -227,11 +232,27 @@ export async function POST(request: NextRequest) {
       `${customerData.fullName}, ${customerData.deliveryMobile || customerData.mobile}, ${customerData.address}, ${customerData.city}, ${customerData.postalCode}, ${customerData.country || "ایران"}` : 
       null;
     
+    // Find the seller's default shop
+    const sellerDefaultShop = await prisma.sellerShop.findFirst({
+      where: {
+        sellerId,
+        isDefault: true,
+      },
+    });
+    
+    if (!sellerDefaultShop) {
+      return NextResponse.json(
+        { error: "Seller's shop not found" },
+        { status: 404 }
+      );
+    }
+
     // Create order data with base properties
     const orderData: OrderData = {
       orderNumber,
       customerId,
       sellerId,
+      shopId: sellerDefaultShop.id,
       status: "pending",
       total,
       paymentMethod: paymentMethod || "credit_card",

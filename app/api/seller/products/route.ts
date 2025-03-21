@@ -29,11 +29,41 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch all products belonging to this seller
-    const products = await prisma.product.findMany({
+    // Get query parameter for shop filtering
+    const shopId = request.nextUrl.searchParams.get('shopId');
+
+    // Get all shops for this seller
+    const shops = await prisma.sellerShop.findMany({
       where: {
-        sellerId: sellerId,
+        sellerId
       },
+      select: {
+        id: true
+      }
+    });
+
+    // Extract shop IDs
+    const shopIds = shops.map(shop => shop.id);
+    
+    if (shopIds.length === 0) {
+      return NextResponse.json({ products: [] });
+    }
+
+    // Build the query
+    const query: any = {
+      shop: {
+        sellerId
+      }
+    };
+    
+    // If shopId is provided and belongs to the seller, use it for filtering
+    if (shopId && shopIds.includes(shopId)) {
+      query.shopId = shopId;
+    }
+
+    // Fetch all products belonging to this seller's shops
+    const products = await prisma.product.findMany({
+      where: query,
       include: {
         images: {
           select: {
@@ -44,13 +74,19 @@ export async function GET(request: NextRequest) {
             order: 'asc',
           },
         },
+        shop: {
+          select: {
+            id: true,
+            shopName: true
+          }
+        }
       },
       orderBy: {
         createdAt: 'desc',
       },
     });
 
-    return NextResponse.json(products);
+    return NextResponse.json({ products });
     
   } catch (error) {
     console.error('Error fetching seller products:', error);
@@ -107,10 +143,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Count existing products
+    // Get all shops for this seller
+    const shops = await prisma.sellerShop.findMany({
+      where: { sellerId },
+      select: { id: true }
+    });
+    
+    const shopIds = shops.map(shop => shop.id);
+
+    // Count existing products across all shops
     const productCount = await prisma.product.count({
       where: {
-        sellerId: sellerId
+        shopId: {
+          in: shopIds
+        }
       }
     });
 
@@ -122,17 +168,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For a real implementation, we'd need to handle multipart form data
-    // This is simplified and assumes JSON data
+    // Parse request body
     const json = await request.json();
-    
-    const { title, description, price, inventory, isActive } = json;
+    const { title, description, price, inventory, isActive, shopId } = json;
 
     // Basic validation
     if (!title || !price) {
       return NextResponse.json(
         { error: 'Title and price are required' },
         { status: 400 }
+      );
+    }
+
+    if (!shopId) {
+      return NextResponse.json(
+        { error: 'Shop ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Verify the shop belongs to this seller
+    const shopBelongsToSeller = shopIds.includes(shopId);
+    if (!shopBelongsToSeller) {
+      return NextResponse.json(
+        { error: 'The specified shop does not belong to you' },
+        { status: 403 }
       );
     }
 
@@ -144,7 +204,7 @@ export async function POST(request: NextRequest) {
         price: Number(price),
         inventory: Number(inventory || 0),
         isActive: isActive ?? true,
-        sellerId
+        shopId
       }
     });
 

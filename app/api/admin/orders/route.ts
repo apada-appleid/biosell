@@ -39,8 +39,13 @@ export async function GET(request: NextRequest) {
         seller: {
           select: {
             id: true,
-            shopName: true,
             username: true,
+          },
+        },
+        shop: {
+          select: {
+            id: true,
+            shopName: true,
           },
         },
         customer: {

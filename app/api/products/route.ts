@@ -2,25 +2,61 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { NextRequest } from 'next/server';
 
-// GET - Fetch products by seller ID
+// GET - Fetch products by shop ID or seller ID
 export async function GET(request: NextRequest) {
   try {
     const sellerId = request.nextUrl.searchParams.get('sellerId');
+    const shopId = request.nextUrl.searchParams.get('shopId');
     
-    if (!sellerId) {
-      return NextResponse.json({ error: 'Seller ID is required' }, { status: 400 });
+    if (!sellerId && !shopId) {
+      return NextResponse.json({ error: 'Either Seller ID or Shop ID is required' }, { status: 400 });
     }
     
-    // Find active products for this seller with their images
+    let query: any = {
+      isActive: true
+    };
+    
+    // If shopId is provided, use that directly
+    if (shopId) {
+      query.shopId = shopId;
+    } 
+    // If only sellerId is provided, find the seller's default shop
+    else if (sellerId) {
+      const defaultShop = await prisma.sellerShop.findFirst({
+        where: {
+          sellerId,
+          isDefault: true
+        }
+      });
+      
+      if (!defaultShop) {
+        return NextResponse.json({ 
+          error: "Seller's default shop not found",
+          products: [] 
+        }, { status: 200 });
+      }
+      
+      query.shopId = defaultShop.id;
+    }
+    
+    // Find active products for this shop with their images
     const products = await prisma.product.findMany({
-      where: { 
-        sellerId,
-        isActive: true 
-      },
+      where: query,
       include: {
         images: {
           orderBy: {
             order: 'asc'
+          }
+        },
+        shop: {
+          select: {
+            shopName: true,
+            seller: {
+              select: {
+                id: true,
+                username: true
+              }
+            }
           }
         }
       },
