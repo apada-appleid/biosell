@@ -409,7 +409,80 @@ export default function CheckoutPage() {
       }
 
       // Get seller ID from cart
-      const sellerId = cart.items[0]?.product.sellerId;
+      // First convert to unknown then to our extended type to avoid type errors
+      const productInCart = cart.items[0]?.product;
+      console.log("Product in cart:", productInCart); // Debug log
+      
+      const product = productInCart as unknown as {
+        id: string;
+        sellerId?: string;
+        shopId?: string;
+        shop?: {
+          id?: string;
+          sellerId?: string;
+        }
+      };
+      
+      let sellerId = null;
+      
+      // Try all possible ways to get the sellerId
+      if (product?.sellerId) {
+        // Method 1: Direct sellerId property (old format)
+        sellerId = product.sellerId;
+        console.log("Found sellerId directly:", sellerId);
+      } else if (product?.shop?.sellerId) {
+        // Method 2: Through the shop object
+        sellerId = product.shop.sellerId;
+        console.log("Found sellerId through shop object:", sellerId);
+      } else if (product?.shopId) {
+        // Method 3: Fetch shop details using shopId
+        try {
+          // Use the public API endpoint instead of the seller-authenticated one
+          console.log("Fetching shop info for shopId:", product.shopId);
+          const response = await fetch(`/api/shops/${product.shopId}`);
+          if (response.ok) {
+            const data = await response.json();
+            sellerId = data.shop?.sellerId || null;
+            console.log("Found sellerId from API:", sellerId);
+          } else {
+            console.error("Shop API response not OK:", await response.text());
+          }
+        } catch (error) {
+          console.error("Error fetching shop:", error);
+        }
+      } else if (product?.shop?.id) {
+        // Method 4: Try using shop.id if shopId is not directly available
+        try {
+          console.log("Trying with shop.id:", product.shop.id);
+          const response = await fetch(`/api/shops/${product.shop.id}`);
+          if (response.ok) {
+            const data = await response.json();
+            sellerId = data.shop?.sellerId || null;
+            console.log("Found sellerId from API using shop.id:", sellerId);
+          }
+        } catch (error) {
+          console.error("Error fetching shop using shop.id:", error);
+        }
+      } else {
+        // Method 5: Last resort - try to fetch the product details directly
+        try {
+          if (product?.id) {
+            console.log("Last resort: fetching product directly:", product.id);
+            const response = await fetch(`/api/products/${product.id}`);
+            if (response.ok) {
+              const productData = await response.json();
+              if (productData.product?.shop?.sellerId) {
+                sellerId = productData.product.shop.sellerId;
+                console.log("Found sellerId from direct product API:", sellerId);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching product directly:", error);
+        }
+      }
+      
+      // If we still don't have a sellerId, throw an error
       if (!sellerId) {
         throw new Error("اطلاعات فروشنده یافت نشد.");
       }

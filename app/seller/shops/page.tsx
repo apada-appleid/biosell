@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import Link from "next/link";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import { motion } from "framer-motion";
+import { Copy, CheckCircle, Link as LinkIcon } from "lucide-react";
 
 interface Shop {
   id: string;
@@ -19,9 +21,11 @@ interface Shop {
 }
 
 export default function ShopsPage() {
+  const { data: session } = useSession();
   const [shops, setShops] = useState<Shop[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [copySuccess, setCopySuccess] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -45,6 +49,18 @@ export default function ShopsPage() {
     
     fetchShops();
   }, []);
+
+  const handleCopyShopLink = (shopId: string, instagramId: string | null) => {
+    if (!instagramId) return;
+    
+    const shopUrl = `biosell.me/${instagramId}`;
+    navigator.clipboard.writeText(shopUrl)
+      .then(() => {
+        setCopySuccess(shopId);
+        setTimeout(() => setCopySuccess(null), 2000);
+      })
+      .catch(err => console.error('Failed to copy: ', err));
+  };
 
   const navigateToEdit = (shopId: string) => {
     router.push(`/seller/shops/${shopId}`);
@@ -159,6 +175,57 @@ export default function ShopsPage() {
               </div>
               
               <div className="p-5 flex-grow">
+                <div className="border border-blue-100 rounded-lg p-3 mb-4 bg-blue-50">
+                  <h3 className="text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <LinkIcon className="h-4 w-4 text-blue-500 ml-1.5" />
+                    لینک فروشگاه
+                  </h3>
+                  {shop.instagramId ? (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <div className="relative flex-grow">
+                          <input 
+                            type="text" 
+                            readOnly
+                            value={`biosell.me/${shop.instagramId}`}
+                            className="py-1.5 px-2 border border-gray-300 bg-gray-50 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-left dir-ltr font-mono text-xs"
+                          />
+                        </div>
+                        <button 
+                          onClick={() => handleCopyShopLink(shop.id, shop.instagramId)}
+                          className="p-1.5 text-gray-600 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full bg-white h-8 w-8 flex items-center justify-center border border-gray-200"
+                          aria-label="کپی لینک"
+                        >
+                          {copySuccess === shop.id ? (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </button>
+                        {copySuccess === shop.id && (
+                          <span className="absolute text-xs text-green-600 -bottom-5 right-3">کپی شد!</span>
+                        )}
+                      </div>
+                      <div className="mt-2 text-center">
+                        <Link 
+                          href={`/${shop.instagramId}`}
+                          target="_blank"
+                          className="text-xs text-blue-600 hover:text-blue-800 hover:underline flex items-center justify-center"
+                        >
+                          <span>مشاهده فروشگاه</span>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                        </Link>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-sm text-gray-500 text-center py-2">
+                      برای ایجاد لینک، ابتدا آیدی اینستاگرام را در بخش ویرایش فروشگاه اضافه کنید.
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex justify-between items-center mb-3">
                   <div className="flex items-center text-sm text-gray-500">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

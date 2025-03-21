@@ -1,62 +1,66 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { NextRequest } from 'next/server';
 
 // GET - Fetch products by shop ID or seller ID
 export async function GET(request: NextRequest) {
   try {
-    const sellerId = request.nextUrl.searchParams.get('sellerId');
-    const shopId = request.nextUrl.searchParams.get('shopId');
+    // Get shopId and/or sellerId from query parameters
+    const url = new URL(request.url);
+    const shopId = url.searchParams.get('shopId');
+    const sellerId = url.searchParams.get('sellerId');
     
-    if (!sellerId && !shopId) {
-      return NextResponse.json({ error: 'Either Seller ID or Shop ID is required' }, { status: 400 });
-    }
-    
+    // Build the product query
     let query: any = {
-      isActive: true
+      deletedAt: null, // Filter out soft-deleted products
+      isActive: true // Only include active products
     };
     
-    // If shopId is provided, use that directly
+    // Add shop filtering if shopId is provided
     if (shopId) {
-      query.shopId = shopId;
-    } 
-    // If only sellerId is provided, find the seller's default shop
-    else if (sellerId) {
-      const defaultShop = await prisma.sellerShop.findFirst({
-        where: {
-          sellerId,
-          isDefault: true
+      // Find products where this is either the main shop or one of the display shops
+      query.OR = [
+        { shopId },
+        { 
+          shops: {
+            some: {
+              shopId
+            }
+          }
         }
-      });
-      
-      if (!defaultShop) {
-        return NextResponse.json({ 
-          error: "Seller's default shop not found",
-          products: [] 
-        }, { status: 200 });
-      }
-      
-      query.shopId = defaultShop.id;
+      ];
+    }
+    // Add seller filtering if sellerId is provided
+    else if (sellerId) {
+      query.shop = {
+        sellerId,
+        deletedAt: null // Filter out products from deleted shops
+      };
     }
     
-    // Find active products for this shop with their images
+    // Fetch products
     const products = await prisma.product.findMany({
       where: query,
       include: {
         images: {
+          select: {
+            id: true,
+            imageUrl: true,
+            order: true
+          },
           orderBy: {
             order: 'asc'
           }
         },
         shop: {
           select: {
+            id: true,
             shopName: true,
-            seller: {
-              select: {
-                id: true,
-                username: true
-              }
-            }
+            sellerId: true
+          }
+        },
+        shops: {
+          select: {
+            shopId: true
           }
         }
       },
@@ -65,10 +69,20 @@ export async function GET(request: NextRequest) {
       }
     });
     
-    // Return the products in the expected format
-    return NextResponse.json({
-      products: products
+    // Process products to include display shops
+    const processedProducts = products.map(product => {
+      // Extract shopIds from the product-shop mappings
+      const displayShops = product.shops ? product.shops.map((mapping: any) => mapping.shopId) : [];
+      
+      // Remove the shops array and add displayShops
+      const { shops, ...productWithoutShops } = product;
+      return {
+        ...productWithoutShops,
+        displayShops
+      };
     });
+    
+    return NextResponse.json({ products: processedProducts });
     
   } catch (error) {
     console.error('Error fetching products:', error);

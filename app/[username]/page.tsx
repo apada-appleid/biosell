@@ -27,13 +27,23 @@ import { useToastStore } from "@/app/store/toast";
 import { ensureValidImageUrl } from "@/utils/s3-storage";
 
 // تعریف انواع داده
+interface Shop {
+  id: string;
+  shopName: string;
+  instagramId?: string;
+  isActive: boolean;
+}
+
 interface Seller {
   id: string;
   username: string;
-  shopName: string;
   bio?: string;
   profileImage?: string;
   isActive: boolean;
+  shopId?: string;
+  shopName?: string; // For backward compatibility
+  instagramId?: string;
+  defaultShop?: Shop;
 }
 
 /**
@@ -103,32 +113,96 @@ export default function ShopPage() {
       try {
         if (!username) return;
         
-        // استفاده از API جدید که مستقیماً با نام کاربری کار می‌کند
-        const response = await fetch(`/api/${username}`);
+        let sellerData = null;
+        let error = null;
         
-        if (!response.ok) {
-          throw new Error("فروشنده یافت نشد");
+        // Method 1: Try the standard shop API
+        try {
+          const response = await fetch(`/api/shop/${username}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data && data.seller) {
+              sellerData = data.seller;
+            }
+          }
+        } catch (e) {
+          error = e;
+          console.error("Error with shop API:", e);
         }
         
-        const data = await response.json();
-        
-        if (!data.seller) {
-          throw new Error("فروشنده یافت نشد");
+        // Method 2: Try legacy API if method 1 fails
+        if (!sellerData) {
+          try {
+            const response = await fetch(`/api/${username}`);
+            if (response.ok) {
+              const data = await response.json();
+              if (data && data.seller) {
+                sellerData = data.seller;
+              }
+            }
+          } catch (e) {
+            error = e;
+            console.error("Error with legacy API:", e);
+          }
         }
         
-        setSeller(data.seller);
+        // Method 3: If both API methods fail, try the debug API
+        if (!sellerData) {
+          try {
+            const response = await fetch(`/api/debug?username=${username}`);
+            if (response.ok) {
+              const data = await response.json();
+              console.log("Debug data:", data);
+              
+              if (data.debug.anyShop) {
+                // If there's any shop, try to use it
+                const shop = data.debug.anyShop;
+                const sellerId = shop.sellerId;
+                
+                // Create a simple seller object with limited data
+                sellerData = {
+                  id: sellerId,
+                  username: username,
+                  bio: "",
+                  isActive: true,
+                  shopId: shop.id,
+                  shopName: shop.shopName,
+                  instagramId: shop.instagramId,
+                  defaultShop: shop
+                };
+              }
+            }
+          } catch (e) {
+            error = e;
+            console.error("Error with debug API:", e);
+          }
+        }
         
-        // پس از دریافت اطلاعات فروشنده، محصولات را دریافت می‌کنیم
-        await fetchProducts(data.seller.id);
+        // If we still don't have any data, show an error
+        if (!sellerData) {
+          throw new Error("فروشنده یا فروشگاه یافت نشد");
+        }
+        
+        // Set seller data
+        setSeller(sellerData);
+        
+        // Fetch products based on the shop ID
+        await fetchProducts(sellerData.shopId);
+        
       } catch (error) {
+        console.error("Error fetching seller data:", error);
         setError(error instanceof Error ? error.message : "خطا در دریافت اطلاعات فروشنده");
         setLoading(false);
       }
     };
     
-    const fetchProducts = async (sellerId: string) => {
+    const fetchProducts = async (shopId: string) => {
       try {
-        const response = await fetch(`/api/products?sellerId=${sellerId}`);
+        if (!shopId) {
+          throw new Error("شناسه فروشگاه نامعتبر است");
+        }
+        
+        const response = await fetch(`/api/products?shopId=${shopId}`);
         
         if (!response.ok) {
           throw new Error("خطا در دریافت محصولات");
@@ -139,8 +213,13 @@ export default function ShopPage() {
         // Make sure we're getting an array
         const productsList = Array.isArray(data.products) ? data.products : [];
         
+        // Filter out inactive or deleted products
+        const activeProducts = productsList.filter(
+          (product: any) => product.isActive && !product.deletedAt
+        );
+        
         // Process product images to ensure they have valid URLs
-        const processedProducts = productsList.map(processProductImages);
+        const processedProducts = activeProducts.map(processProductImages);
         
         setProducts(processedProducts);
       } catch (error) {
@@ -315,6 +394,22 @@ export default function ShopPage() {
     setTouchEnd(null);
   };
 
+  // Get shop name from either defaultShop or legacy shopName
+  const getShopName = () => {
+    if (seller?.defaultShop?.shopName) {
+      return seller.defaultShop.shopName;
+    }
+    return seller?.shopName || seller?.username || "";
+  };
+
+  // Get instagram ID from either defaultShop or legacy field
+  const getInstagramId = () => {
+    if (seller?.defaultShop?.instagramId) {
+      return seller.defaultShop.instagramId;
+    }
+    return seller?.instagramId || "";
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen py-12 px-4">
@@ -396,7 +491,7 @@ export default function ShopPage() {
             {seller?.profileImage ? (
               <Image
                 src={ensureValidImageUrl(seller.profileImage)}
-                alt={seller.shopName}
+                alt={getShopName()}
                 fill
                 sizes="80px"
                 className="object-cover"
@@ -425,12 +520,27 @@ export default function ShopPage() {
         
         {/* Shop Name & Bio - Only */}
         <div className="mt-3 max-w-screen-lg mx-auto">
-          <h2 className="text-gray-900 font-semibold text-base">{seller?.shopName || "Apple Players"}</h2>
+          <h2 className="text-gray-900 font-semibold text-base">{getShopName()}</h2>
           
           {seller?.bio ? (
             <p className="mt-1 text-gray-700 text-sm">{seller.bio}</p>
           ) : (
             <p className="mt-1 text-gray-700 text-sm">هرچیزی که اپلی باشه اینجا هست</p>
+          )}
+          
+          {/* Instagram link if available */}
+          {getInstagramId() && (
+            <div className="mt-2">
+              <a 
+                href={`https://instagram.com/${getInstagramId()}`} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-600 text-sm flex items-center hover:underline"
+              >
+                <ExternalLink className="h-3.5 w-3.5 ml-1" />
+                {getInstagramId()}
+              </a>
+            </div>
           )}
         </div>
       </div>

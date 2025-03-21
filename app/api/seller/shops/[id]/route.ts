@@ -43,7 +43,12 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ shop });
+    return NextResponse.json({
+      shop: {
+        ...shop,
+        sellerId: shop.sellerId
+      }
+    });
   } catch (error) {
     console.error("Error fetching shop:", error);
     return NextResponse.json(

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { NextRequest } from 'next/server';
 
-// GET - Fetch seller information by username from the URL path
+// GET - Fetch shop information by username or instagramId from the URL path
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ username: string }> }
@@ -13,28 +13,62 @@ export async function GET(
     if (!username) {
       return NextResponse.json({ error: 'Username is required' }, { status: 400 });
     }
-    
-    // Find seller by username with default shop
+
+    // First, check if a shop exists with this username as the Instagram ID
+    // This is more direct and might be what users expect
+    const shopByInstagram = await prisma.sellerShop.findFirst({
+      where: {
+        instagramId: username,
+        isActive: true,
+        deletedAt: null
+      },
+      include: {
+        seller: {
+          select: {
+            id: true,
+            username: true,
+            bio: true,
+            profileImage: true,
+            isActive: true
+          }
+        }
+      }
+    });
+
+    // If shop is found by Instagram ID
+    if (shopByInstagram && shopByInstagram.seller) {
+      return NextResponse.json({
+        seller: {
+          id: shopByInstagram.seller.id,
+          username: shopByInstagram.seller.username,
+          bio: shopByInstagram.seller.bio,
+          profileImage: shopByInstagram.seller.profileImage,
+          isActive: shopByInstagram.seller.isActive,
+          shopId: shopByInstagram.id,
+          shopName: shopByInstagram.shopName,
+          instagramId: shopByInstagram.instagramId,
+          defaultShop: {
+            id: shopByInstagram.id,
+            shopName: shopByInstagram.shopName,
+            instagramId: shopByInstagram.instagramId,
+            isActive: shopByInstagram.isActive
+          }
+        }
+      });
+    }
+
+    // If no shop found by Instagram ID, try finding by seller username
     const seller = await prisma.seller.findUnique({
-      where: { username },
+      where: { 
+        username,
+        isActive: true
+      },
       select: {
         id: true,
         username: true,
         bio: true,
         profileImage: true,
-        isActive: true,
-        shops: {
-          where: {
-            isDefault: true,
-          },
-          select: {
-            id: true,
-            shopName: true,
-            instagramId: true,
-            isActive: true,
-          },
-          take: 1
-        }
+        isActive: true
       }
     });
     
@@ -42,22 +76,56 @@ export async function GET(
       return NextResponse.json({ error: 'Seller not found' }, { status: 404 });
     }
     
-    // Check if seller is active
-    if (!seller.isActive) {
-      return NextResponse.json({ error: 'This seller is currently not active' }, { status: 403 });
-    }
+    // Find the default shop for this seller
+    const shop = await prisma.sellerShop.findFirst({
+      where: {
+        sellerId: seller.id,
+        isDefault: true,
+        isActive: true,
+        deletedAt: null
+      },
+      select: {
+        id: true,
+        shopName: true,
+        instagramId: true,
+        isActive: true
+      }
+    });
     
-    // Check if seller has a default shop
-    if (!seller.shops || seller.shops.length === 0) {
-      return NextResponse.json({ error: 'This seller has no active shop' }, { status: 404 });
-    }
-    
-    // Get the default shop
-    const defaultShop = seller.shops[0];
-    
-    // Check if the shop is active
-    if (!defaultShop.isActive) {
-      return NextResponse.json({ error: 'This shop is currently not active' }, { status: 403 });
+    if (!shop) {
+      // If no default shop, try to get any active shop from this seller
+      const anyShop = await prisma.sellerShop.findFirst({
+        where: {
+          sellerId: seller.id,
+          isActive: true,
+          deletedAt: null
+        },
+        select: {
+          id: true,
+          shopName: true,
+          instagramId: true,
+          isActive: true
+        }
+      });
+      
+      if (!anyShop) {
+        return NextResponse.json({ error: 'This seller has no active shop' }, { status: 404 });
+      }
+      
+      // Use any available shop
+      return NextResponse.json({
+        seller: {
+          id: seller.id,
+          username: seller.username,
+          bio: seller.bio,
+          profileImage: seller.profileImage,
+          isActive: seller.isActive,
+          shopId: anyShop.id,
+          shopName: anyShop.shopName,
+          instagramId: anyShop.instagramId,
+          defaultShop: anyShop
+        }
+      });
     }
     
     // Return the seller information with shop details
@@ -68,16 +136,17 @@ export async function GET(
         bio: seller.bio,
         profileImage: seller.profileImage,
         isActive: seller.isActive,
-        shopId: defaultShop.id,
-        shopName: defaultShop.shopName,
-        instagramId: defaultShop.instagramId
+        shopId: shop.id,
+        shopName: shop.shopName,
+        instagramId: shop.instagramId,
+        defaultShop: shop
       }
     });
     
   } catch (error) {
-    console.error('Error fetching seller:', error);
+    console.error('Error fetching shop:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch seller information' },
+      { error: 'Failed to fetch shop information' },
       { status: 500 }
     );
   }
