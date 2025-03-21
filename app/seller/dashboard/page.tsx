@@ -9,10 +9,7 @@ import {
   PlusCircle, 
   ArrowRight,
   Loader2,
-  ClipboardCheck,
-  Link as LinkIcon,
-  Copy,
-  CheckCircle
+  ClipboardCheck
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -52,7 +49,6 @@ export default function SellerDashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [copySuccess, setCopySuccess] = useState(false);
   
   useEffect(() => {
     const fetchDashboardStats = async () => {
@@ -76,18 +72,6 @@ export default function SellerDashboardPage() {
       fetchDashboardStats();
     }
   }, [status]);
-  
-  const handleCopyShopLink = () => {
-    if (!session?.user?.username) return;
-    
-    const shopUrl = `biosell.me/${session.user.username}`;
-    navigator.clipboard.writeText(shopUrl)
-      .then(() => {
-        setCopySuccess(true);
-        setTimeout(() => setCopySuccess(false), 2000);
-      })
-      .catch(err => console.error('Failed to copy: ', err));
-  };
   
   if (status === 'loading' || isLoading) {
     return (
@@ -222,55 +206,6 @@ export default function SellerDashboardPage() {
           >
             <ClipboardCheck className="h-5 w-5 text-blue-600 ml-3" />
             <span>مشاهده سفارشات</span>
-          </Link>
-        </div>
-      </div>
-      
-      {/* Shop link section */}
-      <div className="bg-white rounded-lg shadow mb-6 p-5 border border-blue-100">
-        <div className="flex flex-col md:flex-row items-start justify-between">
-          <div className="w-full md:w-4/5 mb-4 md:mb-0">
-            <h2 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
-              <LinkIcon className="h-5 w-5 text-blue-500 ml-2" />
-              لینک فروشگاه شما
-            </h2>
-            <p className="text-gray-700 mb-3">
-              این لینک را در بیوی اینستاگرام خود قرار دهید تا مشتریان به فروشگاه شما دسترسی داشته باشند.
-            </p>
-            <div className="flex items-center space-x-2 space-x-reverse">
-              <div className="relative flex-grow">
-                <input 
-                  type="text" 
-                  readOnly
-                  value={session?.user?.username ? `biosell.me/${session.user.username}` : 'در حال بارگذاری...'}
-                  className="py-2 px-3 border border-gray-300 bg-gray-50 rounded-lg w-full text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-left dir-ltr font-mono text-sm"
-                />
-              </div>
-              <button 
-                onClick={handleCopyShopLink}
-                className="p-2 text-gray-600 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full bg-gray-100 h-10 w-10 flex items-center justify-center"
-                aria-label="کپی لینک"
-              >
-                {copySuccess ? (
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                ) : (
-                  <Copy className="h-5 w-5" />
-                )}
-              </button>
-              {copySuccess && (
-                <span className="absolute text-xs text-green-600 mt-12 right-0">لینک کپی شد!</span>
-              )}
-            </div>
-          </div>
-          <Link 
-            href={`/${session?.user?.username}`} 
-            target="_blank"
-            className="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center w-full md:w-auto"
-          >
-            <span>مشاهده فروشگاه</span>
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
           </Link>
         </div>
       </div>
