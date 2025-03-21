@@ -462,7 +462,7 @@ export default function ShopPage() {
           </div>
           
           <div className="flex-1 text-center">
-            <h1 className="text-gray-900 text-base font-normal">{seller?.username || username}</h1>
+            <h1 className="text-gray-900 text-base font-normal">{getInstagramId() || seller?.shopName || username}</h1>
           </div>
           
           <div className="w-10 flex justify-end">

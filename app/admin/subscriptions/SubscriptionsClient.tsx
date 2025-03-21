@@ -162,7 +162,7 @@ export default function SubscriptionsClient() {
               <tr key={subscription.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap text-right">
                   <div className="text-sm font-medium text-gray-900">{subscription.seller.shopName}</div>
-                  <div className="text-sm text-gray-500">@{subscription.seller.username}</div>
+                  <div className="text-sm text-gray-500">{subscription.seller.username}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right">
                   <div className="text-sm font-medium text-gray-900">{subscription.plan.name}</div>
@@ -200,7 +200,7 @@ export default function SubscriptionsClient() {
               <div className="text-sm font-medium text-gray-900">{subscription.seller.shopName}</div>
               {getStatusBadge(subscription)}
             </div>
-            <div className="text-xs text-gray-500 mb-3">@{subscription.seller.username}</div>
+            <div className="text-xs text-gray-500 mb-3">{subscription.seller.username}</div>
             
             <div className="flex items-center text-xs text-gray-600 mb-2">
               <Package className="h-3.5 w-3.5 ml-1 text-gray-500" />

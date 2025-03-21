@@ -296,7 +296,7 @@ export default function SubscriptionsClient() {
                 <tr key={subscription.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{subscription.sellerShopName || subscription.seller?.shopName || ''}</div>
-                    <div className="text-sm text-gray-500">@{subscription.sellerUsername || subscription.seller?.username || ''}</div>
+                    <div className="text-sm text-gray-500">{subscription.sellerUsername || subscription.seller?.username || ''}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <div className="font-medium">{subscription.planName || subscription.plan?.name || ''}</div>
@@ -351,7 +351,7 @@ export default function SubscriptionsClient() {
                   <div className="flex justify-between items-start">
                     <div>
                       <div className="text-sm font-medium">{subscription.sellerShopName || subscription.seller?.shopName || ''}</div>
-                      <div className="text-xs text-gray-500">@{subscription.sellerUsername || subscription.seller?.username || ''}</div>
+                      <div className="text-xs text-gray-500">{subscription.sellerUsername || subscription.seller?.username || ''}</div>
                     </div>
                     <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${status.color}`}>
                       {status.text}

@@ -28,6 +28,11 @@ export const RESERVED_USERNAMES = [
 export function isValidUsername(username: string): boolean {
   if (!username) return false;
   
+  // Check if the username is a mobile number (starts with 09 followed by 9 digits)
+  if (/^09\d{9}$/.test(username)) {
+    return true;
+  }
+  
   // نام کاربری نباید در لیست نام‌های کاربری ممنوعه باشد (با در نظر گرفتن حروف کوچک و بزرگ)
   const lowercaseUsername = username.toLowerCase();
   if (RESERVED_USERNAMES.includes(lowercaseUsername)) {
@@ -56,6 +61,11 @@ export function isValidUsername(username: string): boolean {
 export function validateUsername(username: string): string | null {
   if (!username) {
     return 'Username is required';
+  }
+  
+  // Check if the username is a mobile number (starts with 09 followed by 9 digits)
+  if (/^09\d{9}$/.test(username)) {
+    return null; // Mobile numbers are valid usernames
   }
   
   if (username.length < 3) {

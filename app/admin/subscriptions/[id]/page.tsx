@@ -263,7 +263,7 @@ export default function SubscriptionDetailsPage({ params }: { params: Promise<{ 
             </div>
             <div>
               <h2 className="text-lg font-medium text-gray-900">{subscription.seller.shopName}</h2>
-              <p className="text-sm text-gray-600">@{subscription.seller.username}</p>
+              <p className="text-sm text-gray-600">{subscription.seller.username}</p>
             </div>
           </div>
           <button

@@ -22,12 +22,38 @@ export default function PlansPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [hasPendingSubscription, setHasPendingSubscription] = useState(false);
   
   useEffect(() => {
     // If the user is logged in and is a seller with an active subscription, redirect to dashboard
     if (status === 'authenticated' && session?.user?.type === 'seller') {
-      // Here you would check if user has an active subscription
-      // and redirect if needed
+      // Check if user has a pending subscription
+      const checkPendingSubscription = async () => {
+        try {
+          const response = await fetch('/api/seller/subscriptions');
+          const data = await response.json();
+          
+          if (data.success && data.subscriptions) {
+            // Check if there is any pending subscription
+            const pending = data.subscriptions.find((sub: any) => 
+              sub.payments && 
+              sub.payments.length > 0 && 
+              sub.payments[0].status === 'pending'
+            );
+            
+            setHasPendingSubscription(!!pending);
+            
+            // If there's a pending subscription, show error message
+            if (pending) {
+              setError('شما یک درخواست ارتقای پلن در انتظار بررسی دارید. لطفاً پس از تایید یا رد درخواست فعلی، اقدام به خرید پلن جدید نمایید.');
+            }
+          }
+        } catch (err) {
+          console.error('Error checking pending subscription:', err);
+        }
+      };
+      
+      checkPendingSubscription();
     }
     
     // Fetch plans from the API
@@ -64,6 +90,11 @@ export default function PlansPage() {
   const handleSubmit = () => {
     if (!selectedPlan) {
       setError('لطفاً یک پلن را انتخاب کنید');
+      return;
+    }
+    
+    if (hasPendingSubscription) {
+      setError('شما یک درخواست ارتقای پلن در انتظار بررسی دارید. لطفاً پس از تایید یا رد درخواست فعلی، اقدام به خرید پلن جدید نمایید.');
       return;
     }
     
@@ -173,11 +204,11 @@ export default function PlansPage() {
         <div className="flex flex-col items-center">
           <button
             type="button"
-            disabled={!selectedPlan || isLoading}
+            disabled={!selectedPlan || isLoading || hasPendingSubscription}
             className="bg-gradient-to-r from-indigo-600 to-blue-500 text-white py-4 px-10 rounded-xl text-xl hover:from-indigo-700 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300 font-medium disabled:opacity-70 disabled:cursor-not-allowed shadow-lg"
             onClick={handleSubmit}
           >
-            ادامه و پرداخت
+            {hasPendingSubscription ? 'در انتظار بررسی درخواست قبلی' : 'ادامه و پرداخت'}
           </button>
           
           <p className="mt-6 text-gray-600 max-w-md text-center text-lg">

@@ -38,6 +38,7 @@ export default function SellerSubscriptionsPage() {
   const [error, setError] = useState<string | null>(null);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [currentSubscription, setCurrentSubscription] = useState<Subscription | null>(null);
+  const [hasPendingSubscription, setHasPendingSubscription] = useState(false);
   
   useEffect(() => {
     // If not authenticated, redirect to login
@@ -70,6 +71,15 @@ export default function SellerSubscriptionsPage() {
         if (active) {
           setCurrentSubscription(active);
         }
+        
+        // Check if there is any pending subscription
+        const pending = data.subscriptions.find((sub: Subscription) => 
+          sub.payments && 
+          sub.payments.length > 0 && 
+          sub.payments[0].status === 'pending'
+        );
+        
+        setHasPendingSubscription(!!pending);
       } else {
         setError(data.message || 'خطا در دریافت اطلاعات اشتراک‌ها');
       }
@@ -213,12 +223,56 @@ export default function SellerSubscriptionsPage() {
               </div>
               
               <div className="flex justify-center mt-8">
-                <Link
-                  href="/seller/plans"
-                  className="px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
-                >
-                  ارتقای پلن
-                </Link>
+                {hasPendingSubscription ? (
+                  <div className="px-6 py-3 bg-yellow-100 text-yellow-800 font-medium rounded-lg border border-yellow-200 text-center">
+                    <span className="flex items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      شما یک درخواست ارتقای پلن در انتظار بررسی دارید
+                    </span>
+                    <p className="text-sm mt-2">پس از تایید مدیر سیستم، اشتراک شما فعال خواهد شد</p>
+                  </div>
+                ) : (
+                  <Link
+                    href="/seller/plans"
+                    className="px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                  >
+                    ارتقای پلن
+                  </Link>
+                )}
+              </div>
+            </div>
+          ) : hasPendingSubscription ? (
+            <div className="text-center py-6">
+              <div className="bg-amber-50 rounded-xl p-6 border border-amber-200 mb-6">
+                <div className="flex justify-center mb-4">
+                  <div className="rounded-full bg-amber-100 p-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-3">اشتراک شما در انتظار بررسی است</h3>
+                <p className="text-gray-700 mb-4">
+                  درخواست اشتراک شما ثبت شده و در صف بررسی قرار دارد. پس از تایید توسط مدیر سیستم، اشتراک شما فعال خواهد شد.
+                </p>
+                <div className="flex items-center justify-center space-x-2 space-x-reverse">
+                  <div className="h-2 w-2 bg-amber-500 rounded-full animate-pulse"></div>
+                  <div className="h-2 w-2 bg-amber-500 rounded-full animate-pulse delay-150"></div>
+                  <div className="h-2 w-2 bg-amber-500 rounded-full animate-pulse delay-300"></div>
+                </div>
+              </div>
+              
+              <div className="bg-blue-50 rounded-xl p-5 border border-blue-100">
+                <div className="flex items-start text-right">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-500 mt-0.5 ml-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-sm text-blue-700">
+                    لطفاً تا زمان بررسی درخواست شکیبا باشید. در صورت نیاز به اطلاعات بیشتر، کارشناسان ما با شما تماس خواهند گرفت.
+                  </p>
+                </div>
               </div>
             </div>
           ) : (
@@ -248,7 +302,8 @@ export default function SellerSubscriptionsPage() {
             <h2 className="text-xl font-bold text-gray-900">تاریخچه اشتراک‌ها</h2>
           </div>
           
-          <div className="overflow-x-auto">
+          {/* Desktop view - table */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -307,6 +362,43 @@ export default function SellerSubscriptionsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+          
+          {/* Mobile view - cards */}
+          <div className="md:hidden">
+            <div className="divide-y divide-gray-200">
+              {subscriptions.map((subscription) => (
+                <div key={subscription.id} className="p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="text-base font-semibold text-gray-900">{subscription.plan.name}</h3>
+                    {subscription.payments && subscription.payments[0] ? (
+                      <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusClass(subscription.payments[0].status)}`}>
+                        {getStatusText(subscription.payments[0].status)}
+                      </span>
+                    ) : (
+                      <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                        {subscription.isActive ? 'فعال' : 'غیرفعال'}
+                      </span>
+                    )}
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <div className="text-gray-500">تاریخ شروع</div>
+                      <div className="font-medium mt-1">{formatDate(subscription.startDate)}</div>
+                    </div>
+                    <div>
+                      <div className="text-gray-500">تاریخ پایان</div>
+                      <div className="font-medium mt-1">{formatDate(subscription.endDate)}</div>
+                    </div>
+                    <div className="col-span-2 mt-2">
+                      <div className="text-gray-500">مبلغ</div>
+                      <div className="font-medium mt-1">{formatPrice(subscription.plan.price)} تومان</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}

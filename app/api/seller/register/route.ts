@@ -14,21 +14,6 @@ const sellerRegisterSchema = z.object({
   mobile: z.string().regex(/^09\d{9}$/, "Invalid mobile number format"),
 });
 
-// Generate a random username based on shop name with a random suffix
-const generateUsername = (shopName: string): string => {
-  // Remove non-alphanumeric characters, replace spaces with underscores, and lowercase
-  const base = shopName.toLowerCase().replace(/[^a-z0-9_]/g, '').replace(/\s+/g, '_');
-  
-  // Add random suffix
-  const randomSuffix = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-  
-  // Keep the base username within character limits and append the suffix
-  const maxBaseLength = 20; // Max username length - suffix length - underscore
-  const trimmedBase = base.slice(0, maxBaseLength);
-  
-  return `${trimmedBase}_${randomSuffix}`;
-};
-
 export async function POST(req: NextRequest) {
   try {
     // Parse request body
@@ -49,41 +34,23 @@ export async function POST(req: NextRequest) {
     // Remove @ from Instagram ID if present
     const instagramId = rawInstagramId.startsWith('@') ? rawInstagramId.substring(1) : rawInstagramId;
     
-    // Generate a username based on shop name
-    let username = generateUsername(shopName);
-    let isUsernameAvailable = false;
-    let attempts = 0;
-    
-    // Ensure username is unique
-    while (!isUsernameAvailable && attempts < 5) {
-      const existingUsername = await prisma.seller.findUnique({
-        where: { username }
-      });
-      
-      if (!existingUsername) {
-        isUsernameAvailable = true;
-      } else {
-        // Try a different random suffix
-        username = generateUsername(shopName);
-        attempts++;
+    // Check if seller's mobile already exists by looking at bio field
+    const existingSellerWithMobile = await prisma.seller.findFirst({
+      where: {
+        bio: {
+          contains: mobile
+        }
       }
-    }
+    });
     
-    // If we couldn't generate a unique username after multiple attempts, use a timestamp
-    if (!isUsernameAvailable) {
-      username = `user_${Date.now()}`;
-    }
-    
-    // Check if username is valid (not reserved or has invalid format)
-    const usernameError = validateUsername(username);
-    if (usernameError) {
+    if (existingSellerWithMobile) {
       return NextResponse.json({
         success: false,
-        error: usernameError
+        error: "این شماره موبایل قبلاً ثبت شده است"
       }, { status: 400 });
     }
     
-    // Check if seller already exists
+    // Check if seller already exists with this email
     const existingEmail = await prisma.seller.findUnique({
       where: { email }
     });
@@ -115,10 +82,10 @@ export async function POST(req: NextRequest) {
     
     // Create new seller with transaction to ensure both seller and shop are created
     const seller = await prisma.$transaction(async (tx) => {
-      // Create the seller
+      // Create the seller - use the mobile number as username
       const newSeller = await tx.seller.create({
         data: {
-          username,
+          username: mobile, // Use mobile as username
           email,
           password: hashedPassword,
           bio: `Mobile: ${mobile}`,

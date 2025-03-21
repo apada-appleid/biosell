@@ -11,7 +11,7 @@ type Product = {
   price: number;
   inventory: number;
   isActive: boolean;
-  seller: {
+  seller?: {
     id: string;
     shopName: string;
   };
@@ -144,7 +144,7 @@ export default function ProductsPage() {
     })
     .filter((product) =>
       product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.seller.shopName.toLowerCase().includes(searchQuery.toLowerCase())
+      (product.seller?.shopName.toLowerCase().includes(searchQuery.toLowerCase()) || false)
     );
 
   if (isLoading) {
@@ -246,9 +246,13 @@ export default function ProductsPage() {
                                 </div>
                               </td>
                               <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                <Link href={`/admin/sellers/${product.seller.id}`} className="text-blue-600 hover:text-blue-900">
-                                  <span className="break-words max-w-[100px] sm:max-w-full inline-block">{product.seller.shopName}</span>
-                                </Link>
+                                {product.seller ? (
+                                  <Link href={`/admin/sellers/${product.seller.id}`} className="text-blue-600 hover:text-blue-900">
+                                    <span className="break-words max-w-[100px] sm:max-w-full inline-block">{product.seller.shopName}</span>
+                                  </Link>
+                                ) : (
+                                  <span className="text-gray-500">فروشنده حذف شده</span>
+                                )}
                               </td>
                               <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                                 {formatPrice(product.price)}
@@ -328,9 +332,13 @@ export default function ProductsPage() {
                         </div>
                         <div className="mr-4 flex-1">
                           <h3 className="font-medium text-gray-900 text-base">{product.title}</h3>
-                          <Link href={`/admin/sellers/${product.seller.id}`} className="text-blue-600 hover:text-blue-900 text-sm block mt-1">
-                            {product.seller.shopName}
-                          </Link>
+                          {product.seller ? (
+                            <Link href={`/admin/sellers/${product.seller.id}`} className="text-blue-600 hover:text-blue-900 text-sm block mt-1">
+                              {product.seller.shopName}
+                            </Link>
+                          ) : (
+                            <span className="text-gray-500 text-sm block mt-1">فروشنده حذف شده</span>
+                          )}
                         </div>
                         <div>
                           <span

@@ -388,25 +388,26 @@ export default function EditSellerPage({
 
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 gap-y-8 gap-x-6 sm:grid-cols-6">
-              {/* نام کاربری و ایمیل */}
+              {/* شماره موبایل و ایمیل */}
               <div className="sm:col-span-3">
                 <label
-                  htmlFor="username"
+                  htmlFor="mobile"
                   className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  نام کاربری
+                  شماره موبایل
                 </label>
                 <div>
                   <input
                     type="text"
-                    name="username"
-                    id="username"
-                    value={formData.username}
-                    onChange={handleChange}
-                    className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full text-sm border-gray-300 rounded-md p-3"
-                    dir="rtl"
+                    name="mobile"
+                    id="mobile"
+                    value={seller.username}
+                    disabled
+                    className="shadow-sm bg-gray-100 block w-full text-sm border-gray-300 rounded-md p-3"
+                    dir="ltr"
                   />
                 </div>
+                <p className="mt-1 text-xs text-gray-500">شماره موبایل قابل ویرایش نیست.</p>
               </div>
 
               <div className="sm:col-span-3">

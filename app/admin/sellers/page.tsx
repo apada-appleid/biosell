@@ -236,7 +236,6 @@ export default function SellersPage() {
   const filteredSellers = sellers.filter(
     seller => 
       seller.shopName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      seller.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
       seller.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -264,7 +263,7 @@ export default function SellersPage() {
         </div>
         <input
           type="text"
-          placeholder="جستجو براساس نام، ایمیل یا نام فروشگاه..."
+          placeholder="جستجو براساس نام فروشگاه یا ایمیل..."
           className="block w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md"
           value={searchQuery}
           onChange={handleSearchChange}
@@ -281,7 +280,7 @@ export default function SellersPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="py-3 px-4 text-right text-sm font-medium text-gray-500 tracking-wider">نام فروشگاه</th>
-                <th className="py-3 px-4 text-right text-sm font-medium text-gray-500 tracking-wider">نام کاربری</th>
+                <th className="py-3 px-4 text-right text-sm font-medium text-gray-500 tracking-wider">موبایل</th>
                 <th className="py-3 px-4 text-right text-sm font-medium text-gray-500 tracking-wider">ایمیل</th>
                 <th className="py-3 px-4 text-right text-sm font-medium text-gray-500 tracking-wider">وضعیت</th>
                 <th className="py-3 px-4 text-right text-sm font-medium text-gray-500 tracking-wider">اشتراک</th>

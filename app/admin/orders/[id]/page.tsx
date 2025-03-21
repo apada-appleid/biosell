@@ -260,7 +260,7 @@ export default function AdminOrderDetailsPage({ params }: { params: Promise<{ id
                 <Link href={`/admin/sellers/${order.seller.id}`} className="text-blue-600 hover:text-blue-800">
                   {order.seller.shopName}
                 </Link>
-                <div className="text-gray-500 text-sm mt-1">@{order.seller.username}</div>
+                <div className="text-gray-500 text-sm mt-1">{order.seller.username}</div>
               </dd>
             </div>
             {order.shippingAddress && (

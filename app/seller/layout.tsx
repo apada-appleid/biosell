@@ -11,7 +11,8 @@ import {
   TbMenu2,
   TbX,
   TbClipboardList,
-  TbBuildingStore
+  TbBuildingStore,
+  TbCreditCard
 } from 'react-icons/tb';
 
 const navigation = [
@@ -19,6 +20,7 @@ const navigation = [
   { name: 'فروشگاه‌ها', href: '/seller/shops', icon: TbBuildingStore },
   { name: 'محصولات', href: '/seller/products', icon: TbShoppingBag },
   { name: 'مشاهده سفارش‌ها', href: '/seller/orders', icon: TbClipboardList },
+  { name: 'اشتراک‌ها', href: '/seller/subscriptions', icon: TbCreditCard },
 ];
 
 // مسیرهایی که نیاز به احراز هویت ندارند
