@@ -45,9 +45,21 @@ export async function GET(request: NextRequest) {
         ...subscription,
         plan: {
           ...subscription.plan,
-          features: typeof subscription.plan.features === 'string' 
-            ? JSON.parse(subscription.plan.features as string) 
-            : subscription.plan.features
+          features: (() => {
+            let features = [];
+            try {
+              if (typeof subscription.plan.features === 'string') {
+                features = JSON.parse(subscription.plan.features);
+              } else if (Array.isArray(subscription.plan.features)) {
+                features = subscription.plan.features;
+              } else if (subscription.plan.features && typeof subscription.plan.features === 'object') {
+                features = Object.values(subscription.plan.features as Record<string, any>);
+              }
+            } catch (error) {
+              console.error(`Error parsing features for plan ${subscription.plan.id}:`, error);
+            }
+            return Array.isArray(features) ? features : [];
+          })()
         }
       };
       

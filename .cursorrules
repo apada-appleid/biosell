@@ -245,3 +245,59 @@ Follow these rules when you write code:
 - In Next.js App Router, await dynamic route parameters using the Promise type pattern.
 - For S3 signed URLs, use appropriate expiration times (12 hours/43200 seconds for receipts).
 - Never import modules that aren't used in the component or file. Regularly clean up unused imports to keep code clean and performance optimal.
+
+## JSON Field Handling
+- When working with Prisma JSON fields, always ensure proper parsing and validation:
+  ```typescript
+  // Robust handling for JSON fields (like plan.features)
+  const processJsonField = (jsonData: any) => {
+    let result = [];
+    
+    try {
+      if (typeof jsonData === 'string') {
+        // Parse JSON strings
+        result = JSON.parse(jsonData);
+      } else if (Array.isArray(jsonData)) {
+        // Use array as-is
+        result = jsonData;
+      } else if (jsonData && typeof jsonData === 'object') {
+        // Convert objects to arrays if needed
+        result = Object.values(jsonData as Record<string, any>);
+      }
+    } catch (error) {
+      console.error('Error processing JSON data:', error);
+      result = [];
+    }
+    
+    // Always return an array to ensure consistent interface
+    return Array.isArray(result) ? result : [];
+  };
+  ```
+
+- In React components, always check if JSON-derived props are arrays before using array methods:
+  ```jsx
+  // CORRECT ✅
+  {Array.isArray(plan.features) ? (
+    plan.features.map((feature, index) => (
+      <li key={index}>{feature}</li>
+    ))
+  ) : (
+    <li>Default feature</li>
+  )}
+  
+  // INCORRECT ❌
+  {plan.features.map((feature, index) => (
+    <li key={index}>{feature}</li>
+  ))}
+  ```
+
+- In API routes that return JSON fields, transform the data to ensure consistent types:
+  ```typescript
+  // Process plans to ensure features is an array
+  const processedPlans = plans.map(plan => ({
+    ...plan,
+    features: processJsonField(plan.features)
+  }));
+  
+  return NextResponse.json(processedPlans);
+  ```

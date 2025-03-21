@@ -11,12 +11,28 @@ export async function GET(request: NextRequest) {
     const id = url.searchParams.get('id');
     
     // Transform the features from JSON to array for a plan
-    const transformPlan = (plan: any) => ({
-      ...plan,
-      features: typeof plan.features === 'string' 
-        ? JSON.parse(plan.features as string) 
-        : plan.features
-    });
+    const transformPlan = (plan: any) => {
+      let features = [];
+      
+      try {
+        if (typeof plan.features === 'string') {
+          features = JSON.parse(plan.features);
+        } else if (Array.isArray(plan.features)) {
+          features = plan.features;
+        } else if (plan.features && typeof plan.features === 'object') {
+          // If it's a non-null object but not an array, convert to array format
+          features = Object.values(plan.features as Record<string, any>);
+        }
+      } catch (error) {
+        console.error(`Error parsing features for plan ${plan.id}:`, error);
+        features = [];
+      }
+      
+      return {
+        ...plan,
+        features: Array.isArray(features) ? features : [],
+      };
+    };
     
     // If ID is provided, get a specific plan
     if (id) {

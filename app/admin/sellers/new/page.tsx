@@ -350,12 +350,19 @@ export default function NewSellerPage() {
                         <span className="text-sm font-normal text-gray-500"> / ماهیانه</span>
                       </p>
                       <ul className="mt-4 space-y-2 text-sm text-gray-700">
-                        {plan.features.map((feature, index) => (
-                          <li key={index} className="flex items-start">
+                        {Array.isArray(plan.features) ? (
+                          plan.features.map((feature, index) => (
+                            <li key={index} className="flex items-start">
+                              <span className="ml-2 text-green-500">✓</span>
+                              <span>{feature}</span>
+                            </li>
+                          ))
+                        ) : (
+                          <li className="flex items-start">
                             <span className="ml-2 text-green-500">✓</span>
-                            <span>{feature}</span>
+                            <span>دسترسی به ویژگی‌های پایه</span>
                           </li>
-                        ))}
+                        )}
                       </ul>
                     </label>
                   </div>

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
+import { CheckIcon } from '@heroicons/react/24/outline';
 
 // Define types
 type Plan = {
@@ -135,15 +136,20 @@ export default function PlansPage() {
                 
                 <div className="h-px bg-gray-200 w-full my-6"></div>
                 
-                <ul className="mb-8 flex-grow">
-                  {plan.features.map((feature, idx) => (
-                    <li key={idx} className="flex items-center mb-4">
-                      <svg className="h-5 w-5 text-green-500 ml-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                      </svg>
-                      <span className="text-gray-700">{feature}</span>
-                    </li>
-                  ))}
+                <ul className="my-5 space-y-2.5 text-sm">
+                  {Array.isArray(plan.features) ?
+                    plan.features.map((feature, idx) => (
+                      <li key={idx} className="flex items-start">
+                        <CheckIcon className="h-5 w-5 text-green-500 shrink-0 ml-2" />
+                        <span>{feature}</span>
+                      </li>
+                    )) : (
+                      <li className="flex items-start">
+                        <CheckIcon className="h-5 w-5 text-green-500 shrink-0 ml-2" />
+                        <span>دسترسی به ویژگی‌های پایه</span>
+                      </li>
+                    )
+                  }
                 </ul>
                 
                 <button

@@ -19,8 +19,8 @@ interface ProductFormData {
   inventory: string;
   isActive: boolean;
   images: ProductImage[];
-  shopId: string; // Main shop ID 
-  shopIds: string[]; // Additional shop IDs for display in multiple shops
+  shopId: string;
+  shopIds: string[];
 }
 
 export default function NewProductPage() {
@@ -92,13 +92,22 @@ export default function NewProductPage() {
           if (data.shops && data.shops.length > 0) {
             setShops(data.shops);
             
-            // Find default shop or use the first one
-            const defaultShop = data.shops.find((shop: any) => shop.isDefault) || data.shops[0];
-            setFormData(prev => ({
-              ...prev,
-              shopId: defaultShop.id,
-              shopIds: [defaultShop.id]
-            }));
+            // If there's only one shop, automatically select it
+            if (data.shops.length === 1) {
+              setFormData(prev => ({
+                ...prev,
+                shopId: data.shops[0].id,
+                shopIds: [data.shops[0].id]
+              }));
+            } else {
+              // Find default shop or use the first one for multiple shops
+              const defaultShop = data.shops.find((shop: any) => shop.isDefault) || data.shops[0];
+              setFormData(prev => ({
+                ...prev,
+                shopId: defaultShop.id,
+                shopIds: [defaultShop.id]
+              }));
+            }
           }
         } catch (error) {
           console.error('Error fetching shops:', error);
@@ -535,16 +544,27 @@ export default function NewProductPage() {
           
           {/* Shop Selection */}
           <div className="space-y-4 mt-6">
-            <div>
-              <label htmlFor="shopId" className="block text-sm font-medium text-gray-700">
-                فروشگاه اصلی <span className="text-red-500">*</span>
-              </label>
-              {loadingShops ? (
-                <div className="flex items-center mt-1">
-                  <Loader2 className="h-5 w-5 text-gray-400 animate-spin ml-2" />
-                  <span className="text-sm text-gray-500">در حال بارگذاری فروشگاه‌ها...</span>
-                </div>
-              ) : shops.length > 0 ? (
+            {loadingShops ? (
+              <div className="flex items-center mt-1">
+                <Loader2 className="h-5 w-5 text-gray-400 animate-spin ml-2" />
+                <span className="text-sm text-gray-500">در حال بارگذاری فروشگاه‌ها...</span>
+              </div>
+            ) : shops.length === 0 ? (
+              <div className="mt-1 text-sm text-red-600">
+                شما هنوز هیچ فروشگاهی ندارید. لطفا ابتدا یک فروشگاه ایجاد کنید.
+              </div>
+            ) : shops.length === 1 ? (
+              <div className="bg-gray-50 p-3 rounded-md">
+                <p className="text-sm font-medium text-gray-700">فروشگاه اصلی: <span className="text-gray-900">{shops[0].shopName}</span></p>
+                <p className="text-xs text-gray-500 mt-1">محصول به صورت خودکار در فروشگاه شما قرار می‌گیرد.</p>
+                {/* Hidden input to keep the form state consistent */}
+                <input type="hidden" name="shopId" value={shops[0].id} />
+              </div>
+            ) : (
+              <div>
+                <label htmlFor="shopId" className="block text-sm font-medium text-gray-700">
+                  فروشگاه اصلی <span className="text-red-500">*</span>
+                </label>
                 <select
                   id="shopId"
                   name="shopId"
@@ -559,27 +579,18 @@ export default function NewProductPage() {
                     </option>
                   ))}
                 </select>
-              ) : (
-                <div className="mt-1 text-sm text-red-600">
-                  شما هنوز هیچ فروشگاهی ندارید. لطفا ابتدا یک فروشگاه ایجاد کنید.
-                </div>
-              )}
-              {errors.shopId && (
-                <p className="mt-1 text-sm text-red-600">{errors.shopId}</p>
-              )}
-            </div>
+                {errors.shopId && (
+                  <p className="mt-1 text-sm text-red-600">{errors.shopId}</p>
+                )}
+              </div>
+            )}
 
-            {/* Multiple Shop Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                نمایش محصول در فروشگاه‌ها
-              </label>
-              {loadingShops ? (
-                <div className="flex items-center">
-                  <Loader2 className="h-5 w-5 text-gray-400 animate-spin ml-2" />
-                  <span className="text-sm text-gray-500">در حال بارگذاری فروشگاه‌ها...</span>
-                </div>
-              ) : shops.length > 0 ? (
+            {/* Multiple Shop Selection - Only show if there are multiple shops */}
+            {shops.length > 1 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  نمایش محصول در فروشگاه‌ها
+                </label>
                 <div className="space-y-2">
                   {shops.map(shop => (
                     <div key={shop.id} className="flex items-center">
@@ -599,14 +610,14 @@ export default function NewProductPage() {
                     </div>
                   ))}
                 </div>
-              ) : null}
-              {errors.shopIds && (
-                <p className="mt-1 text-sm text-red-600">{errors.shopIds}</p>
-              )}
-              <p className="mt-1 text-xs text-gray-500">
-                محصول علاوه بر فروشگاه اصلی، در فروشگاه‌های انتخاب شده نیز نمایش داده می‌شود.
-              </p>
-            </div>
+                {errors.shopIds && (
+                  <p className="mt-1 text-sm text-red-600">{errors.shopIds}</p>
+                )}
+                <p className="mt-1 text-xs text-gray-500">
+                  محصول علاوه بر فروشگاه اصلی، در فروشگاه‌های انتخاب شده نیز نمایش داده می‌شود.
+                </p>
+              </div>
+            )}
           </div>
           
           {/* Image Upload */}

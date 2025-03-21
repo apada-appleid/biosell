@@ -11,14 +11,11 @@ import axios from 'axios';
 
 const registerSchema = z.object({
   shopName: z.string().min(3, 'نام فروشگاه باید حداقل 3 کاراکتر باشد'),
-  username: z.preprocess(
-    (val) => typeof val === 'string' ? val.toLowerCase() : val,
-    z.string()
-      .min(3, 'نام کاربری باید حداقل 3 کاراکتر باشد')
-      .regex(/^[a-z0-9._]+$/, 'نام کاربری فقط می‌تواند شامل حروف انگلیسی، اعداد، نقطه و زیرخط باشد')
-      .regex(/^(?!.*\.\.)/, 'نام کاربری نمی‌تواند شامل نقطه‌های پشت سر هم باشد')
-      .max(30, 'نام کاربری نمی‌تواند بیشتر از 30 کاراکتر باشد')
-  ),
+  instagramId: z.string()
+    .min(3, 'آیدی اینستاگرام باید حداقل 3 کاراکتر باشد')
+    .regex(/^[a-zA-Z0-9._]+$/, 'آیدی اینستاگرام فقط می‌تواند شامل حروف انگلیسی، اعداد، نقطه و زیرخط باشد')
+    .regex(/^(?!.*\.\.)/, 'آیدی اینستاگرام نمی‌تواند شامل نقطه‌های پشت سر هم باشد')
+    .max(30, 'آیدی اینستاگرام نمی‌تواند بیشتر از 30 کاراکتر باشد'),
   email: z.string().email('ایمیل معتبر وارد کنید'),
   password: z.string().min(8, 'رمز عبور باید حداقل 8 کاراکتر باشد'),
   mobileNumber: z.string().regex(/^09\d{9}$/, 'شماره موبایل معتبر وارد کنید'),
@@ -52,7 +49,7 @@ export default function SellerRegisterPage() {
     resolver: zodResolver(registerSchema),
     defaultValues: {
       shopName: '',
-      username: '',
+      instagramId: '',
       email: '',
       password: '',
       mobileNumber: '',
@@ -74,10 +71,10 @@ export default function SellerRegisterPage() {
     setIsSubmitting(true);
 
     try {
-      // Rename phoneNumber to mobile for API compatibility
+      // Prepare data for API
       const apiData = {
         shopName: data.shopName,
-        username: data.username,
+        instagramId: data.instagramId,
         email: data.email,
         password: data.password,
         mobile: data.mobileNumber,
@@ -157,18 +154,32 @@ export default function SellerRegisterPage() {
           </div>
 
           <div className="mb-4">
-            <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
-              نام کاربری <span className="text-red-500">*</span>
+            <label htmlFor="instagramId" className="block text-sm font-medium text-gray-700 mb-1">
+              آیدی اینستاگرام <span className="text-red-500">*</span>
             </label>
-            <input
-              id="username"
-              type="text"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
-              {...register('username', { required: true })}
-            />
-            {errors.username && (
-              <p className="mt-1 text-sm text-red-600">{errors.username.message}</p>
+            <div className="flex items-center">
+              <input
+                id="instagramId"
+                type="text"
+                className="w-full px-3 py-2 border border-l-0 border-gray-300 rounded-r-none rounded-l-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white text-left"
+                placeholder="نام‌کاربری اینستاگرام"
+                dir="ltr"
+                {...register('instagramId', { 
+                  required: true,
+                  setValueAs: (value) => {
+                    // Remove @ from the beginning if user entered it
+                    return value.startsWith('@') ? value.substring(1) : value;
+                  }
+                })}
+              />
+              <span className="inline-flex items-center px-3 py-2 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                @
+              </span>
+            </div>
+            {errors.instagramId && (
+              <p className="mt-1 text-sm text-red-600">{errors.instagramId.message}</p>
             )}
+            <p className="mt-1 text-xs text-gray-500">آیدی اینستاگرام فروشگاه شما</p>
           </div>
 
           <div className="mb-4">
@@ -178,7 +189,8 @@ export default function SellerRegisterPage() {
             <input
               id="email"
               type="email"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white text-left"
+              dir="ltr"
               {...register('email', { 
                 required: true,
                 pattern: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i
@@ -196,7 +208,8 @@ export default function SellerRegisterPage() {
             <input
               id="mobileNumber"
               type="tel"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white text-left"
+              dir="ltr"
               {...register('mobileNumber', { required: true })}
             />
             {errors.mobileNumber && (
@@ -211,7 +224,8 @@ export default function SellerRegisterPage() {
             <input
               id="password"
               type="password"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white text-left"
+              dir="ltr"
               {...register('password', { required: true, minLength: 6 })}
             />
             {errors.password && (

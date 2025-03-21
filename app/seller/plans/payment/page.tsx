@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { uploadReceiptToS3 } from '@/utils/s3-storage';
+import { CheckIcon } from '@heroicons/react/24/outline';
 
 // Types
 type Plan = {
@@ -376,15 +377,20 @@ function PaymentPageContent() {
                 <div className="h-px bg-gray-200 my-4"></div>
                 
                 <h4 className="font-bold text-gray-900 mb-3">ویژگی‌های پلن:</h4>
-                <ul className="space-y-2 mb-6">
-                  {plan.features.map((feature, idx) => (
-                    <li key={idx} className="flex items-start">
-                      <svg className="h-5 w-5 text-green-500 ml-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                      </svg>
-                      <span className="text-gray-700">{feature}</span>
-                    </li>
-                  ))}
+                <ul className="mt-4 space-y-2 text-sm">
+                  {Array.isArray(plan.features) ?
+                    plan.features.map((feature, idx) => (
+                      <li key={idx} className="flex items-start">
+                        <CheckIcon className="h-5 w-5 text-green-500 ml-2 flex-shrink-0" />
+                        <span>{feature}</span>
+                      </li>
+                    )) : (
+                      <li className="flex items-start">
+                        <CheckIcon className="h-5 w-5 text-green-500 ml-2 flex-shrink-0" />
+                        <span>دسترسی به ویژگی‌های پایه</span>
+                      </li>
+                    )
+                  }
                 </ul>
                 
                 <div className="h-px bg-gray-200 my-4"></div>

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { CheckCircleIcon } from '@heroicons/react/24/outline';
 
 // Types
 type Subscription = {
@@ -195,16 +196,21 @@ export default function SellerSubscriptionsPage() {
               </div>
               
               <h4 className="font-bold text-gray-900 mb-3">ویژگی‌های پلن:</h4>
-              <ul className="space-y-2 mb-6">
-                {currentSubscription.plan.features.map((feature, idx) => (
-                  <li key={idx} className="flex items-start">
-                    <svg className="h-5 w-5 text-green-500 ml-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                    <span className="text-gray-700">{feature}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="mt-4 space-y-2 text-sm">
+                {Array.isArray(currentSubscription.plan.features) ? 
+                  currentSubscription.plan.features.map((feature, idx) => (
+                    <div key={idx} className="flex items-center">
+                      <CheckCircleIcon className="h-5 w-5 text-green-500 ml-2" />
+                      <span>{feature}</span>
+                    </div>
+                  )) : (
+                    <div className="flex items-center">
+                      <CheckCircleIcon className="h-5 w-5 text-green-500 ml-2" />
+                      <span>دسترسی به ویژگی‌های پایه</span>
+                    </div>
+                  )
+                }
+              </div>
               
               <div className="flex justify-center mt-8">
                 <Link
