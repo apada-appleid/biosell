@@ -208,7 +208,7 @@ export default function CustomerOrdersPage() {
                 <div className="p-4">
                   <h3 className="font-medium text-gray-900 mb-2">محصولات</h3>
                   <div className="space-y-2">
-                    {order.items.map((item) => (
+                    {order.items?.map((item) => (
                       <div key={item.id} className="flex justify-between text-sm">
                         <div>
                           <span className="text-gray-800">{item.title}</span>
@@ -217,7 +217,7 @@ export default function CustomerOrdersPage() {
                         </div>
                         <span className="text-gray-900 font-medium">{formatPrice(item.totalPrice)}</span>
                       </div>
-                    ))}
+                    )) || <div className="text-gray-500">هیچ محصولی یافت نشد</div>}
                   </div>
                   
                   <div className="mt-4 pt-4 border-t border-gray-200 flex justify-between">

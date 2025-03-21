@@ -297,45 +297,51 @@ export default function OrderDetailsClient({ id }: OrderDetailsClientProps) {
           </h3>
         </div>
         <div className="border-t border-gray-200">
-          <ul role="list" className="divide-y divide-gray-200">
-            {order.items.map((item) => (
-              <li key={item.id} className="p-4 sm:p-6">
-                <div className="flex items-center flex-col sm:flex-row">
-                  <div className="ml-4 flex-shrink-0 w-20 h-20 bg-gray-200 overflow-hidden rounded-md relative">
-                    <Image
-                      src={
-                        item.product?.images?.[0]?.imageUrl || 
-                        '/images/placeholder.jpg'
-                      }
-                      alt={item.title}
-                      fill
-                      sizes="80px"
-                      className="object-cover"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = '/images/placeholder.jpg';
-                      }}
-                    />
-                  </div>
-                  <div className="flex-1 mt-4 sm:mt-0">
-                    <h4 className="text-md font-medium text-gray-900">{item.title}</h4>
-                    <div className="mt-2 sm:flex sm:justify-between">
-                      <div className="sm:flex">
-                        <p className="flex items-center text-sm text-gray-500">
-                          {formatPrice(item.price)} × {item.quantity}
-                        </p>
-                      </div>
-                      <div className="mt-2 sm:mt-0">
-                        <p className="text-sm font-medium text-gray-900">
-                          {formatPrice(item.totalPrice)}
-                        </p>
+          {order.items && order.items.length > 0 ? (
+            <ul role="list" className="divide-y divide-gray-200">
+              {order.items.map((item) => (
+                <li key={item.id} className="p-4 sm:p-6">
+                  <div className="flex items-center flex-col sm:flex-row">
+                    <div className="ml-4 flex-shrink-0 w-20 h-20 bg-gray-200 overflow-hidden rounded-md relative">
+                      <Image
+                        src={
+                          item.product?.images?.[0]?.imageUrl || 
+                          '/images/placeholder.jpg'
+                        }
+                        alt={item.title}
+                        fill
+                        sizes="80px"
+                        className="object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/images/placeholder.jpg';
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1 mt-4 sm:mt-0">
+                      <h4 className="text-md font-medium text-gray-900">{item.title}</h4>
+                      <div className="mt-2 sm:flex sm:justify-between">
+                        <div className="sm:flex">
+                          <p className="flex items-center text-sm text-gray-500">
+                            {formatPrice(item.price)} × {item.quantity}
+                          </p>
+                        </div>
+                        <div className="mt-2 sm:mt-0">
+                          <p className="text-sm font-medium text-gray-900">
+                            {formatPrice(item.totalPrice)}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="p-4 text-center text-gray-500">
+              هیچ محصولی برای این سفارش یافت نشد
+            </div>
+          )}
         </div>
       </div>
 

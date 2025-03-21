@@ -208,11 +208,11 @@ export default function SellerOrdersPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(order.createdAt)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {order.customer?.fullName || 'نامشخص'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {order.items.length}
+                      {order.items?.length || 0}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {formatPrice(order.total)}
@@ -263,7 +263,7 @@ export default function SellerOrdersPage() {
                   
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">تعداد اقلام:</span>
-                    <span className="text-gray-900 font-medium">{order.items.length}</span>
+                    <span className="text-gray-900 font-medium">{order.items?.length || 0}</span>
                   </div>
                   
                   <div className="flex justify-between text-sm">

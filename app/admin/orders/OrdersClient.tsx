@@ -310,12 +310,12 @@ export default function OrdersClient() {
               <tr key={order.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.orderNumber}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{order.seller.shopName}</div>
-                  <div className="text-sm text-gray-500">@{order.seller.username}</div>
+                  <div className="text-sm font-medium text-gray-900">{order.seller?.shopName || 'نامشخص'}</div>
+                  <div className="text-sm text-gray-500">@{order.seller?.username || 'نامشخص'}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{order.customer.fullName}</div>
-                  <div className="text-sm text-gray-500">{order.customer.mobile}</div>
+                  <div className="text-sm font-medium text-gray-900">{order.customer?.fullName || 'نامشخص'}</div>
+                  <div className="text-sm text-gray-500">{order.customer?.mobile || 'نامشخص'}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   {formatDate(order.createdAt)}
@@ -372,16 +372,16 @@ export default function OrdersClient() {
                 <div className="text-gray-500 flex items-center">
                   <TbUser className="ml-1" /> خریدار
                 </div>
-                <div className="font-medium">{order.customer.fullName}</div>
-                <div className="text-xs text-gray-500">{order.customer.mobile}</div>
+                <div className="font-medium">{order.customer?.fullName || 'نامشخص'}</div>
+                <div className="text-xs text-gray-500">{order.customer?.mobile || 'نامشخص'}</div>
               </div>
               
               <div>
                 <div className="text-gray-500 flex items-center">
                   <TbTruckDelivery className="ml-1" /> فروشگاه
                 </div>
-                <div className="font-medium">{order.seller.shopName}</div>
-                <div className="text-xs text-gray-500">@{order.seller.username}</div>
+                <div className="font-medium">{order.seller?.shopName || 'نامشخص'}</div>
+                <div className="text-xs text-gray-500">@{order.seller?.username || 'نامشخص'}</div>
               </div>
               
               <div className="col-span-2">

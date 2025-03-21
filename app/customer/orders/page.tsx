@@ -291,7 +291,7 @@ export default function CustomerOrders() {
                       {formatDate(order.createdAt)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {order.items.length} کالا
+                      {order.items?.length || 0} کالا
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatPrice(order.total)}

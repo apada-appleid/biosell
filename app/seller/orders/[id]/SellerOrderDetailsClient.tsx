@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { FiArrowLeft, FiUser, FiMail, FiPhone, FiCalendar, FiCreditCard, FiFileText } from 'react-icons/fi';
+import { FiArrowLeft, FiUser, FiMail, FiPhone, FiCalendar, FiCreditCard, FiFileText, FiAlertTriangle } from 'react-icons/fi';
 
 interface OrderItem {
   id: string;
@@ -54,6 +54,8 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   
   // Fetch order details
   useEffect(() => {
@@ -83,8 +85,15 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
     fetchOrderDetails();
   }, [params, sessionStatus]);
   
-  // Update order status
-  const updateOrderStatus = async (newStatus: string) => {
+  // Update order status with confirmation
+  const initiateStatusUpdate = (newStatus: string) => {
+    setSelectedStatus(newStatus);
+    setShowStatusModal(true);
+  };
+  
+  const confirmStatusUpdate = async () => {
+    if (!selectedStatus) return;
+    
     try {
       setIsUpdating(true);
       const orderId = params.id;
@@ -93,7 +102,7 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: selectedStatus }),
       });
       
       if (!response.ok) {
@@ -103,12 +112,19 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
       
       const updatedOrder = await response.json();
       setOrder(updatedOrder);
+      setShowStatusModal(false);
     } catch (err) {
       console.error('Error updating order status:', err);
       alert(err instanceof Error ? err.message : 'خطا در بروزرسانی وضعیت سفارش');
     } finally {
       setIsUpdating(false);
+      setSelectedStatus(null);
     }
+  };
+  
+  const cancelStatusUpdate = () => {
+    setShowStatusModal(false);
+    setSelectedStatus(null);
   };
   
   const formatPrice = (price: number) => {
@@ -217,6 +233,57 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
   
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Status Update Confirmation Modal */}
+      {showStatusModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="text-center">
+              <FiAlertTriangle className="mx-auto h-12 w-12 text-yellow-500 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">تغییر وضعیت سفارش</h3>
+              <p className="mb-4 text-gray-600">
+                آیا از تغییر وضعیت سفارش از{' '}
+                <span className="font-medium">{getStatusText(order.status)}</span> به{' '}
+                <span className="font-medium">{getStatusText(selectedStatus || '')}</span>{' '}
+                اطمینان دارید؟
+              </p>
+              
+              {selectedStatus === 'completed' && (
+                <div className="mb-4 bg-blue-50 rounded-md p-3 text-blue-800 text-sm">
+                  با تکمیل سفارش، به مشتری اطلاع داده می‌شود که سفارش آنها تکمیل شده است.
+                </div>
+              )}
+              
+              {selectedStatus === 'cancelled' && (
+                <div className="mb-4 bg-red-50 rounded-md p-3 text-red-800 text-sm">
+                  با لغو سفارش، سفارش برای مشتری غیرفعال می‌شود و دیگر قابل پردازش نخواهد بود.
+                </div>
+              )}
+              
+              <div className="flex justify-center gap-3 mt-5">
+                <button
+                  onClick={cancelStatusUpdate}
+                  disabled={isUpdating}
+                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                >
+                  انصراف
+                </button>
+                <button
+                  onClick={confirmStatusUpdate}
+                  disabled={isUpdating}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-center min-w-[80px]"
+                >
+                  {isUpdating ? (
+                    <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    'تایید'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    
       {/* هدر صفحه */}
       <div className="flex items-center justify-between mb-6">
         <Link
@@ -291,21 +358,21 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
                 <FiUser className="ml-1" />
                 نام مشتری
               </dt>
-              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{order.customer.fullName}</dd>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{order.customer?.fullName || 'نامشخص'}</dd>
             </div>
             <div className="bg-white px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
               <dt className="text-sm font-medium text-gray-500 flex items-center">
                 <FiMail className="ml-1" />
                 ایمیل
               </dt>
-              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{order.customer.email}</dd>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{order.customer?.email || 'نامشخص'}</dd>
             </div>
             <div className="bg-gray-50 px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
               <dt className="text-sm font-medium text-gray-500 flex items-center">
                 <FiPhone className="ml-1" />
                 شماره تماس
               </dt>
-              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{order.customer.mobile}</dd>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{order.customer?.mobile || 'نامشخص'}</dd>
             </div>
           </dl>
         </div>
@@ -319,45 +386,51 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
           </h3>
         </div>
         <div className="border-t border-gray-200">
-          <ul role="list" className="divide-y divide-gray-200">
-            {order.items.map((item) => (
-              <li key={item.id} className="p-4 sm:p-6">
-                <div className="flex items-center flex-col sm:flex-row">
-                  <div className="ml-4 flex-shrink-0 w-20 h-20 bg-gray-200 overflow-hidden rounded-md relative">
-                    <Image
-                      src={
-                        item.product?.images?.[0]?.imageUrl || 
-                        '/images/placeholder.jpg'
-                      }
-                      alt={item.title}
-                      fill
-                      sizes="80px"
-                      className="object-cover"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = '/images/placeholder.jpg';
-                      }}
-                    />
-                  </div>
-                  <div className="flex-1 mt-4 sm:mt-0">
-                    <h4 className="text-md font-medium text-gray-900">{item.title}</h4>
-                    <div className="mt-2 sm:flex sm:justify-between">
-                      <div className="sm:flex">
-                        <p className="flex items-center text-sm text-gray-500">
-                          {formatPrice(item.price)} × {item.quantity}
-                        </p>
-                      </div>
-                      <div className="mt-2 sm:mt-0">
-                        <p className="text-sm font-medium text-gray-900">
-                          {formatPrice(item.totalPrice)}
-                        </p>
+          {order.items && order.items.length > 0 ? (
+            <ul role="list" className="divide-y divide-gray-200">
+              {order.items.map((item) => (
+                <li key={item.id} className="p-4 sm:p-6">
+                  <div className="flex items-center flex-col sm:flex-row">
+                    <div className="ml-4 flex-shrink-0 w-20 h-20 bg-gray-200 overflow-hidden rounded-md relative">
+                      <Image
+                        src={
+                          item.product?.images?.[0]?.imageUrl || 
+                          '/images/placeholder.jpg'
+                        }
+                        alt={item.title}
+                        fill
+                        sizes="80px"
+                        className="object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/images/placeholder.jpg';
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1 mt-4 sm:mt-0">
+                      <h4 className="text-md font-medium text-gray-900">{item.title}</h4>
+                      <div className="mt-2 sm:flex sm:justify-between">
+                        <div className="sm:flex">
+                          <p className="flex items-center text-sm text-gray-500">
+                            {formatPrice(item.price)} × {item.quantity}
+                          </p>
+                        </div>
+                        <div className="mt-2 sm:mt-0">
+                          <p className="text-sm font-medium text-gray-900">
+                            {formatPrice(item.totalPrice)}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </li>
-            ))}
-          </ul>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="p-4 text-center text-gray-500">
+              هیچ محصولی برای این سفارش یافت نشد
+            </div>
+          )}
         </div>
       </div>
       
@@ -373,52 +446,67 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
         </div>
         
         <div className="border-t border-gray-200 px-4 py-5">
-          <h4 className="text-md font-medium text-gray-900 mb-4">تغییر وضعیت سفارش</h4>
+          <div className="mb-4">
+            <h4 className="text-md font-medium text-gray-900 mb-1">وضعیت فعلی سفارش</h4>
+            <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
+              {getStatusText(order.status)}
+            </div>
+          </div>
+          
+          <h4 className="text-md font-medium text-gray-900 mb-2">تغییر وضعیت سفارش</h4>
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => updateOrderStatus('pending')}
+              onClick={() => initiateStatusUpdate('pending')}
               disabled={order.status === 'pending' || isUpdating}
               className={`px-4 py-2 rounded-md text-sm font-medium ${
                 order.status === 'pending' 
-                  ? 'bg-yellow-100 text-yellow-800 cursor-not-allowed' 
-                  : 'bg-yellow-500 text-white hover:bg-yellow-600'
+                  ? 'bg-yellow-100 text-yellow-800 border-2 border-yellow-300 cursor-not-allowed' 
+                  : 'bg-yellow-500 text-white hover:bg-yellow-600 focus:ring-2 focus:ring-yellow-300 focus:outline-none'
               }`}
+              aria-label="تغییر وضعیت به در انتظار تأیید"
+              tabIndex={order.status === 'pending' ? -1 : 0}
             >
               در انتظار تأیید
             </button>
             
             <button
-              onClick={() => updateOrderStatus('processing')}
+              onClick={() => initiateStatusUpdate('processing')}
               disabled={order.status === 'processing' || isUpdating}
               className={`px-4 py-2 rounded-md text-sm font-medium ${
                 order.status === 'processing' 
-                  ? 'bg-blue-100 text-blue-800 cursor-not-allowed' 
-                  : 'bg-blue-500 text-white hover:bg-blue-600'
+                  ? 'bg-blue-100 text-blue-800 border-2 border-blue-300 cursor-not-allowed' 
+                  : 'bg-blue-500 text-white hover:bg-blue-600 focus:ring-2 focus:ring-blue-300 focus:outline-none'
               }`}
+              aria-label="تغییر وضعیت به در حال پردازش"
+              tabIndex={order.status === 'processing' ? -1 : 0}
             >
               در حال پردازش
             </button>
             
             <button
-              onClick={() => updateOrderStatus('completed')}
+              onClick={() => initiateStatusUpdate('completed')}
               disabled={order.status === 'completed' || isUpdating}
               className={`px-4 py-2 rounded-md text-sm font-medium ${
                 order.status === 'completed' 
-                  ? 'bg-green-100 text-green-800 cursor-not-allowed' 
-                  : 'bg-green-500 text-white hover:bg-green-600'
+                  ? 'bg-green-100 text-green-800 border-2 border-green-300 cursor-not-allowed' 
+                  : 'bg-green-500 text-white hover:bg-green-600 focus:ring-2 focus:ring-green-300 focus:outline-none'
               }`}
+              aria-label="تغییر وضعیت به تکمیل شده"
+              tabIndex={order.status === 'completed' ? -1 : 0}
             >
               تکمیل شده
             </button>
             
             <button
-              onClick={() => updateOrderStatus('cancelled')}
+              onClick={() => initiateStatusUpdate('cancelled')}
               disabled={order.status === 'cancelled' || isUpdating}
               className={`px-4 py-2 rounded-md text-sm font-medium ${
                 order.status === 'cancelled' 
-                  ? 'bg-red-100 text-red-800 cursor-not-allowed' 
-                  : 'bg-red-500 text-white hover:bg-red-600'
+                  ? 'bg-red-100 text-red-800 border-2 border-red-300 cursor-not-allowed' 
+                  : 'bg-red-500 text-white hover:bg-red-600 focus:ring-2 focus:ring-red-300 focus:outline-none'
               }`}
+              aria-label="تغییر وضعیت به لغو سفارش"
+              tabIndex={order.status === 'cancelled' ? -1 : 0}
             >
               لغو سفارش
             </button>

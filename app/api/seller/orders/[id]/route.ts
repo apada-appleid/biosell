@@ -61,6 +61,7 @@ export async function GET(
         createdAt: true,
         updatedAt: true,
         receiptInfo: true,
+        customerId: true,
         items: {
           include: {
             product: {
@@ -103,6 +104,16 @@ export async function GET(
     // Process order receipt info for viewing
     let processedOrder: any = { ...order };
     
+    // Ensure customer object exists even if it's null in the database
+    if (!processedOrder.customer) {
+      processedOrder.customer = {
+        id: processedOrder.customerId || '',
+        fullName: '',
+        email: '',
+        mobile: ''
+      };
+    }
+
     // Generate fresh signed URL for receipt images if available
     if (order.receiptInfo) {
       try {
@@ -197,7 +208,7 @@ export async function PATCH(
     const { status, trackingNumber, shippingProvider } = data;
     
     // Validate status
-    const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+    const validStatuses = ['pending', 'processing', 'completed', 'cancelled'];
     if (status && !validStatuses.includes(status)) {
       return NextResponse.json(
         { error: "Invalid order status" },
@@ -224,8 +235,7 @@ export async function PATCH(
 
     // Add status update timestamp
     if (status === 'processing') updateData.processedAt = new Date();
-    if (status === 'shipped') updateData.shippedAt = new Date();
-    if (status === 'delivered') updateData.deliveredAt = new Date();
+    if (status === 'completed') updateData.deliveredAt = new Date();
     if (status === 'cancelled') updateData.cancelledAt = new Date();
 
     // Update the order
