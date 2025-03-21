@@ -25,6 +25,7 @@ export async function GET(
       where: {
         id: shopId,
         sellerId,
+        deletedAt: null,
       },
       include: {
         _count: {
@@ -78,6 +79,7 @@ export async function PUT(
       where: {
         id: shopId,
         sellerId,
+        deletedAt: null,
       },
     });
 
@@ -195,10 +197,13 @@ export async function DELETE(
       );
     }
 
-    // Delete the shop
-    await prisma.sellerShop.delete({
+    // Soft delete the shop
+    await prisma.sellerShop.update({
       where: {
         id: shopId,
+      },
+      data: {
+        deletedAt: new Date(),
       },
     });
 

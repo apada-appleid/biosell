@@ -142,7 +142,7 @@ export default function SellerProductsPage() {
     if (!confirmDelete) return;
 
     try {
-      // Attempt to call API to delete product
+      // Soft delete the product via API
       const response = await fetch(`/api/seller/products/${confirmDelete}`, {
         method: 'DELETE',
       });
@@ -151,7 +151,7 @@ export default function SellerProductsPage() {
         throw new Error('Failed to delete product');
       }
 
-      // Update local state
+      // Update local state by removing the deleted product from the list
       setProducts(products.filter((product) => product.id !== confirmDelete));
     } catch (error) {
       console.error('Error deleting product:', error);

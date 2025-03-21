@@ -120,6 +120,17 @@ export async function PUT(
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
+    // Get all shops for this seller
+    const sellerShops = await prisma.sellerShop.findMany({
+      where: { 
+        sellerId,
+        deletedAt: null // Only include non-deleted shops
+      },
+      select: { id: true }
+    });
+    
+    const shopIds = sellerShops.map(shop => shop.id);
+
     // Prepare update data
     const updateData: any = {};
 
@@ -130,41 +141,67 @@ export async function PUT(
     if (body.price !== undefined) updateData.price = body.price;
     if (body.inventory !== undefined) updateData.inventory = body.inventory;
     if (body.isActive !== undefined) updateData.isActive = body.isActive;
+    
+    // Handle shop ID update
     if (body.shopId !== undefined) {
       // Verify the shop belongs to this seller
-      const shopBelongsToSeller = await prisma.sellerShop.findFirst({
-        where: {
-          id: body.shopId,
-          sellerId,
-        },
-      });
-
-      if (!shopBelongsToSeller) {
+      if (!shopIds.includes(body.shopId)) {
         return NextResponse.json(
           { error: "Invalid shop selection" },
           { status: 400 }
         );
       }
-
       updateData.shopId = body.shopId;
     }
 
-    // Update the product
-    const updatedProduct = await prisma.product.update({
-      where: {
-        id: productId,
-      },
-      data: updateData,
-      include: {
-        images: true,
-      },
+    // Update the product with a transaction to ensure data consistency
+    const updatedProduct = await prisma.$transaction(async (tx) => {
+      // Update the main product
+      const product = await tx.product.update({
+        where: {
+          id: productId,
+        },
+        data: updateData,
+        include: {
+          images: true,
+        },
+      });
+
+      // Handle shop mapping updates if shopIds is provided
+      if (body.shopIds && Array.isArray(body.shopIds)) {
+        // Validate that all shopIds belong to this seller
+        const validShopIds = body.shopIds.filter((id: string) => shopIds.includes(id));
+        
+        if (validShopIds.length !== body.shopIds.length) {
+          throw new Error("One or more selected shops do not belong to you");
+        }
+        
+        // Delete existing mappings
+        await tx.productShopMapping.deleteMany({
+          where: {
+            productId
+          }
+        });
+        
+        // Create new mappings
+        for (const shopId of body.shopIds) {
+          await tx.productShopMapping.create({
+            data: {
+              productId,
+              shopId
+            }
+          });
+        }
+      }
+      
+      return product;
     });
 
     return NextResponse.json(updatedProduct);
   } catch (error) {
     console.error("Error updating product:", error);
     return NextResponse.json(
-      { error: "Failed to update product" },
+      { error: error instanceof Error ? error.message : "Failed to update product" },
       { status: 500 }
     );
   }
@@ -193,7 +230,6 @@ export async function DELETE(
       },
       include: {
         shop: true,
-        images: true,
       },
     });
 
@@ -206,34 +242,15 @@ export async function DELETE(
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Delete the product
-    await prisma.product.delete({
+    // Soft delete the product by setting deletedAt
+    await prisma.product.update({
       where: {
         id: productId,
       },
+      data: {
+        deletedAt: new Date(),
+      },
     });
-
-    // If the product had images, delete them from disk (if they're stored locally)
-    // This is optional and will depend on how you manage image storage
-    if (existingProduct.images && existingProduct.images.length > 0) {
-      try {
-        for (const image of existingProduct.images) {
-          // Extract the filename from URL
-          const url = new URL(image.imageUrl);
-          const filename = url.pathname.split("/").pop();
-
-          if (filename) {
-            const filePath = join(process.cwd(), "public", "uploads", filename);
-            await unlink(filePath).catch((err) => {
-              console.warn(`Failed to delete image file: ${filePath}`, err);
-            });
-          }
-        }
-      } catch (error) {
-        console.warn("Error while cleaning up product images:", error);
-        // Continue with the deletion even if image cleanup fails
-      }
-    }
 
     return NextResponse.json({ message: "Product deleted successfully" });
   } catch (error) {

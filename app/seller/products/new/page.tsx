@@ -19,6 +19,8 @@ interface ProductFormData {
   inventory: string;
   isActive: boolean;
   images: ProductImage[];
+  shopId: string; // Main shop ID 
+  shopIds: string[]; // Additional shop IDs for display in multiple shops
 }
 
 export default function NewProductPage() {
@@ -30,7 +32,9 @@ export default function NewProductPage() {
     price: '',
     inventory: '0',
     isActive: true,
-    images: []
+    images: [],
+    shopId: '',
+    shopIds: []
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,6 +44,8 @@ export default function NewProductPage() {
   const [hasPendingSubscription, setHasPendingSubscription] = useState<boolean>(false);
   const [pendingSubscriptionStatus, setPendingSubscriptionStatus] = useState<string | null>(null);
   const [checkingSubscription, setCheckingSubscription] = useState(true);
+  const [shops, setShops] = useState<{ id: string; shopName: string; isDefault: boolean }[]>([]);
+  const [loadingShops, setLoadingShops] = useState(true);
 
   // Check if user has an active subscription
   useEffect(() => {
@@ -68,6 +74,42 @@ export default function NewProductPage() {
       router.push('/auth/login');
     }
   }, [status, router]);
+
+  // Fetch seller's shops
+  useEffect(() => {
+    const fetchShops = async () => {
+      if (status === 'authenticated') {
+        try {
+          setLoadingShops(true);
+          const response = await fetch('/api/seller/shops');
+          
+          if (!response.ok) {
+            throw new Error('Failed to fetch shops');
+          }
+          
+          const data = await response.json();
+          
+          if (data.shops && data.shops.length > 0) {
+            setShops(data.shops);
+            
+            // Find default shop or use the first one
+            const defaultShop = data.shops.find((shop: any) => shop.isDefault) || data.shops[0];
+            setFormData(prev => ({
+              ...prev,
+              shopId: defaultShop.id,
+              shopIds: [defaultShop.id]
+            }));
+          }
+        } catch (error) {
+          console.error('Error fetching shops:', error);
+        } finally {
+          setLoadingShops(false);
+        }
+      }
+    };
+    
+    fetchShops();
+  }, [status]);
 
   // Handle input changes
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -141,6 +183,44 @@ export default function NewProductPage() {
     });
   };
 
+  // Handle main shop selection
+  const handleShopChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    const selectedShopId = e.target.value;
+    setFormData({
+      ...formData,
+      shopId: selectedShopId,
+      // Add the main shop to the shopIds array if not already included
+      shopIds: formData.shopIds.includes(selectedShopId) 
+        ? formData.shopIds 
+        : [...formData.shopIds, selectedShopId]
+    });
+  };
+
+  // Handle multiple shop selection
+  const handleShopSelectionChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const shopId = e.target.value;
+    const isChecked = e.target.checked;
+    
+    let newShopIds: string[];
+    
+    if (isChecked) {
+      // Add to selected shops
+      newShopIds = [...formData.shopIds, shopId];
+    } else {
+      // If this is the main shop, don't allow unselecting
+      if (shopId === formData.shopId) {
+        return;
+      }
+      // Remove from selected shops
+      newShopIds = formData.shopIds.filter(id => id !== shopId);
+    }
+    
+    setFormData({
+      ...formData,
+      shopIds: newShopIds
+    });
+  };
+
   // Validate form
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -157,6 +237,14 @@ export default function NewProductPage() {
     
     if (formData.inventory.trim() && (isNaN(Number(formData.inventory)) || Number(formData.inventory) < 0)) {
       newErrors.inventory = 'موجودی باید یک عدد غیرمنفی باشد';
+    }
+
+    if (!formData.shopId) {
+      newErrors.shopId = 'انتخاب فروشگاه اصلی الزامی است';
+    }
+
+    if (formData.shopIds.length === 0) {
+      newErrors.shopIds = 'حداقل یک فروشگاه باید انتخاب شود';
     }
     
     setErrors(newErrors);
@@ -181,7 +269,9 @@ export default function NewProductPage() {
         description: formData.description,
         price: parseFloat(formData.price),
         inventory: parseInt(formData.inventory || '0'),
-        isActive: formData.isActive
+        isActive: formData.isActive,
+        shopId: formData.shopId,
+        shopIds: formData.shopIds
       };
       
       const response = await fetch('/api/seller/products', {
@@ -352,153 +442,232 @@ export default function NewProductPage() {
         </div>
       )}
       
-      <form onSubmit={handleSubmit} className="bg-white shadow-md rounded-lg p-6">
-        {/* Title */}
-        <div className="mb-6">
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-            عنوان محصول <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            id="title"
-            name="title"
-            value={formData.title}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
-            dir="rtl"
-          />
-          {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title}</p>}
-        </div>
-        
-        {/* Description */}
-        <div className="mb-6">
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-            توضیحات محصول
-          </label>
-          <textarea
-            id="description"
-            name="description"
-            rows={4}
-            value={formData.description}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
-            dir="rtl"
-          ></textarea>
-        </div>
-        
-        {/* Price and Inventory */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div>
-            <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
-              قیمت (تومان) <span className="text-red-500">*</span>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Basic Product Details */}
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          {/* Title */}
+          <div className="mb-6">
+            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+              عنوان محصول <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
-              id="price"
-              name="price"
-              value={formData.price}
+              id="title"
+              name="title"
+              value={formData.title}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
               dir="rtl"
             />
-            {errors.price && <p className="mt-1 text-sm text-red-600">{errors.price}</p>}
+            {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title}</p>}
           </div>
           
-          <div>
-            <label htmlFor="inventory" className="block text-sm font-medium text-gray-700 mb-1">
-              موجودی
+          {/* Description */}
+          <div className="mb-6">
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+              توضیحات محصول
             </label>
-            <input
-              type="text"
-              id="inventory"
-              name="inventory"
-              value={formData.inventory}
+            <textarea
+              id="description"
+              name="description"
+              rows={4}
+              value={formData.description}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
               dir="rtl"
-            />
-            {errors.inventory && <p className="mt-1 text-sm text-red-600">{errors.inventory}</p>}
+            ></textarea>
           </div>
-        </div>
-        
-        {/* Active Status */}
-        <div className="flex items-center mb-6">
-          <button 
-            type="button"
-            onClick={handleToggleChange}
-            className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 ${
-              formData.isActive ? 'bg-blue-600' : 'bg-gray-200'
-            }`}
-            role="switch"
-            aria-checked={formData.isActive}
-          >
-            <span 
-              className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${
-                formData.isActive ? 'translate-x-0' : 'translate-x-5'
-              }`} 
-            />
-          </button>
-          <span className="mr-3 text-sm text-gray-700">محصول فعال باشد</span>
-        </div>
-        
-        {/* Image Upload */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            تصاویر محصول
-          </label>
           
-          <div className="mt-2 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-            <div className="space-y-1 text-center">
-              <Upload className="mx-auto h-12 w-12 text-gray-400" />
-              <div className="flex text-sm text-gray-600">
-                <label htmlFor="images" className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500">
-                  <span>آپلود فایل</span>
-                  <input 
-                    id="images" 
-                    name="images" 
-                    type="file" 
-                    className="sr-only" 
-                    multiple 
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                  />
-                </label>
-                <p className="pr-1">یا بکشید و رها کنید</p>
-              </div>
-              <p className="text-xs text-gray-500">
-                PNG, JPG, GIF تا 10MB
+          {/* Price and Inventory */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
+                قیمت (تومان) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="price"
+                name="price"
+                value={formData.price}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                dir="rtl"
+              />
+              {errors.price && <p className="mt-1 text-sm text-red-600">{errors.price}</p>}
+            </div>
+            
+            <div>
+              <label htmlFor="inventory" className="block text-sm font-medium text-gray-700 mb-1">
+                موجودی
+              </label>
+              <input
+                type="text"
+                id="inventory"
+                name="inventory"
+                value={formData.inventory}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white"
+                dir="rtl"
+              />
+              {errors.inventory && <p className="mt-1 text-sm text-red-600">{errors.inventory}</p>}
+            </div>
+          </div>
+          
+          {/* Active Status */}
+          <div className="flex items-center mb-6">
+            <button 
+              type="button"
+              onClick={handleToggleChange}
+              className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 ${
+                formData.isActive ? 'bg-blue-600' : 'bg-gray-200'
+              }`}
+              role="switch"
+              aria-checked={formData.isActive}
+            >
+              <span 
+                className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${
+                  formData.isActive ? 'translate-x-0' : 'translate-x-5'
+                }`} 
+              />
+            </button>
+            <span className="mr-3 text-sm text-gray-700">محصول فعال باشد</span>
+          </div>
+          
+          {/* Shop Selection */}
+          <div className="space-y-4 mt-6">
+            <div>
+              <label htmlFor="shopId" className="block text-sm font-medium text-gray-700">
+                فروشگاه اصلی <span className="text-red-500">*</span>
+              </label>
+              {loadingShops ? (
+                <div className="flex items-center mt-1">
+                  <Loader2 className="h-5 w-5 text-gray-400 animate-spin ml-2" />
+                  <span className="text-sm text-gray-500">در حال بارگذاری فروشگاه‌ها...</span>
+                </div>
+              ) : shops.length > 0 ? (
+                <select
+                  id="shopId"
+                  name="shopId"
+                  value={formData.shopId}
+                  onChange={handleShopChange}
+                  className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                >
+                  <option value="" disabled>انتخاب فروشگاه</option>
+                  {shops.map(shop => (
+                    <option key={shop.id} value={shop.id}>
+                      {shop.shopName} {shop.isDefault ? '(پیش‌فرض)' : ''}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="mt-1 text-sm text-red-600">
+                  شما هنوز هیچ فروشگاهی ندارید. لطفا ابتدا یک فروشگاه ایجاد کنید.
+                </div>
+              )}
+              {errors.shopId && (
+                <p className="mt-1 text-sm text-red-600">{errors.shopId}</p>
+              )}
+            </div>
+
+            {/* Multiple Shop Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                نمایش محصول در فروشگاه‌ها
+              </label>
+              {loadingShops ? (
+                <div className="flex items-center">
+                  <Loader2 className="h-5 w-5 text-gray-400 animate-spin ml-2" />
+                  <span className="text-sm text-gray-500">در حال بارگذاری فروشگاه‌ها...</span>
+                </div>
+              ) : shops.length > 0 ? (
+                <div className="space-y-2">
+                  {shops.map(shop => (
+                    <div key={shop.id} className="flex items-center">
+                      <input
+                        id={`shop-${shop.id}`}
+                        name="shopIds"
+                        type="checkbox"
+                        value={shop.id}
+                        checked={formData.shopIds.includes(shop.id)}
+                        onChange={handleShopSelectionChange}
+                        disabled={shop.id === formData.shopId} // Main shop always selected
+                        className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded ml-2"
+                      />
+                      <label htmlFor={`shop-${shop.id}`} className="text-sm text-gray-700">
+                        {shop.shopName} {shop.id === formData.shopId ? '(فروشگاه اصلی)' : ''}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              {errors.shopIds && (
+                <p className="mt-1 text-sm text-red-600">{errors.shopIds}</p>
+              )}
+              <p className="mt-1 text-xs text-gray-500">
+                محصول علاوه بر فروشگاه اصلی، در فروشگاه‌های انتخاب شده نیز نمایش داده می‌شود.
               </p>
             </div>
           </div>
           
-          {errors.images && <p className="mt-1 text-sm text-red-600">{errors.images}</p>}
-          
-          {/* Preview Images */}
-          {formData.images.length > 0 && (
-            <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {formData.images.map((image, index) => (
-                <div key={index} className="relative group">
-                  <div className="relative h-24 w-full overflow-hidden rounded-md">
-                    <Image 
-                      src={image.preview} 
-                      alt={`Preview ${index}`}
-                      fill
-                      sizes="100px"
-                      className="object-cover"
-                      priority={index === 0}
+          {/* Image Upload */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              تصاویر محصول
+            </label>
+            
+            <div className="mt-2 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+              <div className="space-y-1 text-center">
+                <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                <div className="flex text-sm text-gray-600">
+                  <label htmlFor="images" className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500">
+                    <span>آپلود فایل</span>
+                    <input 
+                      id="images" 
+                      name="images" 
+                      type="file" 
+                      className="sr-only" 
+                      multiple 
+                      accept="image/*"
+                      onChange={handleImageUpload}
                     />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveImage(index)}
-                    className="absolute top-1 right-1 bg-red-100 text-red-600 rounded-full p-1 opacity-0 group-hover:opacity-100 transition"
-                  >
-                    <XCircle className="h-5 w-5" />
-                  </button>
+                  </label>
+                  <p className="pr-1">یا بکشید و رها کنید</p>
                 </div>
-              ))}
+                <p className="text-xs text-gray-500">
+                  PNG, JPG, GIF تا 10MB
+                </p>
+              </div>
             </div>
-          )}
+            
+            {errors.images && <p className="mt-1 text-sm text-red-600">{errors.images}</p>}
+            
+            {/* Preview Images */}
+            {formData.images.length > 0 && (
+              <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {formData.images.map((image, index) => (
+                  <div key={index} className="relative group">
+                    <div className="relative h-24 w-full overflow-hidden rounded-md">
+                      <Image 
+                        src={image.preview} 
+                        alt={`Preview ${index}`}
+                        fill
+                        sizes="100px"
+                        className="object-cover"
+                        priority={index === 0}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(index)}
+                      className="absolute top-1 right-1 bg-red-100 text-red-600 rounded-full p-1 opacity-0 group-hover:opacity-100 transition"
+                    >
+                      <XCircle className="h-5 w-5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         
         {/* Submit Button */}

@@ -35,7 +35,8 @@ export async function GET(request: NextRequest) {
     // Get all shops for this seller
     const shops = await prisma.sellerShop.findMany({
       where: {
-        sellerId
+        sellerId,
+        deletedAt: null // Only include non-deleted shops
       },
       select: {
         id: true
@@ -49,11 +50,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ products: [] });
     }
 
-    // Build the query
-    const query: any = {
+    // Build the query for the main products
+    let query: any = {
       shop: {
         sellerId
-      }
+      },
+      deletedAt: null // Only include non-deleted products
     };
     
     // If shopId is provided and belongs to the seller, use it for filtering
@@ -79,6 +81,11 @@ export async function GET(request: NextRequest) {
             id: true,
             shopName: true
           }
+        },
+        shops: {
+          select: {
+            shopId: true
+          }
         }
       },
       orderBy: {
@@ -86,7 +93,62 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ products });
+    // If a specific shop is selected and it's not the main query, also include products displayed in this shop
+    let additionalProducts: any[] = [];
+    if (shopId && shopIds.includes(shopId)) {
+      additionalProducts = await prisma.product.findMany({
+        where: {
+          shops: {
+            some: {
+              shopId
+            }
+          },
+          shopId: {
+            not: shopId // Don't include products that already have this as their main shop
+          },
+          deletedAt: null // Only include non-deleted products
+        },
+        include: {
+          images: {
+            select: {
+              id: true,
+              imageUrl: true,
+            },
+            orderBy: {
+              order: 'asc',
+            },
+          },
+          shop: {
+            select: {
+              id: true,
+              shopName: true
+            }
+          },
+          shops: {
+            select: {
+              shopId: true
+            }
+          }
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+    }
+
+    // Combine the results
+    const allProducts = [...products, ...additionalProducts];
+
+    // Add display shop information
+    const productsWithShops = allProducts.map(product => {
+      const displayShops = product.shops.map((mapping: { shopId: string }) => mapping.shopId);
+      return {
+        ...product,
+        displayShops
+      };
+    });
+
+    return NextResponse.json({ products: productsWithShops });
     
   } catch (error) {
     console.error('Error fetching seller products:', error);
@@ -145,7 +207,10 @@ export async function POST(request: NextRequest) {
 
     // Get all shops for this seller
     const shops = await prisma.sellerShop.findMany({
-      where: { sellerId },
+      where: { 
+        sellerId,
+        deletedAt: null // Only include non-deleted shops
+      },
       select: { id: true }
     });
     
@@ -156,7 +221,8 @@ export async function POST(request: NextRequest) {
       where: {
         shopId: {
           in: shopIds
-        }
+        },
+        deletedAt: null // Only count non-deleted products
       }
     });
 
@@ -170,7 +236,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const json = await request.json();
-    const { title, description, price, inventory, isActive, shopId } = json;
+    const { title, description, price, inventory, isActive, shopId, shopIds: requestShopIds } = json;
 
     // Basic validation
     if (!title || !price) {
@@ -187,7 +253,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify the shop belongs to this seller
+    // Verify the main shop belongs to this seller
     const shopBelongsToSeller = shopIds.includes(shopId);
     if (!shopBelongsToSeller) {
       return NextResponse.json(
@@ -196,20 +262,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create product
-    const product = await prisma.product.create({
-      data: {
-        title,
-        description,
-        price: Number(price),
-        inventory: Number(inventory || 0),
-        isActive: isActive ?? true,
-        shopId
-      }
-    });
+    // Verify all selected shops belong to this seller
+    const validShopIds = requestShopIds.filter((id: string) => shopIds.includes(id));
+    if (validShopIds.length !== requestShopIds.length) {
+      return NextResponse.json(
+        { error: 'One or more selected shops do not belong to you' },
+        { status: 403 }
+      );
+    }
 
-    // In a real implementation, we'd handle image uploads here
-    // For example, saving images to a storage service and creating records in the ProductImage table
+    // Create product with transaction to ensure all related records are created
+    const product = await prisma.$transaction(async (tx) => {
+      // Create the main product
+      const newProduct = await tx.product.create({
+        data: {
+          title,
+          description,
+          price: Number(price),
+          inventory: Number(inventory || 0),
+          isActive: isActive ?? true,
+          shopId
+        }
+      });
+      
+      // Create shop mappings for display in multiple shops
+      const shopMappings = [];
+      for (const id of requestShopIds as string[]) {
+        shopMappings.push(
+          await tx.productShopMapping.create({
+            data: {
+              productId: newProduct.id,
+              shopId: id
+            }
+          })
+        );
+      }
+      
+      return newProduct;
+    });
 
     return NextResponse.json(product, { status: 201 });
     
