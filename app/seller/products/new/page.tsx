@@ -538,7 +538,7 @@ export default function NewProductPage() {
             >
               <span 
                 className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${
-                  formData.isActive ? 'translate-x-0' : 'translate-x-5'
+                  formData.isActive ? 'translate-x-0' : '-translate-x-5'
                 }`} 
               />
             </button>
@@ -558,7 +558,7 @@ export default function NewProductPage() {
             >
               <span 
                 className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${
-                  formData.requiresAddress ? 'translate-x-0' : 'translate-x-5'
+                  formData.requiresAddress ? 'translate-x-0' : '-translate-x-5'
                 }`} 
               />
             </button>
