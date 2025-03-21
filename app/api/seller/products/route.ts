@@ -236,7 +236,7 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const json = await request.json();
-    const { title, description, price, inventory, isActive, shopId, shopIds: requestShopIds } = json;
+    const { title, description, price, inventory, isActive, requiresAddress, shopId, shopIds: requestShopIds } = json;
 
     // Basic validation
     if (!title || !price) {
@@ -281,6 +281,7 @@ export async function POST(request: NextRequest) {
           price: Number(price),
           inventory: Number(inventory || 0),
           isActive: isActive ?? true,
+          requiresAddress: requiresAddress ?? true,
           shopId
         }
       });

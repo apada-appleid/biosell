@@ -30,6 +30,7 @@ interface CheckoutFormData {
   paymentMethod: 'credit_card' | 'cash_on_delivery';
   saveAddressAsDefault: boolean;
   deliveryMobile: string;
+  customerNotes: string;
 }
 
 const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => {
@@ -59,7 +60,8 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
       fullName: user?.name || '',
       mobile: user?.mobile || '',
       deliveryMobile: user?.mobile || '',
-      saveAddressAsDefault: false
+      saveAddressAsDefault: false,
+      customerNotes: ''
     }
   });
   
@@ -323,14 +325,17 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
         return;
       }
       
-      // Validate required fields for delivery
-      if (!data.fullName || !data.deliveryMobile || !data.province || !data.city || !data.address || !data.postalCode) {
+      // Check if any product in the cart requires an address
+      const requiresAddress = cart.items.some(item => item.product.requiresAddress);
+      
+      // Validate required fields for delivery only if any product requires an address
+      if (requiresAddress && (!data.fullName || !data.deliveryMobile || !data.province || !data.city || !data.address || !data.postalCode)) {
         setSubmitError('لطفا تمام فیلدهای آدرس تحویل را کامل کنید');
         return;
       }
 
-      // Validate postal code format (10 digits)
-      if (data.postalCode && !/^\d{10}$/.test(data.postalCode)) {
+      // Validate postal code format (10 digits) only if address is required
+      if (requiresAddress && data.postalCode && !/^\d{10}$/.test(data.postalCode)) {
         setSubmitError('کد پستی باید 10 رقم باشد');
         return;
       }
@@ -355,12 +360,14 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
         // Continue with order even if profile update fails
       }
       
-      // For shipping address, use the deliveryMobile
+      // For shipping address, use the deliveryMobile (only if required)
       // Create shipping address string
-      const shippingAddressString = `${data.fullName}, ${data.deliveryMobile}, ${data.province}, ${data.city}, ${data.address}, کدپستی: ${data.postalCode}`;
+      const shippingAddressString = requiresAddress 
+        ? `${data.fullName}, ${data.deliveryMobile}, ${data.province}, ${data.city}, ${data.address}, کدپستی: ${data.postalCode}`
+        : '';
       
-      // If adding a new address, save it first
-      if (isAddingNewAddress && user) {
+      // If adding a new address and address is required, save it first
+      if (requiresAddress && isAddingNewAddress && user) {
         try {
           const addressData = {
             fullName: data.fullName,
@@ -429,6 +436,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
         paymentMethod: data.paymentMethod,
         userId: user?.id,
         shippingAddress: shippingAddressString,
+        customerNotes: data.customerNotes || '', // Add customer notes to order data
         isExistingUser: true // Add flag to indicate this is an existing user
       };
       
@@ -804,6 +812,23 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ user, updateUserData }) => 
             </div>
           </div>
         )}
+      </div>
+      
+      <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">توضیحات تکمیلی</h3>
+        
+        <div className="mb-4">
+          <label htmlFor="customerNotes" className="block text-sm font-medium text-gray-700 mb-1">
+            توضیحات سفارش (اختیاری)
+          </label>
+          <textarea
+            id="customerNotes"
+            {...register('customerNotes')}
+            rows={3}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            placeholder="اگر توضیح خاصی برای سفارش خود دارید، اینجا بنویسید"
+          />
+        </div>
       </div>
       
       <div className="border-t border-gray-200 pt-6">

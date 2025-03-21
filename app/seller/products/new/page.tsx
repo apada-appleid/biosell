@@ -18,6 +18,7 @@ interface ProductFormData {
   price: string;
   inventory: string;
   isActive: boolean;
+  requiresAddress: boolean;
   images: ProductImage[];
   shopId: string;
   shopIds: string[];
@@ -32,6 +33,7 @@ export default function NewProductPage() {
     price: '',
     inventory: '0',
     isActive: true,
+    requiresAddress: true,
     images: [],
     shopId: '',
     shopIds: []
@@ -138,10 +140,10 @@ export default function NewProductPage() {
   };
 
   // Handle toggle change
-  const handleToggleChange = () => {
+  const handleToggleChange = (field: 'isActive' | 'requiresAddress') => {
     setFormData({
       ...formData,
-      isActive: !formData.isActive
+      [field]: !formData[field]
     });
   };
 
@@ -279,6 +281,7 @@ export default function NewProductPage() {
         price: parseFloat(formData.price),
         inventory: parseInt(formData.inventory || '0'),
         isActive: formData.isActive,
+        requiresAddress: formData.requiresAddress,
         shopId: formData.shopId,
         shopIds: formData.shopIds
       };
@@ -526,7 +529,7 @@ export default function NewProductPage() {
           <div className="flex items-center mb-6">
             <button 
               type="button"
-              onClick={handleToggleChange}
+              onClick={() => handleToggleChange('isActive')}
               className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 ${
                 formData.isActive ? 'bg-blue-600' : 'bg-gray-200'
               }`}
@@ -540,6 +543,27 @@ export default function NewProductPage() {
               />
             </button>
             <span className="mr-3 text-sm text-gray-700">محصول فعال باشد</span>
+          </div>
+          
+          {/* Requires Address Toggle */}
+          <div className="flex items-center mb-6">
+            <button 
+              type="button"
+              onClick={() => handleToggleChange('requiresAddress')}
+              className={`relative inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full cursor-pointer transition-colors ease-in-out duration-200 ${
+                formData.requiresAddress ? 'bg-blue-600' : 'bg-gray-200'
+              }`}
+              role="switch"
+              aria-checked={formData.requiresAddress}
+            >
+              <span 
+                className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform ring-0 transition ease-in-out duration-200 ${
+                  formData.requiresAddress ? 'translate-x-0' : 'translate-x-5'
+                }`} 
+              />
+            </button>
+            <span className="mr-3 text-sm text-gray-700">نیاز به آدرس برای تحویل دارد</span>
+            <span className="mr-2 text-xs text-gray-500">(برای محصولات دیجیتال غیرفعال کنید)</span>
           </div>
           
           {/* Shop Selection */}

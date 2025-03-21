@@ -182,7 +182,7 @@ export async function GET(
   }
 }
 
-// PATCH - Update order status
+// PATCH - Update order status and seller notes
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -239,38 +239,58 @@ export async function PATCH(
 
     // Get update data
     const data = await request.json();
-    const { status, trackingNumber, shippingProvider } = data;
+    const { status, trackingNumber, shippingProvider, sellerNotes } = data;
     
-    // Validate status
-    const validStatuses = ['pending', 'processing', 'completed', 'cancelled'];
-    if (status && !validStatuses.includes(status)) {
-      return NextResponse.json(
-        { error: "Invalid order status" },
-        { status: 400 }
-      );
-    }
-
     // Define a proper type for order update data
     interface OrderUpdateData {
       status?: string;
       trackingNumber?: string;
       shippingProvider?: string;
-      processedAt?: Date;
-      shippedAt?: Date;
-      deliveredAt?: Date;
-      cancelledAt?: Date;
+      sellerNotes?: string;
+      processedAt?: Date | null;
+      shippedAt?: Date | null;
+      deliveredAt?: Date | null;
+      cancelledAt?: Date | null;
     }
 
     // Prepare update data
     const updateData: OrderUpdateData = {};
-    if (status) updateData.status = status;
+    
+    // Update order status if provided
+    if (status) {
+      // Validate status
+      const validStatuses = ['pending', 'processing', 'completed', 'cancelled'];
+      if (!validStatuses.includes(status)) {
+        return NextResponse.json(
+          { error: "Invalid order status" },
+          { status: 400 }
+        );
+      }
+      
+      updateData.status = status;
+      
+      // Add status update timestamp
+      if (status === 'processing') updateData.processedAt = new Date();
+      else if (status === 'completed') updateData.deliveredAt = new Date();
+      else if (status === 'cancelled') updateData.cancelledAt = new Date();
+    }
+    
+    // Update tracking information if provided
     if (trackingNumber) updateData.trackingNumber = trackingNumber;
     if (shippingProvider) updateData.shippingProvider = shippingProvider;
-
-    // Add status update timestamp
-    if (status === 'processing') updateData.processedAt = new Date();
-    if (status === 'completed') updateData.deliveredAt = new Date();
-    if (status === 'cancelled') updateData.cancelledAt = new Date();
+    
+    // Update seller notes if provided
+    if (sellerNotes !== undefined) {
+      updateData.sellerNotes = sellerNotes;
+    }
+    
+    // Check if there's anything to update
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: "No valid update fields provided" },
+        { status: 400 }
+      );
+    }
 
     // Update the order
     const updatedOrder = await prisma.order.update({
@@ -280,7 +300,10 @@ export async function PATCH(
       data: updateData
     });
 
-    return NextResponse.json(updatedOrder);
+    return NextResponse.json({
+      message: "Order updated successfully",
+      order: updatedOrder
+    });
   } catch (error) {
     console.error("Error updating order:", error);
     return NextResponse.json(

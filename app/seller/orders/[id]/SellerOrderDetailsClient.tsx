@@ -51,6 +51,8 @@ interface Order {
   shippingAddress: string;
   formattedAddress?: string;
   addressId?: string;
+  customerNotes?: string;
+  sellerNotes?: string;
   receiptInfo?: {
     key: string;
     url: string;
@@ -68,6 +70,9 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
   const [isUpdating, setIsUpdating] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [sellerNotes, setSellerNotes] = useState('');
+  const [isUpdatingNotes, setIsUpdatingNotes] = useState(false);
+  const [notesSuccess, setNotesSuccess] = useState(false);
   
   // Fetch order details
   useEffect(() => {
@@ -96,6 +101,13 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
     
     fetchOrderDetails();
   }, [params, sessionStatus]);
+  
+  // Initialize seller notes from order data
+  useEffect(() => {
+    if (order?.sellerNotes) {
+      setSellerNotes(order.sellerNotes);
+    }
+  }, [order]);
   
   // Update order status with confirmation
   const initiateStatusUpdate = (newStatus: string) => {
@@ -137,6 +149,46 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
   const cancelStatusUpdate = () => {
     setShowStatusModal(false);
     setSelectedStatus(null);
+  };
+  
+  // Update seller notes
+  const updateSellerNotes = async () => {
+    if (!order) return;
+    
+    try {
+      setIsUpdatingNotes(true);
+      const orderId = params.id;
+      const response = await fetch(`/api/seller/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sellerNotes }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'خطا در بروزرسانی یادداشت‌ها');
+      }
+      
+      const updatedData = await response.json();
+      setOrder(prevOrder => {
+        if (!prevOrder) return null;
+        return {
+          ...prevOrder,
+          sellerNotes: updatedData.order.sellerNotes
+        };
+      });
+      
+      // Show success message briefly
+      setNotesSuccess(true);
+      setTimeout(() => setNotesSuccess(false), 3000);
+    } catch (err) {
+      console.error('Error updating seller notes:', err);
+      alert(err instanceof Error ? err.message : 'خطا در بروزرسانی یادداشت‌ها');
+    } finally {
+      setIsUpdatingNotes(false);
+    }
   };
   
   const formatPrice = (price: number) => {
@@ -526,6 +578,65 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
               لغو سفارش
             </button>
           </div>
+        </div>
+      </div>
+      
+      {/* Customer Notes - Display if available */}
+      {order?.customerNotes && (
+        <div className="bg-white shadow overflow-hidden sm:rounded-lg mt-6">
+          <div className="px-4 py-5 sm:px-6">
+            <h3 className="text-lg leading-6 font-medium text-gray-900">
+              یادداشت‌های مشتری
+            </h3>
+          </div>
+          <div className="border-t border-gray-200">
+            <div className="bg-gray-50 px-4 py-4">
+              <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                {order.customerNotes}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Seller Notes Form */}
+      <div className="bg-white shadow overflow-hidden sm:rounded-lg mt-6">
+        <div className="px-4 py-5 sm:px-6">
+          <h3 className="text-lg leading-6 font-medium text-gray-900">
+            یادداشت‌های فروشنده
+          </h3>
+          <p className="mt-1 text-sm text-gray-500">
+            این یادداشت‌ها فقط برای شما قابل مشاهده هستند و به مشتری نمایش داده نمی‌شوند
+          </p>
+        </div>
+        <div className="border-t border-gray-200 px-4 py-5">
+          <div className="mb-4">
+            <textarea
+              value={sellerNotes}
+              onChange={(e) => setSellerNotes(e.target.value)}
+              rows={4}
+              className="w-full border border-gray-300 rounded-md shadow-sm p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="یادداشت‌های خود را اینجا بنویسید..."
+            />
+          </div>
+          <div className="flex justify-end">
+            <button
+              onClick={updateSellerNotes}
+              disabled={isUpdatingNotes}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-center min-w-[100px]"
+            >
+              {isUpdatingNotes ? (
+                <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              ) : (
+                'ذخیره یادداشت‌ها'
+              )}
+            </button>
+          </div>
+          {notesSuccess && (
+            <div className="mt-2 text-sm text-green-600">
+              یادداشت‌ها با موفقیت ذخیره شدند
+            </div>
+          )}
         </div>
       </div>
       

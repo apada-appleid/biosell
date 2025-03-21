@@ -112,6 +112,7 @@ export async function POST(request: NextRequest) {
       shippingAddress,
       addressId,
       receiptInfo,
+      customerNotes,
     } = body;
     
     // Enhanced validation
@@ -293,9 +294,26 @@ export async function POST(request: NextRequest) {
     
     // Create the order
     const order = await prisma.order.create({
-      data: orderData,
-      include: {
-        items: true
+      data: {
+        orderNumber: orderNumber,
+        customerId: customer.id,
+        sellerId: sellerId,
+        shopId: cartItems[0].product.shopId,
+        total: total,
+        status: 'pending',
+        paymentMethod: paymentMethod,
+        paymentStatus: 'pending',
+        shippingAddress: shippingAddress || null,
+        customerNotes: customerNotes || null,
+        items: {
+          create: cartItems.map((item: any) => ({
+            productId: item.product.id,
+            title: item.product.title,
+            price: item.product.price,
+            quantity: item.quantity,
+            totalPrice: item.product.price * item.quantity
+          }))
+        }
       }
     });
 

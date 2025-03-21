@@ -4,26 +4,44 @@ export interface ProductImage {
   order?: number;
 }
 
+export interface SellerShop {
+  id: string;
+  shopName: string;
+  sellerId: string;
+  instagramId?: string;
+  description?: string;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface Seller {
+  id: string;
+  username: string;
+  email: string;
+  bio?: string;
+  profileImage?: string;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface Product {
   id: string;
   title: string;
-  description: string;
+  description?: string;
   price: number;
-  imageUrl: string;
-  instagramPostUrl?: string;
-  available: boolean;
-  createdAt: string;
-  images?: ProductImage[];
-  inventory?: number;
-  isActive?: boolean;
-  likes_count?: number;
+  inventory: number;
+  isActive: boolean;
+  requiresAddress: boolean;
   likesCount?: number;
-  sellerId?: string;
-  seller?: {
-    id: string;
-    username: string;
-    shopName: string;
-  };
+  shopId: string;
+  shop?: Partial<SellerShop>;
+  seller?: Partial<Seller>;
+  images?: ProductImage[];
+  displayShops?: string[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CartItem {
@@ -98,4 +116,6 @@ export interface Order {
   createdAt: string;
   user: User;
   addressId?: string;
+  customerNotes?: string;
+  sellerNotes?: string;
 } 

@@ -32,6 +32,7 @@ type OrderDetails = {
   paymentMethod: string;
   paymentStatus: string;
   shippingAddress: string;
+  customerNotes?: string;
   receiptInfo?: {
     key: string;
     url: string;
@@ -371,6 +372,24 @@ export default function OrderDetailsClient({ id }: OrderDetailsClientProps) {
           </dl>
         </div>
       </div>
+      
+      {/* یادداشت‌های مشتری */}
+      {order.customerNotes && (
+        <div className="bg-white shadow overflow-hidden sm:rounded-lg mt-6">
+          <div className="px-4 py-5 sm:px-6">
+            <h3 className="text-lg leading-6 font-medium text-gray-900">
+              یادداشت‌های شما
+            </h3>
+          </div>
+          <div className="border-t border-gray-200">
+            <div className="bg-gray-50 px-4 py-4">
+              <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                {order.customerNotes}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 
