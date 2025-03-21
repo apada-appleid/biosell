@@ -28,6 +28,16 @@ interface Customer {
   fullName: string;
   email: string;
   mobile: string;
+  addresses?: {
+    id: string;
+    fullName: string;
+    mobile: string;
+    address: string;
+    city: string;
+    province: string;
+    postalCode: string;
+    isDefault: boolean;
+  }[];
 }
 
 interface Order {
@@ -39,6 +49,8 @@ interface Order {
   paymentStatus: string;
   createdAt: string;
   shippingAddress: string;
+  formattedAddress?: string;
+  addressId?: string;
   receiptInfo?: {
     key: string;
     url: string;
@@ -334,12 +346,6 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
                 {getPaymentStatusText(order.paymentStatus)}
               </dd>
             </div>
-            {order.shippingAddress && (
-              <div className="bg-white px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-                <dt className="text-sm font-medium text-gray-500">آدرس تحویل</dt>
-                <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{order.shippingAddress}</dd>
-              </div>
-            )}
           </dl>
         </div>
       </div>
@@ -358,21 +364,30 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
                 <FiUser className="ml-1" />
                 نام مشتری
               </dt>
-              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{order.customer?.fullName || 'نامشخص'}</dd>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{order.customer.fullName || 'نامشخص'}</dd>
             </div>
             <div className="bg-white px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
               <dt className="text-sm font-medium text-gray-500 flex items-center">
                 <FiMail className="ml-1" />
                 ایمیل
               </dt>
-              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{order.customer?.email || 'نامشخص'}</dd>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{order.customer.email || 'نامشخص'}</dd>
             </div>
             <div className="bg-gray-50 px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
               <dt className="text-sm font-medium text-gray-500 flex items-center">
                 <FiPhone className="ml-1" />
                 شماره تماس
               </dt>
-              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{order.customer?.mobile || 'نامشخص'}</dd>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{order.customer.mobile || 'نامشخص'}</dd>
+            </div>
+            <div className="bg-white px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+              <dt className="text-sm font-medium text-gray-500 flex items-center">
+                <FiFileText className="ml-1" />
+                آدرس منتخب
+              </dt>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                {order.formattedAddress || order.shippingAddress || 'آدرس ثبت نشده است'}
+              </dd>
             </div>
           </dl>
         </div>

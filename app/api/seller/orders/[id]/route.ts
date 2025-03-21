@@ -58,6 +58,7 @@ export async function GET(
         paymentMethod: true,
         paymentStatus: true,
         shippingAddress: true,
+        addressId: true,
         createdAt: true,
         updatedAt: true,
         receiptInfo: true,
@@ -88,7 +89,22 @@ export async function GET(
             id: true,
             fullName: true,
             email: true,
-            mobile: true
+            mobile: true,
+            addresses: {
+              where: {
+                deletedAt: null
+              },
+              select: {
+                id: true,
+                fullName: true,
+                mobile: true,
+                address: true,
+                city: true,
+                province: true,
+                postalCode: true,
+                isDefault: true
+              }
+            }
           }
         }
       }
@@ -110,8 +126,26 @@ export async function GET(
         id: processedOrder.customerId || '',
         fullName: '',
         email: '',
-        mobile: ''
+        mobile: '',
+        addresses: []
       };
+    }
+    
+    // Find customer address by addressId if available
+    if (processedOrder.addressId && processedOrder.customer.addresses) {
+      const selectedAddress = processedOrder.customer.addresses.find(
+        (addr: any) => addr.id === processedOrder.addressId
+      );
+      
+      if (selectedAddress) {
+        // Format the address for display
+        processedOrder.formattedAddress = `${selectedAddress.address}، ${selectedAddress.city}، ${selectedAddress.province}، کد پستی: ${selectedAddress.postalCode}، گیرنده: ${selectedAddress.fullName}، شماره تماس: ${selectedAddress.mobile}`;
+      }
+    }
+    
+    // If no formatted address is created but there's a shippingAddress string, use that
+    if (!processedOrder.formattedAddress && processedOrder.shippingAddress) {
+      processedOrder.formattedAddress = processedOrder.shippingAddress;
     }
 
     // Generate fresh signed URL for receipt images if available
