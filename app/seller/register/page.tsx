@@ -111,6 +111,7 @@ export default function SellerRegisterPage() {
       setError(apiError.response?.data?.error || (err instanceof Error ? err.message : 'خطا در ثبت‌نام. لطفاً دوباره تلاش کنید.'));
     } finally {
       setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
