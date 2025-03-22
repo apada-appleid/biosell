@@ -812,27 +812,18 @@ export default function ShopPage() {
                   </div>
 
                   {/* Action Buttons - Instagram Style */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      onClick={handleAddToCart}
-                      className="bg-blue-500 text-white py-2.5 px-4 rounded-md hover:bg-blue-600 transition-colors disabled:bg-blue-300 flex items-center justify-center"
-                      disabled={!!(isAddingToCart)}
-                      tabIndex={0}
-                    >
-                      {isAddingToCart ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                      ) : (
-                        "افزودن به سبد"
-                      )}
-                    </button>
-                    <button
-                      onClick={handleGoToCart}
-                      className="bg-gray-100 text-gray-800 py-2.5 px-4 rounded-md hover:bg-gray-200 transition-colors"
-                      tabIndex={0}
-                    >
-                      سبد خرید
-                    </button>
-                  </div>
+                  <button
+                    onClick={handleAddToCart}
+                    className="w-full bg-blue-500 text-white py-2.5 px-4 rounded-md hover:bg-blue-600 transition-colors disabled:bg-blue-300 flex items-center justify-center"
+                    disabled={!!(isAddingToCart)}
+                    tabIndex={0}
+                  >
+                    {isAddingToCart ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      "افزودن به سبد"
+                    )}
+                  </button>
                 </>
               )}
               
