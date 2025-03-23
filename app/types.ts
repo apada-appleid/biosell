@@ -5,6 +5,7 @@ export interface Product {
   price: number;
   inventory?: number;
   isActive: boolean;
+  requiresAddress: boolean;
   deletedAt?: Date | string | null;
   shopId: string;
   shop?: {
