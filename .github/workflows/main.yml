@@ -13,6 +13,12 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
+      - name: Debug SSH Connection
+        run: |
+          eval $(ssh-agent -s)
+          ssh-add ~/.ssh/id_rsa
+          ssh -vvv ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
+
       - name: Set up SSH Key
         run: |
           mkdir -p ~/.ssh
