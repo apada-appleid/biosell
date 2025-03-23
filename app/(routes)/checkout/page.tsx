@@ -15,7 +15,7 @@ import {
 } from "react-icons/fi";
 import { TbLoader, TbPlus, TbCheck, TbMapPin, TbX } from "react-icons/tb";
 import { uploadReceiptToS3 } from "@/utils/s3-storage";
-import { CustomerAddress, CartItem } from "@/app/types";
+import { CustomerAddress, CartItem, Product } from "@/app/types";
 
 interface UserInfo {
   id: string;
@@ -40,6 +40,7 @@ export default function CheckoutPage() {
   const { showToast, hideToast } = useToastStore();
   const { cart } = useCartStore();
   const clearCart = useCartStore((state) => state.clearCart);
+  const updateCartItem = useCartStore((state) => state.updateItem);
 
   const [localUser, setLocalUser] = useState<UserInfo | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -76,8 +77,126 @@ export default function CheckoutPage() {
     postalCode: "",
     isDefault: false,
   });
+  const [isAddressRequired, setIsAddressRequired] = useState(true);
+  const [isValidatingCart, setIsValidatingCart] = useState(false);
+  const [hasCartChanges, setHasCartChanges] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Validate cart items (fetch fresh data for all products)
+  const validateCartItems = useCallback(async () => {
+    if (cart.items.length === 0) return;
+    
+    setIsValidatingCart(true);
+    let hasChanges = false;
+    
+    try {
+      // Collect all product IDs from cart
+      const productIds = cart.items.map(item => item.product.id);
+      
+      // Batch fetch latest product data
+      const response = await fetch(`/api/products/batch?ids=${productIds.join(',')}`);
+      
+      if (!response.ok) {
+        console.error("Failed to validate products:", await response.text());
+        return;
+      }
+      
+      const data = await response.json();
+      const freshProducts = data.products || [];
+      
+      if (!freshProducts.length) return;
+      
+      // Map products by ID for easy lookup
+      const productMap = new Map<string, Product>(
+        freshProducts.map((product: Product) => [product.id, product])
+      );
+      
+      // Update each cart item with fresh data if needed
+      for (const item of cart.items) {
+        const freshProduct = productMap.get(item.product.id) as Product | undefined;
+        
+        // Skip if product no longer exists or is inactive
+        if (!freshProduct || freshProduct.isActive === false) {
+          hasChanges = true;
+          showToast(
+            `محصول "${item.product.title}" دیگر در دسترس نیست و از سبد خرید حذف شد.`, 
+            undefined, 
+            "info"
+          );
+          continue;
+        }
+        
+        // Check for price changes
+        if (freshProduct.price !== item.product.price) {
+          hasChanges = true;
+          showToast(
+            `قیمت محصول "${item.product.title}" تغییر کرده است و بروزرسانی شد.`,
+            undefined,
+            "info"
+          );
+          
+          // Update cart item with new price
+          updateCartItem({
+            ...item,
+            product: {
+              ...item.product,
+              price: freshProduct.price
+            }
+          });
+        }
+        
+        // Check for inventory changes
+        if (freshProduct.inventory !== undefined && freshProduct.inventory < item.quantity) {
+          hasChanges = true;
+          const newQty = Math.max(0, freshProduct.inventory);
+          
+          showToast(
+            `موجودی محصول "${item.product.title}" تغییر کرده و به ${newQty} عدد تنظیم شد.`,
+            undefined,
+            "info"
+          );
+          
+          // Update cart item with new quantity
+          updateCartItem({
+            ...item,
+            quantity: newQty,
+            product: {
+              ...item.product,
+              inventory: freshProduct.inventory
+            }
+          });
+        }
+        
+        // Update requiresAddress value if it changed
+        if (freshProduct.requiresAddress !== item.product.requiresAddress) {
+          updateCartItem({
+            ...item,
+            product: {
+              ...item.product,
+              requiresAddress: freshProduct.requiresAddress
+            }
+          });
+          hasChanges = true;
+        }
+      }
+      
+      if (hasChanges) {
+        setHasCartChanges(true);
+      }
+      
+      // After validation, check if any product requires address
+      const addressRequired = cart.items.some(item => 
+        item.product.requiresAddress !== false
+      );
+      setIsAddressRequired(addressRequired);
+      
+    } catch (error) {
+      console.error("Error validating cart items:", error);
+    } finally {
+      setIsValidatingCart(false);
+    }
+  }, [cart.items, showToast, updateCartItem]);
 
   // Initialize component
   useEffect(() => {
@@ -88,7 +207,32 @@ export default function CheckoutPage() {
       router.push("/cart");
       return;
     }
+    
+    // Validate cart items when page loads
+    validateCartItems();
 
+    // Check if any product requires address
+    const addressRequired = cart.items.some(item => 
+      item.product.requiresAddress !== false // Handle undefined case as true
+    );
+    
+    // Debug logging
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(
+        "Address required:", 
+        addressRequired, 
+        "Products:", 
+        cart.items.map(i => ({
+          title: i.product.title, 
+          requiresAddress: i.product.requiresAddress === undefined 
+            ? "undefined (defaulting to required)" 
+            : i.product.requiresAddress
+        }))
+      );
+    }
+    
+    setIsAddressRequired(addressRequired);
+    
     // Hide any active toasts when entering checkout
     if (typeof window !== "undefined") {
       // Dismiss any existing toasts
@@ -118,7 +262,7 @@ export default function CheckoutPage() {
         console.error("Error getting local user:", error);
       }
     }
-  }, [hideToast, cart.items.length, router, orderComplete]);
+  }, [hideToast, cart.items, router, orderComplete, validateCartItems]);
 
   // Update form data when session changes
   useEffect(() => {
@@ -391,16 +535,19 @@ export default function CheckoutPage() {
     hideToast();
 
     try {
-      // Basic validation
-      if (
-        !formData.fullName ||
-        !formData.mobile ||
-        !formData.address ||
-        !formData.city ||
-        !formData.province ||
+      // Basic validation - only validate address fields if required
+      if (!formData.fullName || !formData.mobile) {
+        throw new Error("لطفاً نام و شماره موبایل را وارد کنید.");
+      }
+
+      // Only validate address fields if address is required
+      if (isAddressRequired && (
+        !formData.address || 
+        !formData.city || 
+        !formData.province || 
         !formData.postalCode
-      ) {
-        throw new Error("لطفاً تمام فیلدهای الزامی را پر کنید.");
+      )) {
+        throw new Error("لطفاً تمام فیلدهای آدرس را پر کنید.");
       }
 
       // Check if cart is empty
@@ -487,8 +634,11 @@ export default function CheckoutPage() {
         throw new Error("اطلاعات فروشنده یافت نشد.");
       }
 
-      // Create shipping address string
-      const shippingAddress = `${formData.fullName}, ${formData.mobile}, ${formData.province}, ${formData.city}, ${formData.address}, کدپستی: ${formData.postalCode}`;
+      // Create shipping address string (only if required or provided)
+      let shippingAddress = null;
+      if (isAddressRequired || (formData.address && formData.city)) {
+        shippingAddress = `${formData.fullName}, ${formData.mobile}, ${formData.province || ''}, ${formData.city || ''}, ${formData.address || ''}, کدپستی: ${formData.postalCode || ''}`;
+      }
 
       // Validate receipt upload for bank transfer
       if (!receiptImage) {
@@ -527,7 +677,7 @@ export default function CheckoutPage() {
         paymentMethod: "bank_transfer",
         shippingAddress,
         receiptInfo,
-        addressId: selectedAddressId,
+        addressId: isAddressRequired ? selectedAddressId : null,
       };
 
       // Create order
@@ -602,6 +752,20 @@ export default function CheckoutPage() {
       </div>
 
       <h1 className="text-2xl font-bold mb-8 text-gray-800">تکمیل سفارش</h1>
+
+      {isValidatingCart && (
+        <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded-md mb-6 flex items-center">
+          <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-500 mr-2"></div>
+          <span>در حال بروزرسانی اطلاعات محصولات...</span>
+        </div>
+      )}
+
+      {hasCartChanges && (
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-md mb-6">
+          <p className="font-medium">تغییراتی در سبد خرید شما اعمال شده است.</p>
+          <p className="text-sm mt-1">برخی محصولات تغییر قیمت یا موجودی داشته‌اند. لطفاً جزئیات را بررسی کنید.</p>
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mb-6">
@@ -759,11 +923,24 @@ export default function CheckoutPage() {
             </div>
 
             {/* Shipping Address */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+            <div className={`bg-white p-6 rounded-lg shadow-sm border ${!isAddressRequired ? 'border-green-100' : 'border-gray-100'}`}>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-medium text-gray-800">
-                  آدرس تحویل
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="text-lg font-medium text-gray-800">
+                    آدرس تحویل
+                  </h2>
+                  {!isAddressRequired && (
+                    <span className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">
+                      اختیاری
+                    </span>
+                  )}
+                </div>
+
+                {!isAddressRequired && (
+                  <p className="text-sm text-gray-600">
+                    محصول انتخابی شما نیازی به آدرس برای تحویل ندارد.
+                  </p>
+                )}
 
                 {!showAddressForm && addresses.length > 0 && (
                   <button
@@ -832,12 +1009,45 @@ export default function CheckoutPage() {
                           </div>
                         </div>
                       ))}
+
+                      {!isAddressRequired && (
+                        <div
+                          className={`border rounded-lg p-4 cursor-pointer transition-all duration-150 ${
+                            selectedAddressId === null
+                              ? "border-green-500 bg-green-50"
+                              : "border-gray-200 hover:border-green-300"
+                          }`}
+                          onClick={() => setSelectedAddressId(null)}
+                        >
+                          <div className="flex items-start">
+                            <div
+                              className={`w-5 h-5 rounded-full border-2 flex-shrink-0 mt-1 ml-3 ${
+                                selectedAddressId === null
+                                  ? "border-green-500 bg-green-500"
+                                  : "border-gray-300"
+                              }`}
+                            >
+                              {selectedAddressId === null && (
+                                <TbCheck className="text-white h-4 w-4" />
+                              )}
+                            </div>
+                            <div className="flex-1">
+                              <h3 className="font-bold text-gray-900">
+                                بدون آدرس فیزیکی
+                              </h3>
+                              <p className="text-sm text-gray-600 mt-1">
+                                محصول شما نیازی به آدرس فیزیکی برای تحویل ندارد
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : showAddressForm ? (
                     <div className="border border-gray-200 rounded-lg p-5">
                       <div className="flex justify-between items-center mb-4">
                         <h3 className="font-bold text-gray-900">
-                          افزودن آدرس جدید
+                          افزودن آدرس جدید {!isAddressRequired && "(اختیاری)"}
                         </h3>
                         <button
                           type="button"
@@ -962,18 +1172,23 @@ export default function CheckoutPage() {
                         <TbMapPin className="h-8 w-8 text-gray-400" />
                       </div>
                       <h3 className="text-base font-medium text-gray-800">
-                        آدرسی ثبت نشده است
+                        {isAddressRequired ? "آدرسی ثبت نشده است" : "آدرس برای این محصول اختیاری است"}
                       </h3>
                       <p className="mt-2 text-sm text-gray-600 text-center">
-                        برای تکمیل سفارش نیاز به ثبت آدرس دارید. لطفاً آدرس خود
-                        را وارد کنید.
+                        {isAddressRequired 
+                          ? "برای تکمیل سفارش نیاز به ثبت آدرس دارید. لطفاً آدرس خود را وارد کنید."
+                          : "محصول شما نیازی به آدرس فیزیکی ندارد. در صورت تمایل می‌توانید آدرس اضافه کنید."}
                       </p>
                       <button
                         type="button"
                         onClick={handleAddNewAddress}
-                        className="mt-4 px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                        className={`mt-4 px-4 py-2 border rounded-md shadow-sm text-sm font-medium ${
+                          isAddressRequired 
+                            ? "border-transparent bg-blue-600 hover:bg-blue-700 text-white" 
+                            : "border-green-300 bg-green-50 hover:bg-green-100 text-green-700"
+                        }`}
                       >
-                        افزودن آدرس
+                        افزودن آدرس{!isAddressRequired && " (اختیاری)"}
                       </button>
                     </div>
                   )}

@@ -20,6 +20,7 @@ interface CartStore {
   removeFromCart: (productId: string) => void;
   undoRemove: () => void;
   updateQuantity: (productId: string, quantity: number) => void;
+  updateItem: (item: CartItem) => void;
   clearCart: () => void;
   hydrate: () => void; // Add hydration method
 }
@@ -128,6 +129,29 @@ export const useCartStore = create<CartStore>()(
           const updatedItems = state.cart.items.map((item) => {
             if (item.product.id === productId) {
               return { ...item, quantity };
+            }
+            return item;
+          });
+          
+          const total = updatedItems.reduce(
+            (sum, item) => sum + (item.product.price * item.quantity),
+            0
+          );
+          
+          return {
+            cart: {
+              items: updatedItems,
+              total
+            }
+          };
+        });
+      },
+      
+      updateItem: (updatedItem: CartItem) => {
+        set((state) => {
+          const updatedItems = state.cart.items.map((item) => {
+            if (item.product.id === updatedItem.product.id) {
+              return updatedItem;
             }
             return item;
           });
