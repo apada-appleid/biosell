@@ -232,6 +232,7 @@ model Order {
   trackingNumber   String?     @map("tracking_number") @db.VarChar(100)
   shippingProvider String?     @map("shipping_provider") @db.VarChar(100)
   receiptInfo      String?     @map("receipt_info") @db.Text // Store receipt information as JSON string
+  digitalProductInfo String?   @map("digital_product_info") @db.Text // Store digital product information (license keys, download links, etc.)
   customerNotes    String?     @map("customer_notes") @db.Text
   sellerNotes      String?     @map("seller_notes") @db.Text
   processedAt      DateTime?   @map("processed_at")

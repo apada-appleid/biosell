@@ -20,6 +20,7 @@ interface OrderItem {
       id: string;
       imageUrl: string;
     }[];
+    requiresAddress: boolean;
   };
 }
 
@@ -53,6 +54,7 @@ interface Order {
   addressId?: string;
   customerNotes?: string;
   sellerNotes?: string;
+  digitalProductInfo?: string;
   receiptInfo?: {
     key: string;
     url: string;
@@ -71,8 +73,11 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [sellerNotes, setSellerNotes] = useState('');
+  const [digitalProductInfo, setDigitalProductInfo] = useState('');
   const [isUpdatingNotes, setIsUpdatingNotes] = useState(false);
+  const [isUpdatingDigitalInfo, setIsUpdatingDigitalInfo] = useState(false);
   const [notesSuccess, setNotesSuccess] = useState(false);
+  const [digitalInfoSuccess, setDigitalInfoSuccess] = useState(false);
   
   // Fetch order details
   useEffect(() => {
@@ -106,6 +111,9 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
   useEffect(() => {
     if (order?.sellerNotes) {
       setSellerNotes(order.sellerNotes);
+    }
+    if (order?.digitalProductInfo) {
+      setDigitalProductInfo(order.digitalProductInfo);
     }
   }, [order]);
   
@@ -188,6 +196,46 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
       alert(err instanceof Error ? err.message : 'خطا در بروزرسانی یادداشت‌ها');
     } finally {
       setIsUpdatingNotes(false);
+    }
+  };
+  
+  // Update digital product information
+  const updateDigitalProductInfo = async () => {
+    if (!order) return;
+    
+    try {
+      setIsUpdatingDigitalInfo(true);
+      const orderId = params.id;
+      const response = await fetch(`/api/seller/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ digitalProductInfo }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'خطا در بروزرسانی اطلاعات محصول دیجیتال');
+      }
+      
+      const updatedData = await response.json();
+      setOrder(prevOrder => {
+        if (!prevOrder) return null;
+        return {
+          ...prevOrder,
+          digitalProductInfo: updatedData.order.digitalProductInfo
+        };
+      });
+      
+      // Show success message briefly
+      setDigitalInfoSuccess(true);
+      setTimeout(() => setDigitalInfoSuccess(false), 3000);
+    } catch (err) {
+      console.error('Error updating digital product info:', err);
+      alert(err instanceof Error ? err.message : 'خطا در بروزرسانی اطلاعات محصول دیجیتال');
+    } finally {
+      setIsUpdatingDigitalInfo(false);
     }
   };
   
@@ -605,40 +653,73 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
           <h3 className="text-lg leading-6 font-medium text-gray-900">
             یادداشت‌های فروشنده
           </h3>
-          <p className="mt-1 text-sm text-gray-500">
-            این یادداشت‌ها فقط برای شما قابل مشاهده هستند و به مشتری نمایش داده نمی‌شوند
+          <p className="mt-1 max-w-2xl text-sm text-gray-500">
+            یادداشت‌های داخلی شما برای این سفارش
           </p>
         </div>
-        <div className="border-t border-gray-200 px-4 py-5">
-          <div className="mb-4">
-            <textarea
-              value={sellerNotes}
-              onChange={(e) => setSellerNotes(e.target.value)}
-              rows={4}
-              className="w-full border border-gray-300 rounded-md shadow-sm p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="یادداشت‌های خود را اینجا بنویسید..."
-            />
-          </div>
-          <div className="flex justify-end">
+        <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
+          <textarea
+            rows={3}
+            className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border border-gray-300 rounded-md"
+            placeholder="یادداشتی برای سفارش بنویسید..."
+            value={sellerNotes}
+            onChange={(e) => setSellerNotes(e.target.value)}
+          />
+          <div className="mt-3 flex justify-end">
             <button
+              type="button"
               onClick={updateSellerNotes}
               disabled={isUpdatingNotes}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 flex items-center justify-center min-w-[100px]"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
             >
-              {isUpdatingNotes ? (
-                <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              ) : (
-                'ذخیره یادداشت‌ها'
-              )}
+              {isUpdatingNotes ? 'در حال ذخیره...' : 'ذخیره یادداشت'}
             </button>
           </div>
           {notesSuccess && (
-            <div className="mt-2 text-sm text-green-600">
-              یادداشت‌ها با موفقیت ذخیره شدند
+            <div className="mt-3 text-sm text-green-600">
+              یادداشت‌های شما با موفقیت ذخیره شد.
             </div>
           )}
         </div>
       </div>
+      
+      {/* اطلاعات محصول دیجیتال */}
+      {order && order.items && order.items.some(item => item.product.requiresAddress === false) && (
+        <div className="bg-white shadow overflow-hidden sm:rounded-lg mt-6">
+          <div className="px-4 py-5 sm:px-6">
+            <h3 className="text-lg leading-6 font-medium text-gray-900">
+              اطلاعات محصول دیجیتال
+            </h3>
+            <p className="mt-1 max-w-2xl text-sm text-gray-500">
+              کلید لایسنس یا لینک دانلود برای مشتری
+            </p>
+          </div>
+          <div className="border-t border-gray-200 px-4 py-5 sm:p-6">
+            <textarea
+              rows={3}
+              className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border border-gray-300 rounded-md"
+              placeholder="لینک دانلود یا کلید لایسنس محصول دیجیتال را اینجا وارد کنید..."
+              value={digitalProductInfo}
+              onChange={(e) => setDigitalProductInfo(e.target.value)}
+            />
+            <div className="mt-3 flex justify-end">
+              <button
+                type="button"
+                onClick={updateDigitalProductInfo}
+                disabled={isUpdatingDigitalInfo}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              >
+                {isUpdatingDigitalInfo ? 'در حال ذخیره...' : 'ذخیره اطلاعات'}
+              </button>
+            </div>
+            {digitalInfoSuccess && (
+              <div className="mt-3 text-sm text-green-600">
+                اطلاعات محصول دیجیتال با موفقیت ذخیره شد.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       
       {/* اطلاعات رسید */}
       <div className="bg-white shadow overflow-hidden sm:rounded-lg mt-6">

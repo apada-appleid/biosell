@@ -62,6 +62,7 @@ export async function GET(
         createdAt: true,
         updatedAt: true,
         receiptInfo: true,
+        digitalProductInfo: true,
         customerId: true,
         items: {
           include: {
@@ -70,6 +71,7 @@ export async function GET(
                 id: true,
                 title: true,
                 price: true,
+                requiresAddress: true,
                 images: {
                   select: {
                     id: true,
@@ -247,10 +249,12 @@ export async function PATCH(
       trackingNumber?: string;
       shippingProvider?: string;
       sellerNotes?: string;
+      digitalProductInfo?: string;
       processedAt?: Date | null;
       shippedAt?: Date | null;
       deliveredAt?: Date | null;
       cancelledAt?: Date | null;
+      paymentStatus?: string;
     }
 
     // Prepare update data
@@ -269,10 +273,15 @@ export async function PATCH(
       
       updateData.status = status;
       
-      // Add status update timestamp
-      if (status === 'processing') updateData.processedAt = new Date();
-      else if (status === 'completed') updateData.deliveredAt = new Date();
-      else if (status === 'cancelled') updateData.cancelledAt = new Date();
+      // Add status update timestamp and update payment status if completed
+      if (status === 'processing') {
+        updateData.processedAt = new Date();
+      } else if (status === 'completed') {
+        updateData.deliveredAt = new Date();
+        updateData.paymentStatus = 'paid'; // Set payment status to paid when order is completed
+      } else if (status === 'cancelled') {
+        updateData.cancelledAt = new Date();
+      }
     }
     
     // Update tracking information if provided
@@ -282,6 +291,11 @@ export async function PATCH(
     // Update seller notes if provided
     if (sellerNotes !== undefined) {
       updateData.sellerNotes = sellerNotes;
+    }
+    
+    // Update digital product info if provided
+    if (data.digitalProductInfo !== undefined) {
+      updateData.digitalProductInfo = data.digitalProductInfo;
     }
     
     // Check if there's anything to update

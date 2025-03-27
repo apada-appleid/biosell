@@ -16,6 +16,7 @@ type OrderItem = {
     title: string;
     description: string;
     price: number;
+    requiresAddress?: boolean;
     images: {
       id: string;
       imageUrl: string;
@@ -33,6 +34,7 @@ type OrderDetails = {
   paymentStatus: string;
   shippingAddress: string;
   customerNotes?: string;
+  digitalProductInfo?: string;
   receiptInfo?: {
     key: string;
     url: string;
@@ -43,6 +45,11 @@ type OrderDetails = {
     id: string;
     shopName: string;
     username: string;
+  };
+  shop?: {
+    id: string;
+    shopName: string;
+    instagramId?: string;
   };
 };
 
@@ -146,6 +153,33 @@ export default function OrderDetailsClient({ id }: OrderDetailsClientProps) {
     }).format(date);
   };
 
+  // Add this function before the return statement
+  const processDigitalProductInfo = (info: string) => {
+    // Regular expression to match URLs
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = info.split(urlRegex);
+    
+    return parts.map((part, index) => {
+      if (part.match(urlRegex)) {
+        return (
+          <a
+            key={index}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-600 hover:text-blue-800 underline"
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+          >
+            {part}
+          </a>
+        );
+      }
+      return part;
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
@@ -201,6 +235,27 @@ export default function OrderDetailsClient({ id }: OrderDetailsClientProps) {
         </Link>
       </div>
 
+      {/* اطلاعات محصول دیجیتال - Moved to top for better visibility */}
+      {order.digitalProductInfo && order.status === 'completed' && order.items.some(item => item.product.requiresAddress === false) && (
+        <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
+          <div className="px-4 py-5 sm:px-6 bg-blue-50">
+            <h3 className="text-lg leading-6 font-bold text-blue-900">
+              اطلاعات محصول دیجیتال
+            </h3>
+            <p className="mt-1 text-sm text-blue-700">
+              لینک دانلود یا اطلاعات محصول دیجیتال شما
+            </p>
+          </div>
+          <div className="border-t border-gray-200">
+            <div className="bg-white px-4 py-4">
+              <div className="text-sm text-gray-700 whitespace-pre-wrap font-medium">
+                {processDigitalProductInfo(order.digitalProductInfo)}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* اطلاعات اصلی سفارش */}
       <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-6">
         <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
@@ -219,13 +274,6 @@ export default function OrderDetailsClient({ id }: OrderDetailsClientProps) {
         </div>
         <div className="border-t border-gray-200">
           <dl>
-            <div className="bg-gray-50 px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-              <dt className="text-sm font-medium text-gray-500 flex items-center">
-                <TbClipboard className="ml-1" />
-                شماره سفارش
-              </dt>
-              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{order.orderNumber}</dd>
-            </div>
             <div className="bg-white px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
               <dt className="text-sm font-medium text-gray-500 flex items-center">
                 <TbCreditCard className="ml-1" />
@@ -234,6 +282,7 @@ export default function OrderDetailsClient({ id }: OrderDetailsClientProps) {
               <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                 {order.paymentMethod === 'credit_card' ? 'پرداخت آنلاین' : 
                  order.paymentMethod === 'cash_on_delivery' ? 'پرداخت در محل' : 
+                 order.paymentMethod === 'bank_transfer' ? 'پرداخت بانکی' :
                  order.paymentMethod}
               </dd>
             </div>
@@ -245,8 +294,30 @@ export default function OrderDetailsClient({ id }: OrderDetailsClientProps) {
             </div>
             <div className="bg-white px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
               <dt className="text-sm font-medium text-gray-500">فروشگاه</dt>
-              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                {order.seller.shopName}
+              <dd className="mt-1 text-sm sm:mt-0 sm:col-span-2">
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <div className="flex flex-col space-y-2">
+                    <div className="flex items-center">
+                      <span className="text-gray-500">نام فروشگاه:</span>
+                      <span className="mr-2 text-gray-900 font-medium">{order.seller?.shopName || order.shop?.shopName || 'نامشخص'}</span>
+                    </div>
+                    {order.shop?.instagramId && (
+                      <div className="flex items-center">
+                        <span className="text-gray-500">پیج فروشگاه:</span>
+                        <span className="mr-2 text-gray-900">
+                          <a
+                            href={`https://instagram.com/${order.shop.instagramId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:text-blue-800 underline"
+                          >
+                            {order.shop.instagramId}@
+                          </a>
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </dd>
             </div>
             {order.shippingAddress && (

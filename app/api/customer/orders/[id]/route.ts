@@ -15,6 +15,7 @@ type OrderWithReceiptInfo = {
   paymentStatus: string;
   shippingAddress: string | null;
   receiptInfo: string | null;
+  digitalProductInfo: string | null;
   items: any[];
   seller: {
     id: string;
@@ -109,6 +110,7 @@ export async function GET(
         createdAt: true,
         updatedAt: true,
         receiptInfo: true,
+        digitalProductInfo: true,
         items: {
           include: {
             product: {
@@ -117,6 +119,7 @@ export async function GET(
                 title: true,
                 description: true,
                 price: true,
+                requiresAddress: true,
                 images: {
                   select: {
                     id: true,
@@ -140,7 +143,8 @@ export async function GET(
         shop: {
           select: {
             id: true,
-            shopName: true
+            shopName: true,
+            instagramId: true
           }
         }
       }
