@@ -37,9 +37,7 @@ export async function POST(req: NextRequest) {
     // Check if seller's mobile already exists by looking at bio field
     const existingSellerWithMobile = await prisma.seller.findFirst({
       where: {
-        bio: {
-          contains: mobile
-        }
+        username: mobile
       }
     });
     
@@ -58,24 +56,24 @@ export async function POST(req: NextRequest) {
     if (existingEmail) {
       return NextResponse.json({
         success: false,
-        error: "Email already in use"
+        error: "این ایمیل قبلاً ثبت شده است"
       }, { status: 400 });
     }
 
-    // Check if Instagram ID is already in use
-    const existingInstagramId = await prisma.sellerShop.findFirst({
-      where: { 
-        instagramId,
-        deletedAt: null // Only check active shops
-      }
-    });
+    // // Check if Instagram ID is already in use
+    // const existingInstagramId = await prisma.sellerShop.findFirst({
+    //   where: { 
+    //     instagramId,
+    //     deletedAt: null // Only check active shops
+    //   }
+    // });
 
-    if (existingInstagramId) {
-      return NextResponse.json({
-        success: false,
-        error: "Instagram ID is already associated with another shop"
-      }, { status: 400 });
-    }
+    // if (existingInstagramId) {
+    //   return NextResponse.json({
+    //     success: false,
+    //     error: "این ایدی اینستاگرام قبلاً ثبت شده است"
+    //   }, { status: 400 });
+    // }
     
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);

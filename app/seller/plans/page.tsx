@@ -148,53 +148,74 @@ export default function PlansPage() {
               onClick={() => handleSelectPlan(plan.id)}
             >
               <div className="p-8 flex flex-col h-full">
-                {plan.price === 0 && (
+                {plan.name === 'یک ساله' && (
+                  <div className="absolute top-4 right-4 bg-red-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+                    17% تخفیف
+                  </div>
+                )}
+                {plan.name === 'سه ماهه' && (
                   <div className="absolute top-4 right-4 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-                    رایگان
+                    7% تخفیف
                   </div>
                 )}
                 
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">{plan.name}</h3>
                 
-                <div className="mb-6 flex items-baseline">
-                  <span className="text-5xl font-bold text-indigo-600">
-                    {plan.price === 0 ? 'رایگان' : formatPrice(plan.price)}
-                  </span>
-                  {plan.price > 0 && (
-                    <span className="text-gray-500 mr-2 text-lg">تومان / ماهانه</span>
+                <div className="mb-6">
+                  <div className="flex items-baseline">
+                    <span className="text-4xl font-bold text-indigo-600">
+                      {formatPrice(plan.price)}
+                    </span>
+                    <span className="text-gray-500 mr-2">تومان</span>
+                  </div>
+                  
+                  {plan.name === 'یک ساله' && (
+                    <div className="mt-2">
+                      <span className="text-sm text-gray-500 line-through">{formatPrice(6000000)} تومان</span>
+                      <span className="text-sm text-red-500 mr-2">17% تخفیف</span>
+                    </div>
                   )}
+                  {plan.name === 'سه ماهه' && (
+                    <div className="mt-2">
+                      <span className="text-sm text-gray-500 line-through">{formatPrice(1500000)} تومان</span>
+                      <span className="text-sm text-green-500 mr-2">7% تخفیف</span>
+                    </div>
+                  )}
+                  
+                  <div className="mt-2 text-sm text-gray-600">
+                    {plan.name === 'یک ماهه' && 'اشتراک یک ماهه'}
+                    {plan.name === 'سه ماهه' && 'معادل ماهیانه 467,000 تومان'}
+                    {plan.name === 'یک ساله' && 'معادل ماهیانه 417,000 تومان'}
+                  </div>
                 </div>
                 
                 <div className="h-px bg-gray-200 w-full my-6"></div>
                 
-                <ul className="my-5 space-y-2.5 text-sm">
-                  {Array.isArray(plan.features) ?
-                    plan.features.map((feature, idx) => (
+                <div className="flex-grow">
+                  <ul className="space-y-3">
+                    {Array.isArray(plan.features) && plan.features.map((feature, idx) => (
                       <li key={idx} className="flex items-start">
-                        <CheckIcon className="h-5 w-5 text-green-500 shrink-0 ml-2" />
-                        <span>{feature}</span>
+                        <CheckIcon className="h-5 w-5 text-green-500 ml-2 flex-shrink-0" />
+                        <span className="text-gray-600">{feature}</span>
                       </li>
-                    )) : (
-                      <li className="flex items-start">
-                        <CheckIcon className="h-5 w-5 text-green-500 shrink-0 ml-2" />
-                        <span>دسترسی به ویژگی‌های پایه</span>
-                      </li>
-                    )
-                  }
-                </ul>
+                    ))}
+                  </ul>
+                </div>
                 
                 <button
-                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSelectPlan(plan.id);
+                  }}
                   className={`
-                    w-full py-4 px-4 rounded-xl font-medium text-lg transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500
+                    mt-8 w-full py-3 px-4 rounded-lg font-medium transition-colors duration-200
                     ${selectedPlan === plan.id
                       ? 'bg-indigo-600 text-white hover:bg-indigo-700'
-                      : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+                      : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
                     }
                   `}
-                  onClick={() => handleSelectPlan(plan.id)}
                 >
-                  {selectedPlan === plan.id ? 'انتخاب شده' : 'انتخاب پلن'}
+                  انتخاب این پلن
                 </button>
               </div>
             </div>
