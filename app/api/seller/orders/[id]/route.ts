@@ -314,9 +314,140 @@ export async function PATCH(
       data: updateData
     });
 
+    // Fetch the complete order with all related data after update
+    const completeOrder = await prisma.order.findFirst({
+      where: {
+        id: orderId,
+        sellerId
+      },
+      select: {
+        id: true,
+        orderNumber: true,
+        status: true,
+        total: true,
+        paymentMethod: true,
+        paymentStatus: true,
+        shippingAddress: true,
+        addressId: true,
+        createdAt: true,
+        updatedAt: true,
+        receiptInfo: true,
+        digitalProductInfo: true,
+        sellerNotes: true,
+        customerId: true,
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                title: true,
+                price: true,
+                requiresAddress: true,
+                images: {
+                  select: {
+                    id: true,
+                    imageUrl: true
+                  },
+                  orderBy: {
+                    order: 'asc'
+                  },
+                  take: 1
+                }
+              }
+            }
+          }
+        },
+        customer: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            mobile: true,
+            addresses: {
+              where: {
+                deletedAt: null
+              },
+              select: {
+                id: true,
+                fullName: true,
+                mobile: true,
+                address: true,
+                city: true,
+                province: true,
+                postalCode: true,
+                isDefault: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!completeOrder) {
+      return NextResponse.json(
+        { error: "Failed to retrieve updated order" },
+        { status: 500 }
+      );
+    }
+
+    // Process order data same as in GET handler
+    let processedOrder: any = { ...completeOrder };
+    
+    // Ensure customer object exists even if it's null in the database
+    if (!processedOrder.customer) {
+      processedOrder.customer = {
+        id: processedOrder.customerId || '',
+        fullName: '',
+        email: '',
+        mobile: '',
+        addresses: []
+      };
+    }
+    
+    // Find customer address by addressId if available
+    if (processedOrder.addressId && processedOrder.customer.addresses) {
+      const selectedAddress = processedOrder.customer.addresses.find(
+        (addr: any) => addr.id === processedOrder.addressId
+      );
+      
+      if (selectedAddress) {
+        // Format the address for display
+        processedOrder.formattedAddress = `${selectedAddress.address}، ${selectedAddress.city}، ${selectedAddress.province}، کد پستی: ${selectedAddress.postalCode}، گیرنده: ${selectedAddress.fullName}، شماره تماس: ${selectedAddress.mobile}`;
+      }
+    }
+    
+    // If no formatted address is created but there's a shippingAddress string, use that
+    if (!processedOrder.formattedAddress && processedOrder.shippingAddress) {
+      processedOrder.formattedAddress = processedOrder.shippingAddress;
+    }
+
+    // Generate fresh signed URL for receipt images if available
+    if (completeOrder.receiptInfo) {
+      try {
+        const receiptData = JSON.parse(completeOrder.receiptInfo as string);
+        
+        // Generate a fresh signed URL for the S3 object
+        if (receiptData.key) {
+          const { getSignedReceiptUrl } = await import('@/utils/s3-storage');
+          const signedUrl = await getSignedReceiptUrl(receiptData.key);
+          
+          processedOrder.receiptInfo = {
+            ...receiptData,
+            url: signedUrl
+          };
+        } else {
+          processedOrder.receiptInfo = receiptData;
+        }
+      } catch (error) {
+        console.error('Error processing receipt info:', error);
+        // Keep the original receipt info
+        processedOrder.receiptInfo = completeOrder.receiptInfo;
+      }
+    }
+
     return NextResponse.json({
       message: "Order updated successfully",
-      order: updatedOrder
+      order: processedOrder
     });
   } catch (error) {
     console.error("Error updating order:", error);

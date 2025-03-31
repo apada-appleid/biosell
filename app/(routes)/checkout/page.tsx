@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useCartStore } from "@/app/store/cart";
@@ -282,7 +282,8 @@ export default function CheckoutPage() {
 
     // Redirect if not a customer
     if (status === "authenticated" && session?.user?.type !== "customer") {
-      router.push("/auth/customer-login?callbackUrl=/checkout");
+      // Use signOut instead of manually clearing localStorage
+      signOut({ redirect: true, callbackUrl: "/auth/customer-login?callbackUrl=/checkout" });
       return;
     }
 
@@ -347,7 +348,8 @@ export default function CheckoutPage() {
 
       if (!token) {
         console.error("No authentication token found");
-        router.push("/auth/customer-login?callbackUrl=/checkout");
+        // Use signOut to clean up session
+        signOut({ redirect: true, callbackUrl: "/auth/customer-login?callbackUrl=/checkout" });
         return;
       }
 
@@ -361,6 +363,10 @@ export default function CheckoutPage() {
 
       if (!response.ok) {
         console.error("Error fetching addresses:", response.statusText);
+        // If unauthorized (401) or forbidden (403), use signOut
+        if (response.status === 401 || response.status === 403) {
+          signOut({ redirect: true, callbackUrl: "/auth/customer-login?callbackUrl=/checkout" });
+        }
         return;
       }
 
@@ -466,6 +472,8 @@ export default function CheckoutPage() {
 
       if (!token) {
         setError("مشکل در احراز هویت. لطفاً دوباره وارد شوید.");
+        // Use signOut to clean up session
+        signOut({ redirect: true, callbackUrl: "/auth/customer-login?callbackUrl=/checkout" });
         return;
       }
 
@@ -483,6 +491,11 @@ export default function CheckoutPage() {
       });
 
       if (!response.ok) {
+        // If unauthorized (401) or forbidden (403), use signOut
+        if (response.status === 401 || response.status === 403) {
+          signOut({ redirect: true, callbackUrl: "/auth/customer-login?callbackUrl=/checkout" });
+          return;
+        }
         throw new Error("خطا در ذخیره آدرس");
       }
 

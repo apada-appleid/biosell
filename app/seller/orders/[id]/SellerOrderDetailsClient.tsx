@@ -61,7 +61,7 @@ interface Order {
     url: string;
     bucket: string;
   };
-  customer: Customer;
+  customer: Customer | null;
   items: OrderItem[];
 }
 
@@ -96,6 +96,18 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
         }
         
         const orderData = await response.json();
+        
+        // Ensure customer object exists with default values
+        if (!orderData.customer) {
+          orderData.customer = {
+            id: orderData.customerId || 'unknown',
+            fullName: 'مشتری ناشناس',
+            email: 'نامشخص',
+            mobile: 'نامشخص',
+            addresses: []
+          };
+        }
+        
         setOrder(orderData);
       } catch (err) {
         console.error('Error fetching order details:', err);
@@ -143,8 +155,20 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
         throw new Error(errorData.error || 'خطا در بروزرسانی وضعیت سفارش');
       }
       
-      const updatedOrder = await response.json();
-      setOrder(updatedOrder);
+      const updatedData = await response.json();
+      
+      // Ensure customer object exists in the updated order
+      if (updatedData.order && !updatedData.order.customer) {
+        updatedData.order.customer = {
+          id: updatedData.order.customerId || '',
+          fullName: '',
+          email: '',
+          mobile: '',
+          addresses: []
+        };
+      }
+      
+      setOrder(updatedData.order);
       setShowStatusModal(false);
     } catch (err) {
       console.error('Error updating order status:', err);
@@ -249,14 +273,27 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
   };
   
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('fa-IR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
+    if (!dateString) return '';
+    
+    try {
+      const date = new Date(dateString);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return '';
+      }
+      
+      return new Intl.DateTimeFormat('fa-IR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(date);
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return '';
+    }
   };
   
   const getStatusText = (status: OrderStatus) => {
@@ -465,21 +502,27 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
                 <FiUser className="ml-1" />
                 نام مشتری
               </dt>
-              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{order.customer.fullName || 'نامشخص'}</dd>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                {order.customer?.fullName || 'نامشخص'}
+              </dd>
             </div>
             <div className="bg-white px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
               <dt className="text-sm font-medium text-gray-500 flex items-center">
                 <FiMail className="ml-1" />
                 ایمیل
               </dt>
-              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{order.customer.email || 'نامشخص'}</dd>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                {order.customer?.email || 'نامشخص'}
+              </dd>
             </div>
             <div className="bg-gray-50 px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
               <dt className="text-sm font-medium text-gray-500 flex items-center">
                 <FiPhone className="ml-1" />
                 شماره تماس
               </dt>
-              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">{order.customer.mobile || 'نامشخص'}</dd>
+              <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                {order.customer?.mobile || 'نامشخص'}
+              </dd>
             </div>
             <div className="bg-white px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
               <dt className="text-sm font-medium text-gray-500 flex items-center">
