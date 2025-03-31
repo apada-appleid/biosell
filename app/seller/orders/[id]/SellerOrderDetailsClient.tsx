@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { FiArrowLeft, FiUser, FiMail, FiPhone, FiCalendar, FiCreditCard, FiFileText, FiAlertTriangle } from 'react-icons/fi';
+import { OrderStatus, PaymentStatus } from "@/app/types";
 
 interface OrderItem {
   id: string;
@@ -71,7 +72,7 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
   const [error, setError] = useState<string | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
   const [showStatusModal, setShowStatusModal] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState<OrderStatus | null>(null);
   const [sellerNotes, setSellerNotes] = useState('');
   const [digitalProductInfo, setDigitalProductInfo] = useState('');
   const [isUpdatingNotes, setIsUpdatingNotes] = useState(false);
@@ -118,7 +119,7 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
   }, [order]);
   
   // Update order status with confirmation
-  const initiateStatusUpdate = (newStatus: string) => {
+  const initiateStatusUpdate = (newStatus: OrderStatus) => {
     setSelectedStatus(newStatus);
     setShowStatusModal(true);
   };
@@ -258,43 +259,43 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
     }).format(date);
   };
   
-  const getStatusText = (status: string) => {
+  const getStatusText = (status: OrderStatus) => {
     switch (status) {
-      case 'pending':
+      case OrderStatus.pending:
         return 'در انتظار تأیید';
-      case 'processing':
+      case OrderStatus.processing:
         return 'در حال پردازش';
-      case 'completed':
+      case OrderStatus.completed:
         return 'تکمیل شده';
-      case 'cancelled':
+      case OrderStatus.cancelled:
         return 'لغو شده';
       default:
         return status;
     }
   };
   
-  const getPaymentStatusText = (status: string) => {
+  const getPaymentStatusText = (status: PaymentStatus) => {
     switch (status) {
-      case 'paid':
+      case PaymentStatus.paid:
         return 'پرداخت شده';
-      case 'pending':
+      case PaymentStatus.pending:
         return 'در انتظار پرداخت';
-      case 'failed':
+      case PaymentStatus.failed:
         return 'ناموفق';
       default:
         return status;
     }
   };
   
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: OrderStatus) => {
     switch (status) {
-      case 'pending':
+      case OrderStatus.pending:
         return 'bg-yellow-100 text-yellow-800';
-      case 'processing':
+      case OrderStatus.processing:
         return 'bg-blue-100 text-blue-800';
-      case 'completed':
+      case OrderStatus.completed:
         return 'bg-green-100 text-green-800';
-      case 'cancelled':
+      case OrderStatus.cancelled:
         return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -354,8 +355,8 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
               <h3 className="text-lg font-medium text-gray-900 mb-2">تغییر وضعیت سفارش</h3>
               <p className="mb-4 text-gray-600">
                 آیا از تغییر وضعیت سفارش از{' '}
-                <span className="font-medium">{getStatusText(order.status)}</span> به{' '}
-                <span className="font-medium">{getStatusText(selectedStatus || '')}</span>{' '}
+                <span className="font-medium">{getStatusText(order.status as OrderStatus)}</span> به{' '}
+                <span className="font-medium">{selectedStatus ? getStatusText(selectedStatus) : ''}</span>{' '}
                 اطمینان دارید؟
               </p>
               
@@ -406,8 +407,8 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
           بازگشت به سفارش‌ها
         </Link>
         
-        <span className={`px-3 py-1 inline-flex text-sm font-semibold rounded-full ${getStatusColor(order.status)}`}>
-          {getStatusText(order.status)}
+        <span className={`px-3 py-1 inline-flex text-sm font-semibold rounded-full ${getStatusColor(order.status as OrderStatus)}`}>
+          {getStatusText(order.status as OrderStatus)}
         </span>
       </div>
       
@@ -443,7 +444,7 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
             <div className="bg-gray-50 px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
               <dt className="text-sm font-medium text-gray-500">وضعیت پرداخت</dt>
               <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                {getPaymentStatusText(order.paymentStatus)}
+                {getPaymentStatusText(order.paymentStatus as PaymentStatus)}
               </dd>
             </div>
           </dl>
@@ -563,65 +564,65 @@ export default function SellerOrderDetailsClient({ params }: { params: { id: str
         <div className="border-t border-gray-200 px-4 py-5">
           <div className="mb-4">
             <h4 className="text-md font-medium text-gray-900 mb-1">وضعیت فعلی سفارش</h4>
-            <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
-              {getStatusText(order.status)}
+            <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status as OrderStatus)}`}>
+              {getStatusText(order.status as OrderStatus)}
             </div>
           </div>
           
           <h4 className="text-md font-medium text-gray-900 mb-2">تغییر وضعیت سفارش</h4>
           <div className="flex flex-wrap gap-2">
             <button
-              onClick={() => initiateStatusUpdate('pending')}
-              disabled={order.status === 'pending' || isUpdating}
+              onClick={() => initiateStatusUpdate(OrderStatus.pending)}
+              disabled={order.status === OrderStatus.pending || isUpdating}
               className={`px-4 py-2 rounded-md text-sm font-medium ${
-                order.status === 'pending' 
+                order.status === OrderStatus.pending 
                   ? 'bg-yellow-100 text-yellow-800 border-2 border-yellow-300 cursor-not-allowed' 
                   : 'bg-yellow-500 text-white hover:bg-yellow-600 focus:ring-2 focus:ring-yellow-300 focus:outline-none'
               }`}
               aria-label="تغییر وضعیت به در انتظار تأیید"
-              tabIndex={order.status === 'pending' ? -1 : 0}
+              tabIndex={order.status === OrderStatus.pending ? -1 : 0}
             >
               در انتظار تأیید
             </button>
             
             <button
-              onClick={() => initiateStatusUpdate('processing')}
-              disabled={order.status === 'processing' || isUpdating}
+              onClick={() => initiateStatusUpdate(OrderStatus.processing)}
+              disabled={order.status === OrderStatus.processing || isUpdating}
               className={`px-4 py-2 rounded-md text-sm font-medium ${
-                order.status === 'processing' 
+                order.status === OrderStatus.processing 
                   ? 'bg-blue-100 text-blue-800 border-2 border-blue-300 cursor-not-allowed' 
                   : 'bg-blue-500 text-white hover:bg-blue-600 focus:ring-2 focus:ring-blue-300 focus:outline-none'
               }`}
               aria-label="تغییر وضعیت به در حال پردازش"
-              tabIndex={order.status === 'processing' ? -1 : 0}
+              tabIndex={order.status === OrderStatus.processing ? -1 : 0}
             >
               در حال پردازش
             </button>
             
             <button
-              onClick={() => initiateStatusUpdate('completed')}
-              disabled={order.status === 'completed' || isUpdating}
+              onClick={() => initiateStatusUpdate(OrderStatus.completed)}
+              disabled={order.status === OrderStatus.completed || isUpdating}
               className={`px-4 py-2 rounded-md text-sm font-medium ${
-                order.status === 'completed' 
+                order.status === OrderStatus.completed 
                   ? 'bg-green-100 text-green-800 border-2 border-green-300 cursor-not-allowed' 
                   : 'bg-green-500 text-white hover:bg-green-600 focus:ring-2 focus:ring-green-300 focus:outline-none'
               }`}
               aria-label="تغییر وضعیت به تکمیل شده"
-              tabIndex={order.status === 'completed' ? -1 : 0}
+              tabIndex={order.status === OrderStatus.completed ? -1 : 0}
             >
               تکمیل شده
             </button>
             
             <button
-              onClick={() => initiateStatusUpdate('cancelled')}
-              disabled={order.status === 'cancelled' || isUpdating}
+              onClick={() => initiateStatusUpdate(OrderStatus.cancelled)}
+              disabled={order.status === OrderStatus.cancelled || isUpdating}
               className={`px-4 py-2 rounded-md text-sm font-medium ${
-                order.status === 'cancelled' 
+                order.status === OrderStatus.cancelled 
                   ? 'bg-red-100 text-red-800 border-2 border-red-300 cursor-not-allowed' 
                   : 'bg-red-500 text-white hover:bg-red-600 focus:ring-2 focus:ring-red-300 focus:outline-none'
               }`}
               aria-label="تغییر وضعیت به لغو سفارش"
-              tabIndex={order.status === 'cancelled' ? -1 : 0}
+              tabIndex={order.status === OrderStatus.cancelled ? -1 : 0}
             >
               لغو سفارش
             </button>

@@ -1,3 +1,34 @@
+// Define enums that match the Prisma schema
+export enum UserRole {
+  admin = 'admin',
+  superadmin = 'superadmin'
+}
+
+export enum PlanPaymentStatus {
+  pending = 'pending',
+  approved = 'approved',
+  rejected = 'rejected'
+}
+
+export enum OrderStatus {
+  pending = 'pending',
+  processing = 'processing',
+  completed = 'completed',
+  cancelled = 'cancelled'
+}
+
+export enum PaymentMethod {
+  cash_on_delivery = 'cash_on_delivery',
+  credit_card = 'credit_card',
+  bank_transfer = 'bank_transfer'
+}
+
+export enum PaymentStatus {
+  pending = 'pending',
+  paid = 'paid',
+  failed = 'failed'
+}
+
 export interface Product {
   id: string;
   title: string;
@@ -35,12 +66,6 @@ export interface CartItem {
   product: Product;
   quantity: number;
 }
-
-export type OrderStatus = 'pending' | 'processing' | 'completed' | 'cancelled';
-
-export type PaymentStatus = 'pending' | 'paid' | 'failed';
-
-export type PaymentMethod = 'credit_card' | 'cash_on_delivery' | 'bank_transfer';
 
 // Customer address type
 export interface CustomerAddress {

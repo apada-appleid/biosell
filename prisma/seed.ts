@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, UserRole } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -16,7 +16,7 @@ async function main() {
         email: 'superadmin@biosell.me',
         password: hashedPassword,
         name: 'مدیر ارشد سیستم',
-        role: 'superadmin',
+        role: UserRole.superadmin,
       },
     });
     console.log('✅ سوپر ادمین با موفقیت ایجاد شد!');
@@ -36,7 +36,7 @@ async function main() {
         email: 'admin@biosell.me',
         password: hashedPassword,
         name: 'مدیر سیستم',
-        role: 'admin',
+        role: UserRole.admin,
       },
     });
     console.log('✅ ادمین با موفقیت ایجاد شد!');

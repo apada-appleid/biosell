@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import authOptions from "@/lib/auth";
 import { getAuthenticatedUser } from "@/lib/auth-helpers";
+import { OrderStatus } from "@/app/types";
 
 // GET: Fetch customer profile
 export async function GET(request: NextRequest) {
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
     const totalSpent = await prisma.order.aggregate({
       where: { 
         customerId,
-        status: 'delivered' 
+        status: OrderStatus.completed
       },
       _sum: {
         total: true

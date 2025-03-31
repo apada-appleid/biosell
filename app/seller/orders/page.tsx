@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { FiArrowLeft, FiPackage, FiClock, FiCheck, FiX, FiEye } from 'react-icons/fi';
+import { OrderStatus, PaymentStatus, PaymentMethod } from '@/app/types';
 
 interface OrderItem {
   id: string;
@@ -24,9 +25,9 @@ interface Order {
   id: string;
   orderNumber: string;
   total: number;
-  status: string;
-  paymentMethod: string;
-  paymentStatus: string;
+  status: OrderStatus;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
   createdAt: string;
   customer: Customer;
   items: OrderItem[];
@@ -86,45 +87,45 @@ export default function SellerOrdersPage() {
     }).format(date);
   };
   
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: OrderStatus) => {
     switch (status) {
-      case 'pending':
+      case OrderStatus.pending:
         return <FiClock className="text-yellow-500" />;
-      case 'processing':
+      case OrderStatus.processing:
         return <FiPackage className="text-blue-500" />;
-      case 'completed':
+      case OrderStatus.completed:
         return <FiCheck className="text-green-500" />;
-      case 'cancelled':
+      case OrderStatus.cancelled:
         return <FiX className="text-red-500" />;
       default:
         return <FiClock className="text-gray-500" />;
     }
   };
   
-  const getStatusText = (status: string) => {
+  const getStatusText = (status: OrderStatus) => {
     switch (status) {
-      case 'pending':
+      case OrderStatus.pending:
         return 'در انتظار تأیید';
-      case 'processing':
+      case OrderStatus.processing:
         return 'در حال پردازش';
-      case 'completed':
+      case OrderStatus.completed:
         return 'تکمیل شده';
-      case 'cancelled':
+      case OrderStatus.cancelled:
         return 'لغو شده';
       default:
         return status;
     }
   };
   
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: OrderStatus) => {
     switch (status) {
-      case 'pending':
+      case OrderStatus.pending:
         return 'bg-yellow-100 text-yellow-800';
-      case 'processing':
+      case OrderStatus.processing:
         return 'bg-blue-100 text-blue-800';
-      case 'completed':
+      case OrderStatus.completed:
         return 'bg-green-100 text-green-800';
-      case 'cancelled':
+      case OrderStatus.cancelled:
         return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';

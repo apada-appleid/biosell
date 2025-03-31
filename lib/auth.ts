@@ -2,12 +2,13 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import { UserRole } from '@/app/types';
 
 // Extend the JWT interface
 declare module 'next-auth/jwt' {
   interface JWT {
     id: string;
-    role?: string;
+    role?: UserRole;
     type: 'admin' | 'seller' | 'customer';
     username?: string;
     mobile?: string | null;
@@ -20,7 +21,7 @@ declare module 'next-auth/jwt' {
 declare module 'next-auth' {
   interface User {
     id: string;
-    role?: string;
+    role?: UserRole;
     type: 'admin' | 'seller' | 'customer';
     username?: string;
     mobile?: string | null;
@@ -34,7 +35,7 @@ declare module 'next-auth' {
       name?: string | null;
       email?: string | null;
       image?: string | null;
-      role?: string;
+      role?: UserRole;
       type: 'admin' | 'seller' | 'customer';
       username?: string;
       mobile?: string | null;
@@ -130,7 +131,7 @@ const authOptions: NextAuthOptions = {
               id: user.id,
               name: user.name,
               email: user.email,
-              role: user.role,
+              role: user.role as UserRole,
               type: 'admin',
               mobile: user.mobile
             };

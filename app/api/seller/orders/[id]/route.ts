@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import authOptions from "@/lib/auth";
 import { getAuthenticatedUser } from "@/lib/auth-helpers";
+import { OrderStatus, PaymentStatus } from "@/app/types";
 
 // GET - Get a specific order for a seller
 export async function GET(
@@ -243,18 +244,17 @@ export async function PATCH(
     const data = await request.json();
     const { status, trackingNumber, shippingProvider, sellerNotes } = data;
     
-    // Define a proper type for order update data
+    // Define a type for order update data with proper types
     interface OrderUpdateData {
-      status?: string;
+      status?: OrderStatus;
+      paymentStatus?: PaymentStatus;
+      processedAt?: Date;
+      deliveredAt?: Date;
+      cancelledAt?: Date;
       trackingNumber?: string;
       shippingProvider?: string;
       sellerNotes?: string;
       digitalProductInfo?: string;
-      processedAt?: Date | null;
-      shippedAt?: Date | null;
-      deliveredAt?: Date | null;
-      cancelledAt?: Date | null;
-      paymentStatus?: string;
     }
 
     // Prepare update data
@@ -262,24 +262,24 @@ export async function PATCH(
     
     // Update order status if provided
     if (status) {
-      // Validate status
-      const validStatuses = ['pending', 'processing', 'completed', 'cancelled'];
-      if (!validStatuses.includes(status)) {
+      // Validate status using the enum values
+      const validStatuses = Object.values(OrderStatus);
+      if (!validStatuses.includes(status as OrderStatus)) {
         return NextResponse.json(
           { error: "Invalid order status" },
           { status: 400 }
         );
       }
       
-      updateData.status = status;
+      updateData.status = status as OrderStatus;
       
       // Add status update timestamp and update payment status if completed
-      if (status === 'processing') {
+      if (status === OrderStatus.processing) {
         updateData.processedAt = new Date();
-      } else if (status === 'completed') {
+      } else if (status === OrderStatus.completed) {
         updateData.deliveredAt = new Date();
-        updateData.paymentStatus = 'paid'; // Set payment status to paid when order is completed
-      } else if (status === 'cancelled') {
+        updateData.paymentStatus = PaymentStatus.paid; // Set payment status to paid when order is completed
+      } else if (status === OrderStatus.cancelled) {
         updateData.cancelledAt = new Date();
       }
     }

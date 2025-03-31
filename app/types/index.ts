@@ -1,3 +1,5 @@
+import { OrderStatus, PaymentStatus, PaymentMethod } from '@/app/types';
+
 export interface ProductImage {
   id: string;
   imageUrl: string;
@@ -45,7 +47,12 @@ export interface Product {
 }
 
 export interface CartItem {
-  product: Product;
+  product: {
+    id: string;
+    title: string;
+    price: number;
+    image?: string;
+  };
   quantity: number;
 }
 
@@ -89,9 +96,8 @@ export interface CustomerAddress {
 
 export interface User {
   id: string;
-  name: string;
-  email: string;
-  mobile?: string;
+  name?: string;
+  email?: string;
 }
 
 export interface Customer {
@@ -112,7 +118,7 @@ export interface Order {
   id: string;
   items: CartItem[];
   total: number;
-  status: 'pending' | 'processing' | 'completed' | 'cancelled';
+  status: OrderStatus;
   createdAt: string;
   user: User;
   addressId?: string;

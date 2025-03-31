@@ -6,6 +6,7 @@ import { TbEdit, TbTrash, TbPlus, TbSearch, TbEye } from 'react-icons/tb';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useToastStore } from '@/app/store/toast';
+import { PlanPaymentStatus } from '@/app/types';
 
 type PaymentInfo = {
   id: string;
@@ -33,7 +34,7 @@ type PendingSubscriptionInfo = {
   endDate: string;
   maxProducts: number;
   paymentId: string;
-  paymentStatus?: 'pending' | 'approved' | 'rejected';
+  paymentStatus?: PlanPaymentStatus;
   payment?: PaymentInfo;
 };
 
@@ -94,38 +95,38 @@ export default function SellersPage() {
       setSellers([
         {
           id: '1',
-          username: 'fashion_gallery',
-          email: 'info@fashiongallery.com',
-          shopName: 'گالری مد آنلاین',
+          username: 'ahmad123',
+          email: 'ahmad@example.com',
+          shopName: 'فروشگاه احمد',
           isActive: true,
-          createdAt: '2023-08-15T10:00:00Z',
+          createdAt: '2023-08-15T10:30:00Z',
           subscription: {
             id: 's1',
             planId: 'p1',
-            planName: 'حرفه‌ای',
-            startDate: '2023-08-15T10:00:00Z',
-            endDate: '2024-08-15T10:00:00Z',
+            planName: 'طلایی',
+            startDate: '2023-08-15T10:30:00Z',
+            endDate: '2024-08-15T10:30:00Z',
             isActive: true,
             maxProducts: 100
           }
         },
         {
           id: '2',
-          username: 'nikan_studio',
-          email: 'contact@nikanstudio.com',
-          shopName: 'استودیو عکاسی نیکان',
+          username: 'sara78',
+          email: 'sara@example.com',
+          shopName: 'بوتیک سارا',
           isActive: true,
-          createdAt: '2023-09-20T14:30:00Z',
+          createdAt: '2023-10-20T14:30:00Z',
           pendingSubscription: {
             id: 's2',
             planId: 'p2',
-            planName: 'پایه',
-            startDate: '2023-09-20T14:30:00Z',
+            planName: 'نقره‌ای',
+            startDate: '2023-10-20T14:30:00Z',
             endDate: '2024-03-20T14:30:00Z',
             isActive: false,
             maxProducts: 50,
             paymentId: 'pay1',
-            paymentStatus: 'pending'
+            paymentStatus: PlanPaymentStatus.pending
           }
         },
         {
@@ -179,7 +180,13 @@ export default function SellersPage() {
     setError(null);
   };
 
-  const handleReviewAction = async (sellerId: string, subscriptionId: string, paymentId: string, status: 'approved' | 'rejected', notes?: string) => {
+  const handleReviewAction = async (
+    sellerId: string, 
+    subscriptionId: string, 
+    paymentId: string, 
+    status: PlanPaymentStatus.approved | PlanPaymentStatus.rejected, 
+    notes?: string
+  ) => {
     setProcessingSubscription(true);
     setError(null);
     
@@ -209,7 +216,7 @@ export default function SellersPage() {
       // Success handling
       if (data.success) {
         // Show success message
-        const message = status === 'approved' ? 'اشتراک تایید شد!' : 'اشتراک رد شد';
+        const message = status === PlanPaymentStatus.approved ? 'اشتراک تایید شد!' : 'اشتراک رد شد';
         useToastStore.getState().showToast(message);
         
         // Close the modal
@@ -381,15 +388,15 @@ export default function SellersPage() {
                 <div className="mt-2 p-3 bg-gray-50 rounded-md">
                   <p className="text-sm font-medium">وضعیت پرداخت: 
                     <span className={`mr-2 px-2 py-0.5 rounded-full text-xs ${
-                      reviewSeller.pendingSubscription.paymentStatus === 'approved' 
+                      reviewSeller.pendingSubscription.paymentStatus === PlanPaymentStatus.approved 
                         ? 'bg-green-100 text-green-800' 
-                        : reviewSeller.pendingSubscription.paymentStatus === 'rejected'
+                        : reviewSeller.pendingSubscription.paymentStatus === PlanPaymentStatus.rejected
                           ? 'bg-red-100 text-red-800'
                           : 'bg-yellow-100 text-yellow-800'
                     }`}>
-                      {reviewSeller.pendingSubscription.paymentStatus === 'approved' 
+                      {reviewSeller.pendingSubscription.paymentStatus === PlanPaymentStatus.approved 
                         ? 'تأیید شده' 
-                        : reviewSeller.pendingSubscription.paymentStatus === 'rejected'
+                        : reviewSeller.pendingSubscription.paymentStatus === PlanPaymentStatus.rejected
                           ? 'رد شده'
                           : 'در انتظار بررسی'}
                     </span>
@@ -424,7 +431,7 @@ export default function SellersPage() {
               <button
                 type="button"
                 className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
-                onClick={() => handleReviewAction(reviewSeller.id, reviewSeller.pendingSubscription?.id || '', reviewSeller.pendingSubscription?.paymentId || '', 'approved', reviewNotes)}
+                onClick={() => handleReviewAction(reviewSeller.id, reviewSeller.pendingSubscription?.id || '', reviewSeller.pendingSubscription?.paymentId || '', PlanPaymentStatus.approved, reviewNotes)}
                 disabled={processingSubscription}
               >
                 {processingSubscription ? 'در حال ثبت...' : 'تایید اشتراک'}
@@ -432,7 +439,7 @@ export default function SellersPage() {
               <button
                 type="button"
                 className="mt-3 w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
-                onClick={() => handleReviewAction(reviewSeller.id, reviewSeller.pendingSubscription?.id || '', reviewSeller.pendingSubscription?.paymentId || '', 'rejected', reviewNotes)}
+                onClick={() => handleReviewAction(reviewSeller.id, reviewSeller.pendingSubscription?.id || '', reviewSeller.pendingSubscription?.paymentId || '', PlanPaymentStatus.rejected, reviewNotes)}
                 disabled={processingSubscription}
               >
                 {processingSubscription ? 'در حال ثبت...' : 'رد درخواست'}

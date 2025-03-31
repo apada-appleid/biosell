@@ -14,13 +14,44 @@ datasource db {
   relationMode = "foreignKeys"
 }
 
+// Enum definitions
+enum UserRole {
+  admin
+  superadmin
+}
+
+enum PlanPaymentStatus {
+  pending
+  approved
+  rejected
+}
+
+enum OrderStatus {
+  pending
+  processing
+  completed
+  cancelled
+}
+
+enum PaymentMethod {
+  cash_on_delivery
+  credit_card
+  bank_transfer
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  failed
+}
+
 // مدل کاربران (ادمین‌ها)
 model User {
   id        String   @id @default(uuid())
   email     String   @unique @db.VarChar(255)
   password  String   @db.VarChar(255)
   name      String   @db.VarChar(255)
-  role      String   @default("admin") @db.VarChar(50)
+  role      UserRole @default(admin)
   mobile    String?  @db.VarChar(20)
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -44,19 +75,19 @@ model Plan {
 
 // مدل پرداخت‌های پلن (جدید)
 model PlanPayment {
-  id             String       @id @default(uuid())
-  subscriptionId String       @map("subscription_id")
-  sellerId       String       @map("seller_id")
+  id             String            @id @default(uuid())
+  subscriptionId String            @map("subscription_id")
+  sellerId       String            @map("seller_id")
   amount         Int
-  status         String       @default("pending") @db.VarChar(50) // pending, approved, rejected
-  receiptInfo    String?      @map("receipt_info") @db.Text // JSON string with receipt metadata
-  reviewedAt     DateTime?    @map("reviewed_at")
-  reviewedBy     String?      @map("reviewed_by")
-  notes          String?      @db.Text
-  createdAt      DateTime     @default(now()) @map("created_at")
-  updatedAt      DateTime     @updatedAt @map("updated_at")
-  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-  seller         Seller       @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  status         PlanPaymentStatus @default(pending)
+  receiptInfo    String?           @map("receipt_info") @db.Text // JSON string with receipt metadata
+  reviewedAt     DateTime?         @map("reviewed_at")
+  reviewedBy     String?           @map("reviewed_by")
+  notes          String?           @db.Text
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+  subscription   Subscription      @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  seller         Seller            @relation(fields: [sellerId], references: [id], onDelete: Cascade)
 
   @@map("plan_payments")
 }
@@ -218,32 +249,32 @@ model otp {
 
 // مدل سفارش‌ها
 model Order {
-  id               String      @id @default(uuid())
-  orderNumber      String      @unique @map("order_number") @db.VarChar(50)
-  customerId       String      @map("customer_id")
-  sellerId         String      @map("seller_id")
-  shopId           String      @map("shop_id")
+  id               String        @id @default(uuid())
+  orderNumber      String        @unique @map("order_number") @db.VarChar(50)
+  customerId       String        @map("customer_id")
+  sellerId         String        @map("seller_id")
+  shopId           String        @map("shop_id")
   total            Int
-  status           String      @default("pending") @db.VarChar(50) // pending, processing, completed, cancelled
-  paymentMethod    String      @map("payment_method") @db.VarChar(50) // cash_on_delivery, credit_card
-  paymentStatus    String      @default("pending") @map("payment_status") @db.VarChar(50) // pending, paid, failed
-  shippingAddress  String?     @map("shipping_address") @db.Text
-  addressId        String?     @map("address_id")
-  trackingNumber   String?     @map("tracking_number") @db.VarChar(100)
-  shippingProvider String?     @map("shipping_provider") @db.VarChar(100)
-  receiptInfo      String?     @map("receipt_info") @db.Text // Store receipt information as JSON string
-  digitalProductInfo String?   @map("digital_product_info") @db.Text // Store digital product information (license keys, download links, etc.)
-  customerNotes    String?     @map("customer_notes") @db.Text
-  sellerNotes      String?     @map("seller_notes") @db.Text
-  processedAt      DateTime?   @map("processed_at")
-  shippedAt        DateTime?   @map("shipped_at")
-  deliveredAt      DateTime?   @map("delivered_at")
-  cancelledAt      DateTime?   @map("cancelled_at")
-  createdAt        DateTime    @default(now()) @map("created_at")
-  updatedAt        DateTime    @updatedAt @map("updated_at")
-  customer         Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  seller           Seller      @relation(fields: [sellerId], references: [id], onDelete: Cascade)
-  shop             SellerShop  @relation(fields: [shopId], references: [id], onDelete: Cascade)
+  status           OrderStatus   @default(pending)
+  paymentMethod    PaymentMethod @map("payment_method")
+  paymentStatus    PaymentStatus @default(pending) @map("payment_status")
+  shippingAddress  String?       @map("shipping_address") @db.Text
+  addressId        String?       @map("address_id")
+  trackingNumber   String?       @map("tracking_number") @db.VarChar(100)
+  shippingProvider String?       @map("shipping_provider") @db.VarChar(100)
+  receiptInfo      String?       @map("receipt_info") @db.Text // Store receipt information as JSON string
+  digitalProductInfo String?     @map("digital_product_info") @db.Text // Store digital product information (license keys, download links, etc.)
+  customerNotes    String?       @map("customer_notes") @db.Text
+  sellerNotes      String?       @map("seller_notes") @db.Text
+  processedAt      DateTime?     @map("processed_at")
+  shippedAt        DateTime?     @map("shipped_at")
+  deliveredAt      DateTime?     @map("delivered_at")
+  cancelledAt      DateTime?     @map("cancelled_at")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @updatedAt @map("updated_at")
+  customer         Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  seller           Seller        @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  shop             SellerShop    @relation(fields: [shopId], references: [id], onDelete: Cascade)
   items            OrderItem[]
 
   @@map("orders")

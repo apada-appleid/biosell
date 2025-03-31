@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { PlanPaymentStatus } from '@/app/types';
 
 // Types
 type PlanPayment = {
@@ -11,7 +12,7 @@ type PlanPayment = {
   subscriptionId: string;
   sellerId: string;
   amount: number;
-  status: 'pending' | 'approved' | 'rejected';
+  status: PlanPaymentStatus;
   receiptInfo?: {
     key: string;
     url: string;
@@ -53,7 +54,7 @@ export default function AdminSubscriptionsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [reviewNotes, setReviewNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [currentFilter, setCurrentFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [currentFilter, setCurrentFilter] = useState<'all' | PlanPaymentStatus>('all');
   
   // Fetch payments
   useEffect(() => {
@@ -102,7 +103,7 @@ export default function AdminSubscriptionsPage() {
     setIsModalOpen(true);
   };
   
-  const handleReviewPayment = async (status: 'approved' | 'rejected') => {
+  const handleReviewPayment = async (status: PlanPaymentStatus) => {
     if (!selectedPayment) return;
     
     setIsSubmitting(true);
@@ -138,26 +139,26 @@ export default function AdminSubscriptionsPage() {
     }
   };
   
-  const getStatusClass = (status: string) => {
+  const getStatusClass = (status: PlanPaymentStatus) => {
     switch (status) {
-      case 'pending':
+      case PlanPaymentStatus.pending:
         return 'bg-yellow-100 text-yellow-800';
-      case 'approved':
+      case PlanPaymentStatus.approved:
         return 'bg-green-100 text-green-800';
-      case 'rejected':
+      case PlanPaymentStatus.rejected:
         return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
   };
   
-  const getStatusText = (status: string) => {
+  const getStatusText = (status: PlanPaymentStatus) => {
     switch (status) {
-      case 'pending':
+      case PlanPaymentStatus.pending:
         return 'در انتظار بررسی';
-      case 'approved':
+      case PlanPaymentStatus.approved:
         return 'تأیید شده';
-      case 'rejected':
+      case PlanPaymentStatus.rejected:
         return 'رد شده';
       default:
         return status;
@@ -211,9 +212,9 @@ export default function AdminSubscriptionsPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setCurrentFilter('pending')}
+                onClick={() => setCurrentFilter(PlanPaymentStatus.pending)}
                 className={`px-4 py-2 text-sm font-medium border-y ${
-                  currentFilter === 'pending' 
+                  currentFilter === PlanPaymentStatus.pending 
                     ? 'bg-indigo-600 text-white border-indigo-600' 
                     : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'
                 }`}
@@ -222,9 +223,9 @@ export default function AdminSubscriptionsPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setCurrentFilter('approved')}
+                onClick={() => setCurrentFilter(PlanPaymentStatus.approved)}
                 className={`px-4 py-2 text-sm font-medium border-y ${
-                  currentFilter === 'approved' 
+                  currentFilter === PlanPaymentStatus.approved 
                     ? 'bg-indigo-600 text-white border-indigo-600' 
                     : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'
                 }`}
@@ -233,9 +234,9 @@ export default function AdminSubscriptionsPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setCurrentFilter('rejected')}
+                onClick={() => setCurrentFilter(PlanPaymentStatus.rejected)}
                 className={`px-4 py-2 text-sm font-medium rounded-l-lg ${
-                  currentFilter === 'rejected' 
+                  currentFilter === PlanPaymentStatus.rejected 
                     ? 'bg-indigo-600 text-white' 
                     : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
                 }`}
@@ -330,7 +331,7 @@ export default function AdminSubscriptionsPage() {
                         مشاهده
                       </button>
                       
-                      {payment.status === 'pending' && (
+                      {payment.status === PlanPaymentStatus.pending && (
                         <>
                           <button
                             onClick={() => {
@@ -456,7 +457,7 @@ export default function AdminSubscriptionsPage() {
                     </dl>
                   </div>
                   
-                  {selectedPayment.status === 'pending' && (
+                  {selectedPayment.status === PlanPaymentStatus.pending && (
                     <div className="mt-8">
                       <h4 className="text-lg font-bold text-gray-900 mb-4">بررسی درخواست</h4>
                       <div className="space-y-4">
@@ -477,7 +478,7 @@ export default function AdminSubscriptionsPage() {
                         <div className="flex space-x-reverse space-x-4">
                           <button
                             type="button"
-                            onClick={() => handleReviewPayment('approved')}
+                            onClick={() => handleReviewPayment(PlanPaymentStatus.approved)}
                             disabled={isSubmitting}
                             className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
@@ -485,7 +486,7 @@ export default function AdminSubscriptionsPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleReviewPayment('rejected')}
+                            onClick={() => handleReviewPayment(PlanPaymentStatus.rejected)}
                             disabled={isSubmitting}
                             className="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
                           >

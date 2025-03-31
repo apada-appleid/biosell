@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 import { getServerSession } from 'next-auth/next';
 import authOptions from '@/lib/auth';
+import { PlanPaymentStatus } from '@/app/types';
 
 const prisma = new PrismaClient();
 
@@ -34,7 +35,9 @@ export async function POST(
     const body = await request.json();
     const { status, notes } = body;
     
-    if (!status || !['approved', 'rejected'].includes(status)) {
+    // Validate status using enum values
+    const validStatuses = [PlanPaymentStatus.approved, PlanPaymentStatus.rejected];
+    if (!status || !validStatuses.includes(status)) {
       return NextResponse.json(
         { success: false, message: 'Invalid status. Must be "approved" or "rejected"' },
         { status: 400 }
@@ -69,7 +72,7 @@ export async function POST(
     const updatedPayment = await prisma.planPayment.update({
       where: { id: paymentId },
       data: {
-        status,
+        status: status as PlanPaymentStatus,
         notes: notes || undefined,
         reviewedAt: new Date(),
         reviewedBy: session.user.email,
@@ -77,7 +80,7 @@ export async function POST(
     });
     
     // If payment is approved, activate the subscription
-    if (status === 'approved') {
+    if (status === PlanPaymentStatus.approved) {
       await prisma.subscription.update({
         where: { id: payment.subscriptionId },
         data: {

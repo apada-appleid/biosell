@@ -1,5 +1,6 @@
 import NextAuth from "next-auth"
 import { JWT } from "next-auth/jwt"
+import { UserRole } from "@/app/types"
 
 declare module "next-auth" {
   /**
@@ -11,7 +12,7 @@ declare module "next-auth" {
       name?: string | null;
       email?: string | null;
       image?: string | null;
-      role?: string;
+      role?: UserRole;
       type: 'admin' | 'seller' | 'customer';
       username?: string;
       phone?: string;
@@ -24,7 +25,7 @@ declare module "next-auth" {
     name?: string | null;
     email?: string | null;
     image?: string | null;
-    role?: string;
+    role?: UserRole;
     type: 'admin' | 'seller' | 'customer';
     username?: string;
     phone?: string;
@@ -36,7 +37,7 @@ declare module "next-auth/jwt" {
   /** Extending JWT with necessary properties */
   interface JWT {
     id: string;
-    role?: string;
+    role?: UserRole;
     type: 'admin' | 'seller' | 'customer';
     username?: string;
     phone?: string;
