@@ -3,15 +3,16 @@ import { prisma } from "@/lib/prisma";
 import { getAuthenticatedUser } from "@/lib/auth-helpers";
 import { getServerSession } from "next-auth";
 import authOptions from "@/lib/auth";
+import { OrderStatus, PaymentMethod, PaymentStatus } from "@/app/types";
 
 // Helper to generate a unique order number
 function generateOrderNumber() {
   // Timestamp component - current time in milliseconds
   const timestamp = Date.now().toString();
-  
+
   // Random component - random 4 digit number
   const random = Math.floor(Math.random() * 9000) + 1000;
-  
+
   // Combine to create order number
   return `${timestamp.slice(-6)}${random}`;
 }
@@ -32,9 +33,9 @@ interface OrderData {
   customerId: string;
   sellerId: string;
   shopId: string;
-  status: string;
+  status: OrderStatus;
   total: number;
-  paymentMethod: string;
+  paymentMethod: PaymentMethod;
   shippingAddress: string | null;
   addressId?: string; // Optional addressId field
   receiptInfo?: string; // Receipt information as JSON string
@@ -47,6 +48,8 @@ interface OrderData {
       totalPrice: number;
     }[];
   };
+  paymentStatus: PaymentStatus;
+  customerNotes?: string;
 }
 
 // Define a proper type for the orders
@@ -114,9 +117,16 @@ export async function POST(request: NextRequest) {
       receiptInfo,
       customerNotes,
     } = body;
-    
+
     // Enhanced validation
-    if (!customerData || !cartItems || !Array.isArray(cartItems) || cartItems.length === 0 || !total || !sellerId) {
+    if (
+      !customerData ||
+      !cartItems ||
+      !Array.isArray(cartItems) ||
+      cartItems.length === 0 ||
+      !total ||
+      !sellerId
+    ) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -125,8 +135,13 @@ export async function POST(request: NextRequest) {
 
     // Validate that all cart items have the required properties
     for (const item of cartItems) {
-      if (!item.product || !item.product.id || !item.product.title || 
-          typeof item.product.price !== 'number' || typeof item.quantity !== 'number') {
+      if (
+        !item.product ||
+        !item.product.id ||
+        !item.product.title ||
+        typeof item.product.price !== "number" ||
+        typeof item.quantity !== "number"
+      ) {
         return NextResponse.json(
           { error: "Invalid cart item data" },
           { status: 400 }
@@ -136,27 +151,33 @@ export async function POST(request: NextRequest) {
 
     // Validate customer data
     if (!customerData.fullName || !customerData.mobile || !customerData.email) {
-      return NextResponse.json({ error: 'Customer information is incomplete' }, { status: 400 });
+      return NextResponse.json(
+        { error: "Customer information is incomplete" },
+        { status: 400 }
+      );
     }
 
     // Try to get authenticated user
     let authenticatedUser = null;
-    
+
     // Try session-based auth first
     const session = await getServerSession(authOptions);
     if (session?.user?.id) {
       authenticatedUser = {
         userId: session.user.id,
-        type: session.user.type
+        type: session.user.type,
       };
-    } 
+    }
     // Fall back to token-based auth
     else {
       authenticatedUser = await getAuthenticatedUser(request);
     }
 
     // Note: We allow unauthenticated users to place orders, but they need to provide full customer details
-    if (!authenticatedUser?.userId && (!customerData.fullName || !customerData.mobile || !customerData.email)) {
+    if (
+      !authenticatedUser?.userId &&
+      (!customerData.fullName || !customerData.mobile || !customerData.email)
+    ) {
       return NextResponse.json(
         { error: "Guest users must provide full customer information" },
         { status: 400 }
@@ -166,31 +187,28 @@ export async function POST(request: NextRequest) {
     // Fix the customer creation and ID assignment
     let customer;
     let customerId;
-    if (authenticatedUser?.userId && authenticatedUser.type === 'customer') {
+    if (authenticatedUser?.userId && authenticatedUser.type === "customer") {
       // For authenticated customers, find by mobile or email
       customer = await prisma.customer.findFirst({
         where: {
-          OR: [
-            { email: customerData.email },
-            { mobile: customerData.mobile }
-          ]
-        }
+          OR: [{ email: customerData.email }, { mobile: customerData.mobile }],
+        },
       });
-      
+
       if (customer) {
         // Update existing customer with new info
         customer = await prisma.customer.update({
           where: {
-            id: customer.id
+            id: customer.id,
           },
           data: {
             fullName: customerData.fullName,
             // Only update email if provided and different
-            ...(customerData.email && customerData.email !== customer.email 
-              ? { email: customerData.email } 
+            ...(customerData.email && customerData.email !== customer.email
+              ? { email: customerData.email }
               : {}),
             // Don't update mobile as it's verified
-          }
+          },
         });
         customerId = customer.id;
       } else {
@@ -204,8 +222,8 @@ export async function POST(request: NextRequest) {
             address: customerData.address,
             city: customerData.city,
             postalCode: customerData.postalCode,
-            country: customerData.country || 'ایران'
-          }
+            country: customerData.country || "ایران",
+          },
         });
         customerId = customer.id;
       }
@@ -220,26 +238,30 @@ export async function POST(request: NextRequest) {
           city: customerData.city,
           postalCode: customerData.postalCode,
           country: customerData.country || "ایران",
-        }
+        },
       });
       customerId = customer.id;
     }
 
     // Create order with the customer ID and address ID if available
     const orderNumber = generateOrderNumber();
-    
+
     // Include delivery mobile in shipping address since there's no separate field for it
-    const finalShippingAddress = customerData.address ? 
-      `${customerData.fullName}, ${customerData.deliveryMobile || customerData.mobile}, ${customerData.address}, ${customerData.city}, ${customerData.postalCode}, ${customerData.country || "ایران"}` : 
-      null;
-    
+    const finalShippingAddress = customerData.address
+      ? `${customerData.fullName}, ${
+          customerData.deliveryMobile || customerData.mobile
+        }, ${customerData.address}, ${customerData.city}, ${
+          customerData.postalCode
+        }, ${customerData.country || "ایران"}`
+      : null;
+
     // Find the seller's default shop
     const sellerDefaultShop = await prisma.sellerShop.findFirst({
       where: {
         sellerId,
       },
     });
-    
+
     if (!sellerDefaultShop) {
       return NextResponse.json(
         { error: "Seller's shop not found" },
@@ -253,9 +275,10 @@ export async function POST(request: NextRequest) {
       customerId,
       sellerId,
       shopId: sellerDefaultShop.id,
-      status: "pending",
+      status: OrderStatus.pending,
       total,
-      paymentMethod: paymentMethod || "credit_card",
+      paymentMethod:
+        (paymentMethod as PaymentMethod) || PaymentMethod.bank_transfer,
       shippingAddress: finalShippingAddress,
       items: {
         create: cartItems.map((item: CartItem) => ({
@@ -263,11 +286,13 @@ export async function POST(request: NextRequest) {
           title: item.product.title,
           price: item.product.price,
           quantity: item.quantity,
-          totalPrice: item.product.price * item.quantity
-        }))
-      }
+          totalPrice: item.product.price * item.quantity,
+        })),
+      },
+      paymentStatus: PaymentStatus.pending,
+      customerNotes: customerNotes || null,
     };
-    
+
     // Add customer address ID if provided
     if (addressId) {
       // Verify address belongs to this customer
@@ -276,45 +301,27 @@ export async function POST(request: NextRequest) {
           id: addressId,
           customerId: customerId,
           deletedAt: null,
-        }
+        },
       });
-      
+
       if (addressExists) {
         // Link address to order - no need for @ts-ignore now
         orderData.addressId = addressId;
       } else {
-        console.warn(`Address ID ${addressId} not found for customer ${customerId} or is deleted`);
+        console.warn(
+          `Address ID ${addressId} not found for customer ${customerId} or is deleted`
+        );
       }
     }
-    
+
     // Add receipt info if available
     if (receiptInfo) {
       orderData.receiptInfo = JSON.stringify(receiptInfo);
     }
-    
+
     // Create the order
     const order = await prisma.order.create({
-      data: {
-        orderNumber: orderNumber,
-        customerId: customer.id,
-        sellerId: sellerId,
-        shopId: cartItems[0].product.shopId,
-        total: total,
-        status: 'pending',
-        paymentMethod: paymentMethod,
-        paymentStatus: 'pending',
-        shippingAddress: shippingAddress || null,
-        customerNotes: customerNotes || null,
-        items: {
-          create: cartItems.map((item: any) => ({
-            productId: item.product.id,
-            title: item.product.title,
-            price: item.product.price,
-            quantity: item.quantity,
-            totalPrice: item.product.price * item.quantity
-          }))
-        }
-      }
+      data: orderData,
     });
 
     // Update product inventory (reduce by quantity ordered)
@@ -335,25 +342,28 @@ export async function POST(request: NextRequest) {
       orderId: order.id,
     });
   } catch (error) {
-    console.error("Order creation error:", error instanceof Error ? error.message : error);
-    
+    console.error(
+      "Order creation error:",
+      error instanceof Error ? error.message : error
+    );
+
     // Provide more specific error messages based on error type
     let errorMessage = "Failed to create order";
     let statusCode = 500;
-    
+
     if (error instanceof Error) {
       // Check for Prisma-specific errors
-      if (error.message.includes('Unique constraint failed')) {
+      if (error.message.includes("Unique constraint failed")) {
         errorMessage = "Customer with this email or mobile already exists";
         statusCode = 400;
-      } else if (error.message.includes('Foreign key constraint failed')) {
+      } else if (error.message.includes("Foreign key constraint failed")) {
         errorMessage = "Invalid reference to product or seller";
         statusCode = 400;
-      } else if (error.message.includes('field does not exist')) {
+      } else if (error.message.includes("field does not exist")) {
         // Schema error
         errorMessage = "Database schema error: " + error.message;
         statusCode = 500;
-      } else if (error.message.includes('connect or create')) {
+      } else if (error.message.includes("connect or create")) {
         // Relation error
         errorMessage = "Failed to link order data properly: " + error.message;
         statusCode = 500;
@@ -362,11 +372,8 @@ export async function POST(request: NextRequest) {
         errorMessage = `Failed to create order: ${error.message}`;
       }
     }
-    
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: statusCode }
-    );
+
+    return NextResponse.json({ error: errorMessage }, { status: statusCode });
   }
 }
 
@@ -374,15 +381,15 @@ export async function GET(request: NextRequest) {
   try {
     // Try to get authenticated user
     let authenticatedUser = null;
-    
+
     // Try session-based auth first
     const session = await getServerSession(authOptions);
     if (session?.user?.id) {
       authenticatedUser = {
         userId: session.user.id,
-        type: session.user.type
+        type: session.user.type,
       };
-    } 
+    }
     // Fall back to token-based auth
     else {
       authenticatedUser = await getAuthenticatedUser(request);
@@ -394,69 +401,70 @@ export async function GET(request: NextRequest) {
 
     // Filter orders based on user type
     let orders: OrderWithRelations[] = [];
-    
-    if (authenticatedUser.type === 'admin') {
+
+    if (authenticatedUser.type === "admin") {
       // Admins can see all orders
       orders = await prisma.order.findMany({
         include: {
           items: {
             include: {
-              product: true
-            }
+              product: true,
+            },
           },
-          customer: true
+          customer: true,
         },
         orderBy: {
-          createdAt: 'desc'
-        }
+          createdAt: "desc",
+        },
       });
-    } 
-    else if (authenticatedUser.type === 'seller') {
+    } else if (authenticatedUser.type === "seller") {
       // Sellers can only see orders for their products
       orders = await prisma.order.findMany({
         where: {
-          sellerId: authenticatedUser.userId
+          sellerId: authenticatedUser.userId,
         },
         include: {
           items: {
             include: {
-              product: true
-            }
+              product: true,
+            },
           },
-          customer: true
+          customer: true,
         },
         orderBy: {
-          createdAt: 'desc'
-        }
+          createdAt: "desc",
+        },
       });
-    }
-    else if (authenticatedUser.type === 'customer') {
+    } else if (authenticatedUser.type === "customer") {
       // Customers can only see their own orders
       // First find the customer record that matches the authenticated user
       const customer = await prisma.customer.findFirst({
         where: {
-          id: authenticatedUser.userId
-        }
+          id: authenticatedUser.userId,
+        },
       });
-      
+
       if (!customer) {
-        return NextResponse.json({ error: "Customer not found" }, { status: 404 });
+        return NextResponse.json(
+          { error: "Customer not found" },
+          { status: 404 }
+        );
       }
-      
+
       orders = await prisma.order.findMany({
         where: {
-          customerId: customer.id
+          customerId: customer.id,
         },
         include: {
           items: {
             include: {
-              product: true
-            }
-          }
+              product: true,
+            },
+          },
         },
         orderBy: {
-          createdAt: 'desc'
-        }
+          createdAt: "desc",
+        },
       });
     }
 
@@ -468,4 +476,4 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}
