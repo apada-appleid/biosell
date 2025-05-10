@@ -83,6 +83,104 @@ export default function RootLayout({
       >
         <Providers>
           {children}
+          <footer className="bg-white border-t border-gray-200 mt-10">
+            <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                {/* لوگو و توضیحات */}
+                <div className="col-span-1 md:col-span-1">
+                  <h2 className="text-xl font-bold text-blue-600 mb-4">بایوسل</h2>
+                  <p className="text-gray-600 text-sm">
+                    فروشگاه‌ساز آنلاین برای صفحات اینستاگرام - با بایوسل به راحتی محصولات خود را به مشتریان‌تان بفروشید.
+                  </p>
+                </div>
+
+                {/* لینک‌های دسترسی سریع */}
+                <div className="col-span-1">
+                  <h3 className="text-sm font-semibold text-gray-900 tracking-wider mb-4">
+                    دسترسی سریع
+                  </h3>
+                  <ul className="space-y-3">
+                    <li>
+                      <a href="/" className="text-gray-600 hover:text-blue-600 text-sm">
+                        صفحه اصلی
+                      </a>
+                    </li>
+                    <li>
+                      <a href="/products" className="text-gray-600 hover:text-blue-600 text-sm">
+                        محصولات
+                      </a>
+                    </li>
+                    <li>
+                      <a href="/seller/register" className="text-gray-600 hover:text-blue-600 text-sm">
+                        ثبت‌نام فروشندگان
+                      </a>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* لینک‌های قانونی */}
+                <div className="col-span-1">
+                  <h3 className="text-sm font-semibold text-gray-900 tracking-wider mb-4">
+                    اطلاعات
+                  </h3>
+                  <ul className="space-y-3">
+                    <li>
+                      <a href="/legal/terms-of-service" className="text-gray-600 hover:text-blue-600 text-sm">
+                        قوانین و مقررات
+                      </a>
+                    </li>
+                    <li>
+                      <a href="/legal/privacy-policy" className="text-gray-600 hover:text-blue-600 text-sm">
+                        حریم خصوصی
+                      </a>
+                    </li>
+                    <li>
+                      <a href="/contact" className="text-gray-600 hover:text-blue-600 text-sm">
+                        تماس با ما
+                      </a>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* اینماد */}
+                <div className="col-span-1 flex justify-start md:justify-center items-start">
+                  <a
+                    referrerPolicy="origin"
+                    target="_blank"
+                    href="https://trustseal.enamad.ir/?id=608402&Code=EGm4eCnfOat2Z39mbJ4XAuWxTqvieN7u"
+                    aria-label="نماد اعتماد الکترونیکی"
+                    tabIndex={0}
+                    className="inline-block"
+                  >
+                    <img
+                      referrerPolicy="origin"
+                      src="https://trustseal.enamad.ir/logo.aspx?id=608402&Code=EGm4eCnfOat2Z39mbJ4XAuWxTqvieN7u"
+                      alt="نماد اعتماد الکترونیکی"
+                      style={{ cursor: "pointer" }}
+                      width={100}
+                      height={100}
+                      loading="lazy"
+                    />
+                  </a>
+                </div>
+              </div>
+              <div className="mt-8 pt-6 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center">
+                <p className="text-gray-500 text-sm">
+                  &copy; {new Date().getFullYear()} بایوسل. تمامی حقوق محفوظ است.
+                </p>
+                <div className="mt-4 md:mt-0">
+                  <p className="text-gray-500 text-sm">
+                    <a 
+                      href="mailto:the.only.apada@gmail.com" 
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      the.only.apada@gmail.com
+                    </a>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </footer>
         </Providers>
       </body>
     </html>
