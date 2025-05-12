@@ -168,13 +168,21 @@ export default function RootLayout({
                 <p className="text-gray-500 text-sm">
                   &copy; {new Date().getFullYear()} بایوسل. تمامی حقوق محفوظ است.
                 </p>
-                <div className="mt-4 md:mt-0">
+                <div className="mt-4 md:mt-0 flex flex-col items-end">
                   <p className="text-gray-500 text-sm">
                     <a 
-                      href="mailto:the.only.apada@gmail.com" 
+                      href="tel:061-42555049" 
                       className="text-blue-600 hover:text-blue-800"
                     >
-                      the.only.apada@gmail.com
+                      061-42555049
+                    </a>
+                  </p>
+                  <p className="text-gray-500 text-sm">
+                    <a 
+                      href="mailto:info@biosell.me" 
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      info@biosell.me
                     </a>
                   </p>
                 </div>
