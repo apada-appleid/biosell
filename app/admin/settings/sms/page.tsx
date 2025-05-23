@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
-import { Loader2, Save, CheckCircle, XCircle } from 'lucide-react';
+import { Loader2, Save, CheckCircle, XCircle, Info, Code, Cloud } from 'lucide-react';
 
 interface SmsSettings {
   enabled: boolean;
@@ -24,12 +24,19 @@ export default function SmsSettingsPage() {
   const [loading, setLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setError] = useState<string | null>(null);
-  const [testSmsResult, setTestSmsResult] = useState<{ success: boolean; message: string } | null>(null);
-  const [testSmsLoading, setTestSmsLoading] = useState(false);
-  const [testMobile, setTestMobile] = useState('');
-  const [settings, setSettings] = useState<SmsSettings | null>(null);
+  const [testLoading, setTestLoading] = useState(false);
+  const [testSuccess, setTestSuccess] = useState(false);
+  const [testError, setTestError] = useState<string | null>(null);
+  const [testMobile, setTestMobile] = useState('09123456789');
+  const [isDevelopment, setIsDevelopment] = useState(false);
 
-  const { control, handleSubmit, watch, reset, formState: { errors, isDirty } } = useForm<FormData>({
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors }
+  } = useForm<FormData>({
     defaultValues: {
       enabled: false,
       from: '',
@@ -38,54 +45,47 @@ export default function SmsSettingsPage() {
 
   const isEnabled = watch('enabled');
 
-  // Protect this page for admin users only
+  // Check if we're in development mode
   useEffect(() => {
-    if (status === 'authenticated' && session?.user.type !== 'admin') {
-      router.push('/admin/dashboard');
+    setIsDevelopment(process.env.NODE_ENV === 'development');
+  }, []);
+
+  // Authentication check
+  useEffect(() => {
+    if (status === 'loading') return;
+    
+    if (!session || session.user.type !== 'admin') {
+      router.push('/auth/login');
+      return;
     }
   }, [session, status, router]);
 
-  // Load settings from API
+  // Load settings on component mount
   useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch('/api/admin/settings/sms');
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log(data);
-        
-        if (data.settings) {
-          setSettings(data.settings);
-          reset({
-            enabled: data.settings.enabled || false,
-            from: data.settings.from || '',
-          });
-        }
-      } catch (error) {
-        console.error('Error loading SMS settings:', error);
-        setError('خطا در بارگیری تنظیمات پیامک');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (status === 'authenticated' && session?.user.type === 'admin') {
+    if (session?.user.type === 'admin') {
       loadSettings();
     }
-  }, [status, session, reset]);
+  }, [session]);
 
-  // Save settings
-  const onSubmit = async (data: FormData) => {
+  const loadSettings = async () => {
     try {
-      setLoading(true);
-      setSaveSuccess(false);
-      setError(null);
+      const response = await fetch('/api/admin/settings/sms');
+      if (response.ok) {
+        const settings: SmsSettings = await response.json();
+        setValue('enabled', settings.enabled);
+        setValue('from', settings.from || '');
+      }
+    } catch (error) {
+      console.error('Error loading settings:', error);
+    }
+  };
 
+  const onSubmit = async (data: FormData) => {
+    setLoading(true);
+    setSaveSuccess(false);
+    setError(null);
+
+    try {
       const response = await fetch('/api/admin/settings/sms', {
         method: 'POST',
         headers: {
@@ -93,41 +93,32 @@ export default function SmsSettingsPage() {
         },
         body: JSON.stringify(data),
       });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      
-      if (result.success) {
+
+      if (response.ok) {
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
       } else {
-        setError(result.message || 'خطا در ذخیره تنظیمات');
+        const errorData = await response.json();
+        setError(errorData.error || 'خطا در ذخیره تنظیمات');
       }
     } catch (error) {
-      console.error('Error saving SMS settings:', error);
-      setError('خطا در ذخیره تنظیمات پیامک');
+      setError('خطا در ارتباط با سرور');
     } finally {
       setLoading(false);
     }
   };
 
-  // Send test SMS
-  const handleSendTestSms = async () => {
-    if (!testMobile || !/^09\d{9}$/.test(testMobile)) {
-      setTestSmsResult({
-        success: false,
-        message: 'شماره موبایل نامعتبر است'
-      });
+  const handleTestSms = async () => {
+    if (!testMobile.trim()) {
+      setTestError('لطفا شماره موبایل را وارد کنید');
       return;
     }
 
-    try {
-      setTestSmsLoading(true);
-      setTestSmsResult(null);
+    setTestLoading(true);
+    setTestSuccess(false);
+    setTestError(null);
 
+    try {
       const response = await fetch('/api/admin/settings/sms/test', {
         method: 'POST',
         headers: {
@@ -135,200 +126,250 @@ export default function SmsSettingsPage() {
         },
         body: JSON.stringify({ mobile: testMobile }),
       });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      
+
       const result = await response.json();
 
-      setTestSmsResult({
-        success: result.success,
-        message: result.message
-      });
+      if (response.ok && result.success) {
+        setTestSuccess(true);
+        setTestError(null);
+        setTimeout(() => setTestSuccess(false), 5000);
+      } else {
+        setTestError(result.message || 'خطا در ارسال پیامک تست');
+      }
     } catch (error) {
-      console.error('Error sending test SMS:', error);
-      setTestSmsResult({
-        success: false,
-        message: 'خطا در ارسال پیامک تست'
-      });
+      setTestError('خطا در ارتباط با سرور');
     } finally {
-      setTestSmsLoading(false);
+      setTestLoading(false);
     }
   };
 
-  if (status === 'loading' || (status === 'authenticated' && session?.user.type !== 'admin')) {
+  if (status === 'loading') {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      <div className="flex justify-center items-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl">
-      <h1 className="text-2xl font-bold mb-6">تنظیمات سرویس پیامک</h1>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">تنظیمات پیامک</h1>
+        <p className="mt-1 text-sm text-gray-600">
+          مدیریت سرویس ارسال پیامک ملی پیامک
+        </p>
+      </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 bg-white p-6 rounded-lg shadow">
-        {/* Enable/Disable Service */}
-        <div className="border-b pb-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <h2 className="text-lg font-semibold text-gray-900 mb-1">سرویس پیامک</h2>
-              <p className="text-sm text-gray-600">فعال یا غیرفعال کردن سرویس ارسال پیامک</p>
+      {/* Development Mode Notice */}
+      {isDevelopment && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-start">
+            <Code className="h-5 w-5 text-yellow-600 mt-0.5 ml-2" />
+            <div>
+              <h3 className="text-sm font-medium text-yellow-800">
+                حالت توسعه (Development Mode)
+              </h3>
+              <p className="mt-1 text-sm text-yellow-700">
+                در حالت توسعه، کدهای تایید به‌صورت محلی تولید می‌شوند و پیامک ارسال نمی‌شود. 
+                این کار برای کاهش هزینه‌ها در طول توسعه انجام می‌شود.
+              </p>
             </div>
-            <div className="flex items-center">
+          </div>
+        </div>
+      )}
+
+      {/* Production Mode Notice */}
+      {!isDevelopment && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start">
+            <Cloud className="h-5 w-5 text-blue-600 mt-0.5 ml-2" />
+            <div>
+              <h3 className="text-sm font-medium text-blue-800">
+                حالت تولید (Production Mode)
+              </h3>
+              <p className="mt-1 text-sm text-blue-700">
+                در حالت تولید، پیامک‌ها از طریق سرویس ملی‌پیامک ارسال می‌شوند.
+                کدهای احراز هویت از متغیرهای محیطی خوانده می‌شوند.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Environment Variables Info */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-start">
+          <Info className="h-5 w-5 text-blue-600 mt-0.5 ml-2" />
+          <div>
+            <h3 className="text-sm font-medium text-blue-800">
+              اطلاعات متغیرهای محیطی
+            </h3>
+            <p className="mt-1 text-sm text-blue-700">
+              {isDevelopment ? (
+                'در حالت توسعه نیازی به تنظیم متغیرهای محیطی نیست، اما برای تست در محیط واقعی می‌توانید آن‌ها را تنظیم کنید:'
+              ) : (
+                'اطلاعات احراز هویت ملی‌پیامک از متغیرهای محیطی زیر خوانده می‌شوند:'
+              )}
+            </p>
+            <ul className="mt-2 text-sm text-blue-600 space-y-1">
+              <li><code className="bg-blue-100 px-1 rounded">MELIPAYAMAK_TOKEN</code> - توکن احراز هویت</li>
+              <li><code className="bg-blue-100 px-1 rounded">MELIPAYAMAK_FROM</code> - شماره فرستنده (اختیاری)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <div className="bg-white shadow rounded-lg p-6">
+          <div className="grid grid-cols-1 gap-6">
+            {/* Service Toggle */}
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-sm font-medium text-gray-700">
+                  فعال‌سازی سرویس پیامک
+                </label>
+                <p className="text-sm text-gray-500">
+                  {isDevelopment 
+                    ? 'فعال‌سازی تولید کد محلی (توسعه) یا ارسال واقعی (تولید)'
+                    : 'فعال‌سازی ارسال پیامک از طریق ملی‌پیامک'
+                  }
+                </p>
+              </div>
               <Controller
                 name="enabled"
                 control={control}
                 render={({ field }) => (
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={field.value}
-                      onChange={field.onChange}
+                  <button
+                    type="button"
+                    onClick={() => field.onChange(!field.value)}
+                    className={`
+                      relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                      ${field.value ? 'bg-green-600' : 'bg-gray-200'}
+                    `}
+                  >
+                    <span
+                      className={`
+                        inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                        ${field.value ? 'translate-x-6' : 'translate-x-1'}
+                      `}
                     />
-                    <div className={`relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 ${field.value ? 'peer-checked:bg-green-600' : 'peer-checked:bg-gray-600'}`}></div>
-                    <span className="ms-3 text-sm font-medium text-gray-900">
-                      {field.value ? (
-                        <span className="text-green-600 font-semibold">فعال</span>
-                      ) : (
-                        <span className="text-gray-500">غیرفعال</span>
-                      )}
-                    </span>
-                  </label>
+                  </button>
                 )}
               />
             </div>
-          </div>
-          
-          {/* Environment Variables Info */}
-          <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <p className="text-sm text-blue-800">
-              <strong>نکته:</strong> توکن احراز هویت از متغیر محیطی خوانده می‌شود.
-              <br />
-              لطفاً در فایل <code className="text-xs bg-blue-100 px-1 py-0.5 rounded">.env.local</code> 
-              مقدار <code className="text-xs bg-blue-100 px-1 py-0.5 rounded ml-1">MELIPAYAMAK_TOKEN</code> را تنظیم کنید.
-            </p>
-            {settings?.tokenConfigured && (
-              <p className="text-sm text-green-700 mt-2 font-semibold">
-                ✅ توکن پیکربندی شده است
-              </p>
-            )}
-            {settings?.useEnvVars && (
-              <p className="text-sm text-green-700 mt-1">
-                ✅ در حال استفاده از متغیرهای محیطی
-              </p>
-            )}
-          </div>
-        </div>
 
-        {/* Sender Number Section */}
-        <div>
-          <h2 className="text-lg font-semibold mb-4">تنظیمات ارسال</h2>
-          
-          <div>
-            <label htmlFor="from" className="block text-sm font-medium text-gray-700 mb-1">
-              شماره فرستنده (اختیاری)
-            </label>
-            <Controller
-              name="from"
-              control={control}
-              render={({ field }) => (
-                <input
-                  id="from"
-                  type="text"
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
-                  disabled={loading || !isEnabled}
-                  placeholder="5000... (در صورت عدم تکمیل، شماره پیش‌فرض استفاده می‌شود)"
-                  {...field}
-                />
+            {/* From Number */}
+            <div>
+              <label htmlFor="from" className="block text-sm font-medium text-gray-700 mb-1">
+                شماره فرستنده (اختیاری)
+              </label>
+              <Controller
+                name="from"
+                control={control}
+                render={({ field }) => (
+                  <input
+                    {...field}
+                    id="from"
+                    type="text"
+                    className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="مثال: 10008566"
+                    dir="ltr"
+                  />
+                )}
+              />
+              <p className="mt-1 text-sm text-gray-500">
+                در صورت خالی بودن از شماره پیش‌فرض استفاده می‌شود
+              </p>
+            </div>
+          </div>
+
+          {/* Save Button */}
+          <div className="mt-6 flex items-center justify-between">
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin ml-2" />
+              ) : (
+                <Save className="h-4 w-4 ml-2" />
               )}
-            />
-            <p className="text-gray-500 text-xs mt-1">
-              اگر شماره خط خدماتی اختصاصی دارید، آن را وارد کنید. در غیر این صورت شماره پیش‌فرض استفاده خواهد شد.
-            </p>
+              ذخیره تنظیمات
+            </button>
+
+            {saveSuccess && (
+              <div className="flex items-center text-green-600">
+                <CheckCircle className="h-5 w-5 ml-1" />
+                <span className="text-sm">تنظیمات با موفقیت ذخیره شد</span>
+              </div>
+            )}
+
+            {saveError && (
+              <div className="flex items-center text-red-600">
+                <XCircle className="h-5 w-5 ml-1" />
+                <span className="text-sm">{saveError}</span>
+              </div>
+            )}
           </div>
         </div>
+      </form>
 
-        {/* Test SMS Section */}
-        <div className="mt-8 p-4 bg-gray-50 rounded-md">
-          <h2 className="text-lg font-semibold mb-4">ارسال پیامک تست</h2>
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-grow">
+      {/* Test SMS Section */}
+      {isEnabled && (
+        <div className="bg-white shadow rounded-lg p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">تست ارسال پیامک</h3>
+          
+          <div className="space-y-4">
+            <div>
               <label htmlFor="testMobile" className="block text-sm font-medium text-gray-700 mb-1">
-                شماره موبایل تست
+                شماره موبایل برای تست
               </label>
               <input
                 id="testMobile"
                 type="text"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
-                disabled={loading || !isEnabled}
-                placeholder="09123456789"
                 value={testMobile}
                 onChange={(e) => setTestMobile(e.target.value)}
+                className="block w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="09123456789"
+                dir="ltr"
               />
             </div>
-            <div className="flex items-end">
+
+            <div className="flex items-center justify-between">
               <button
                 type="button"
-                onClick={handleSendTestSms}
-                disabled={testSmsLoading || !isEnabled || !testMobile}
-                className="w-full md:w-auto flex items-center justify-center rounded-md bg-green-500 px-4 py-2 text-white hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleTestSms}
+                disabled={testLoading}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
               >
-                {testSmsLoading ? (
-                  <Loader2 className="w-4 h-4 mr-2 rtl:ml-2 rtl:mr-0 animate-spin" />
-                ) : null}
-                ارسال پیامک تست
+                {testLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin ml-2" />
+                ) : (
+                  <Save className="h-4 w-4 ml-2" />
+                )}
+                {isDevelopment ? 'تولید کد تست (محلی)' : 'ارسال پیامک تست'}
               </button>
+
+              {testSuccess && (
+                <div className="flex items-center text-green-600">
+                  <CheckCircle className="h-5 w-5 ml-1" />
+                  <span className="text-sm">
+                    {isDevelopment ? 'کد تست با موفقیت تولید شد' : 'پیامک تست با موفقیت ارسال شد'}
+                  </span>
+                </div>
+              )}
+
+              {testError && (
+                <div className="flex items-center text-red-600">
+                  <XCircle className="h-5 w-5 ml-1" />
+                  <span className="text-sm">{testError}</span>
+                </div>
+              )}
             </div>
           </div>
-          
-          {testSmsResult && (
-            <div className={`mt-4 p-3 rounded-md ${testSmsResult.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
-              <div className="flex items-center">
-                {testSmsResult.success ? (
-                  <CheckCircle className="w-5 h-5 mr-2 rtl:ml-2 rtl:mr-0" />
-                ) : (
-                  <XCircle className="w-5 h-5 mr-2 rtl:ml-2 rtl:mr-0" />
-                )}
-                <p>{testSmsResult.message}</p>
-              </div>
-            </div>
-          )}
         </div>
-
-        {/* Save Button */}
-        <div className="flex justify-end pt-4 border-t">
-          {saveSuccess && (
-            <div className="flex items-center text-green-600 mr-4 rtl:ml-4 rtl:mr-0">
-              <CheckCircle className="w-5 h-5 mr-1 rtl:ml-1 rtl:mr-0" />
-              <span>تنظیمات با موفقیت ذخیره شد</span>
-            </div>
-          )}
-          
-          {saveError && (
-            <div className="flex items-center text-red-600 mr-4 rtl:ml-4 rtl:mr-0">
-              <XCircle className="w-5 h-5 mr-1 rtl:ml-1 rtl:mr-0" />
-              <span>{saveError}</span>
-            </div>
-          )}
-          
-          <button
-            type="submit"
-            disabled={loading || !isDirty}
-            className="flex items-center rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? (
-              <Loader2 className="w-4 h-4 mr-2 rtl:ml-2 rtl:mr-0 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4 mr-2 rtl:ml-2 rtl:mr-0" />
-            )}
-            ذخیره تنظیمات
-          </button>
-        </div>
-      </form>
+      )}
     </div>
   );
 } 

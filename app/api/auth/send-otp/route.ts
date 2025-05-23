@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { sendMelipayamakOtp } from '@/utils/sms-service';
+import { sendOtpCode } from '@/utils/sms-service';
 
 export async function POST(request: Request) {
   try {
@@ -50,8 +50,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // Send OTP via Melipayamak and get the generated code
-    const smsResult = await sendMelipayamakOtp(mobile);
+    // Send OTP using hybrid approach (local in development, Melipayamak in production)
+    const smsResult = await sendOtpCode(mobile);
     
     if (!smsResult.success) {
       return NextResponse.json(
@@ -60,12 +60,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get the OTP code from Melipayamak response
+    // Get the OTP code from the result
     const otpCode = smsResult.code;
     
     if (!otpCode) {
       return NextResponse.json(
-        { error: 'کد تأیید از سرویس پیامک دریافت نشد' },
+        { error: 'کد تأیید تولید نشد' },
         { status: 500 }
       );
     }
@@ -74,7 +74,7 @@ export async function POST(request: Request) {
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 2);
 
-    // Save OTP to database (using code from Melipayamak)
+    // Save OTP to database
     await prisma.otp.upsert({
       where: { mobile },
       update: { 
@@ -93,12 +93,16 @@ export async function POST(request: Request) {
     // Log OTP for development
     console.log(`OTP for ${mobile}: ${otpCode}`);
 
+    const isDevelopment = process.env.NODE_ENV === 'development';
+
     return NextResponse.json(
       { 
-        message: 'کد تأیید با موفقیت ارسال شد',
+        message: isDevelopment 
+          ? 'کد تأیید (محلی) با موفقیت تولید شد' 
+          : 'کد تأیید با موفقیت ارسال شد',
         success: true,
         // Return the OTP for development (and display in UI)
-        otp: process.env.NODE_ENV === 'production' ? undefined : otpCode
+        otp: isDevelopment ? otpCode : undefined
       },
       { status: 200 }
     );

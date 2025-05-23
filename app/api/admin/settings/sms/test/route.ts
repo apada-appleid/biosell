@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import authOptions from '@/lib/auth';
-import { sendOtpSms } from '@/utils/sms-service';
+import { sendOtpCode } from '@/utils/sms-service';
 
 // POST /api/admin/settings/sms/test - Send test SMS
 export async function POST(request: Request) {
@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if mobile is in valid format
+    // Check mobile format
     const mobileRegex = /^09\d{9}$/;
     if (!mobileRegex.test(mobile)) {
       return NextResponse.json(
@@ -31,23 +31,33 @@ export async function POST(request: Request) {
       );
     }
 
-    // Generate test code
-    const testCode = '123456';
-
-    // Send test SMS
-    const result = await sendOtpSms(mobile, testCode);
-
-    return NextResponse.json({
-      success: result.success,
-      message: result.message,
-      code: result.code
-    });
+    // Send test OTP using hybrid approach (local in development, Melipayamak in production)
+    const result = await sendOtpCode(mobile);
+    
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    
+    if (result.success) {
+      const message = isDevelopment 
+        ? `کد تست (محلی) با موفقیت تولید شد: ${result.code}`
+        : `پیامک تست با موفقیت ارسال شد${result.code ? ` - کد: ${result.code}` : ''}`;
+        
+      return NextResponse.json({
+        success: true,
+        message,
+        code: result.code
+      });
+    } else {
+      return NextResponse.json({
+        success: false,
+        message: result.message || 'خطا در ارسال پیامک تست'
+      });
+    }
   } catch (error) {
-    console.error('Error sending test SMS:', error);
+    console.error('Error in SMS test:', error);
     return NextResponse.json(
       { 
         success: false, 
-        message: error instanceof Error ? error.message : 'خطا در ارسال پیامک تست' 
+        message: 'خطا در سرور' 
       },
       { status: 500 }
     );

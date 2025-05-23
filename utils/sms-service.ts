@@ -9,6 +9,11 @@ interface MelipayamakSettings {
 // Default template for OTP message
 const DEFAULT_OTP_TEMPLATE = 'کد تایید شما: {code}';
 
+// Helper function to generate local OTP code
+function generateOtpCode(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
 // Helper function to get Melipayamak settings with environment variables priority
 async function getMelipayamakSettings(): Promise<MelipayamakSettings & { token?: string }> {
   // First check environment variables
@@ -172,8 +177,42 @@ export async function sendMelipayamakOtp(to: string): Promise<{ success: boolean
   }
 }
 
+/**
+ * Send OTP using local generation for development or Melipayamak for production
+ * This is a hybrid function that chooses the appropriate method based on environment
+ */
+export async function sendOtpCode(to: string): Promise<{ success: boolean; message: string; code?: string }> {
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  
+  if (isDevelopment) {
+    // In development, generate local OTP code
+    const localOtpCode = generateOtpCode();
+    console.log(`Development mode: Generated local OTP for ${to}: ${localOtpCode}`);
+    
+    return {
+      success: true,
+      message: 'کد تایید (محلی) ایجاد شد',
+      code: localOtpCode
+    };
+  } else {
+    // In production, use Melipayamak
+    return await sendMelipayamakOtp(to);
+  }
+}
+
 export async function checkSmsService(): Promise<{ enabled: boolean; configured: boolean }> {
   try {
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    
+    if (isDevelopment) {
+      // In development, always consider it enabled and configured
+      return {
+        enabled: true,
+        configured: true
+      };
+    }
+    
+    // In production, check actual settings
     const settings = await getMelipayamakSettings();
     
     return {
