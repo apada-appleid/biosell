@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { sendOtpSms } from '@/utils/sms-service';
 
 // Function to generate a random 6-digit OTP
 const generateOTP = (): string => {
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // Save OTP to database (you might use a different table for OTPs)
+    // Save OTP to database
     await prisma.otp.upsert({
       where: { mobile },
       update: { 
@@ -75,15 +76,18 @@ export async function POST(request: Request) {
       },
     });
 
-    // TODO: Integrate with SMS service in the future
-    // For now, return the OTP in the response regardless of environment
+    // Send OTP via SMS
+    const smsResult = await sendOtpSms(mobile, otp);
+    
+    // Log OTP for development
     console.log(`OTP for ${mobile}: ${otp}`);
 
     return NextResponse.json(
       { 
         message: 'کد تأیید با موفقیت ارسال شد',
-        // Always return the OTP until the SMS service is implemented
-        otp: otp // Remove environment check to always show OTP
+        success: smsResult.success,
+        // Always return the OTP for development
+        otp: process.env.NODE_ENV === 'production' ? undefined : otp
       },
       { status: 200 }
     );
