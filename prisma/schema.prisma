@@ -45,6 +45,18 @@ enum PaymentStatus {
   failed
 }
 
+// مدل تنظیمات سیستم
+model Setting {
+  id          String   @id @default(uuid())
+  key         String   @unique @db.VarChar(255)
+  value       Json?
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
 // مدل کاربران (ادمین‌ها)
 model User {
   id        String   @id @default(uuid())

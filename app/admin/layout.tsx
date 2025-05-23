@@ -12,16 +12,35 @@ import {
   TbX,
   TbLogout,
   TbReceipt,
-  TbShoppingCart
+  TbShoppingCart,
+  TbSettings,
+  TbMessageCircle,
+  TbChevronDown,
+  TbChevronUp
 } from 'react-icons/tb';
 
+interface NavItem {
+  name: string;
+  href: string;
+  icon: any;
+  children?: NavItem[];
+}
+
 // Admin navigation items
-const navigation = [
+const navigation: NavItem[] = [
   { name: 'داشبورد', href: '/admin/dashboard', icon: TbLayoutDashboard },
   { name: 'محصولات', href: '/admin/products', icon: TbShoppingBag },
   { name: 'فروشندگان', href: '/admin/sellers', icon: TbBuildingStore },
   { name: 'اشتراک‌های فروشندگان', href: '/admin/subscriptions', icon: TbReceipt },
   { name: 'سفارش‌ها', href: '/admin/orders', icon: TbShoppingCart },
+  { 
+    name: 'تنظیمات', 
+    href: '/admin/settings', 
+    icon: TbSettings,
+    children: [
+      { name: 'تنظیمات پیامک', href: '/admin/settings/sms', icon: TbMessageCircle },
+    ] 
+  },
 ];
 
 export default function AdminLayout({
@@ -30,38 +49,131 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
 
+  // Initialize expandedItems based on current path
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Close sidebar when user navigates on mobile
-  useEffect(() => {
-    if (sidebarOpen) {
-      setSidebarOpen(false);
-    }
+    const newExpandedItems: Record<string, boolean> = {};
+    
+    navigation.forEach(item => {
+      if (item.children) {
+        const childMatches = item.children.some(
+          child => pathname === child.href || pathname?.startsWith(child.href + '/')
+        );
+        if (childMatches) {
+          newExpandedItems[item.name] = true;
+        }
+      }
+    });
+    
+    setExpandedItems(newExpandedItems);
   }, [pathname]);
 
-  // Lock body scroll when sidebar is open on mobile
-  useEffect(() => {
-    if (!mounted) return;
-    
-    if (sidebarOpen) {
-      document.body.classList.add('overflow-hidden');
-    } else {
-      document.body.classList.remove('overflow-hidden');
-    }
-    
-    return () => {
-      document.body.classList.remove('overflow-hidden');
-    };
-  }, [sidebarOpen, mounted]);
+  const toggleExpand = (itemName: string) => {
+    setExpandedItems(prev => ({
+      ...prev,
+      [itemName]: !prev[itemName]
+    }));
+  };
 
+  // Check if user is authenticated
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      window.location.href = '/auth/login';
+    }
+  }, [status]);
+
+  // Sign out handler
   const handleSignOut = async () => {
     await signOut({ redirect: true, callbackUrl: '/auth/login' });
+  };
+
+  // Render navigation item
+  const renderNavItem = (item: NavItem, mobile: boolean = false) => {
+    const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
+    const hasChildren = item.children && item.children.length > 0;
+    const isExpanded = expandedItems[item.name];
+    
+    // If item has children, we want to show it as a dropdown
+    if (hasChildren) {
+      return (
+        <div key={item.name} className="space-y-1">
+          <button
+            onClick={() => toggleExpand(item.name)}
+            className={`group flex items-center justify-between w-full px-3 py-2.5 text-base font-medium rounded-md transition-colors duration-150 ease-in-out
+            ${isActive 
+              ? 'bg-blue-50 text-blue-700' 
+              : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`}
+          >
+            <div className="flex items-center">
+              <item.icon
+                className={`ml-3 h-5 w-5 flex-shrink-0 
+                ${isActive 
+                  ? 'text-blue-700' 
+                  : 'text-gray-400 group-hover:text-gray-500'}`}
+                aria-hidden="true"
+              />
+              {item.name}
+            </div>
+            {isExpanded ? (
+              <TbChevronUp className="h-5 w-5 text-gray-400" />
+            ) : (
+              <TbChevronDown className="h-5 w-5 text-gray-400" />
+            )}
+          </button>
+          
+          {/* Child items */}
+          {isExpanded && item.children && (
+            <div className="pr-4 mr-4 border-r border-gray-200">
+              {item.children.map(child => (
+                <Link
+                  key={child.name}
+                  href={child.href}
+                  className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-150 ease-in-out
+                  ${pathname === child.href || pathname?.startsWith(child.href + '/') 
+                    ? 'bg-blue-50 text-blue-700' 
+                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`}
+                  onClick={mobile ? () => setSidebarOpen(false) : undefined}
+                >
+                  <child.icon
+                    className={`ml-3 h-4 w-4 flex-shrink-0 
+                    ${pathname === child.href || pathname?.startsWith(child.href + '/') 
+                      ? 'text-blue-700' 
+                      : 'text-gray-400 group-hover:text-gray-500'}`}
+                    aria-hidden="true"
+                  />
+                  {child.name}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+    
+    // Regular item without children
+    return (
+      <Link
+        key={item.name}
+        href={item.href}
+        className={`group flex items-center px-3 py-2.5 text-base font-medium rounded-md transition-colors duration-150 ease-in-out
+        ${isActive 
+          ? 'bg-blue-50 text-blue-700' 
+          : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`}
+        onClick={mobile ? () => setSidebarOpen(false) : undefined}
+      >
+        <item.icon
+          className={`ml-3 h-5 w-5 flex-shrink-0 
+          ${isActive 
+            ? 'text-blue-700' 
+            : 'text-gray-400 group-hover:text-gray-500'}`}
+          aria-hidden="true"
+        />
+        {item.name}
+      </Link>
+    );
   };
 
   return (
@@ -98,51 +210,23 @@ export default function AdminLayout({
 
           {/* Mobile Navigation */}
           <nav className="flex-1 px-2 py-4 space-y-1">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`group flex items-center px-3 py-2.5 text-base font-medium rounded-md transition-colors duration-150 ease-in-out
-                ${pathname === item.href || pathname?.startsWith(item.href + '/') 
-                  ? 'bg-blue-50 text-blue-700' 
-                  : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'}`}
-                onClick={() => setSidebarOpen(false)}
-              >
-                <item.icon
-                  className={`ml-3 h-5 w-5 flex-shrink-0 
-                  ${pathname === item.href || pathname?.startsWith(item.href + '/') 
-                    ? 'text-blue-700' 
-                    : 'text-gray-400 group-hover:text-gray-500'}`}
-                  aria-hidden="true"
-                />
-                {item.name}
-              </Link>
-            ))}
+            {navigation.map((item) => renderNavItem(item, true))}
           </nav>
 
           {/* Logout Button - Mobile */}
-          <div className="border-t border-gray-200 p-4">
-            <div className="flex items-center mb-4">
-              <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600">
-                {session?.user?.name?.[0] || 'A'}
-              </div>
-              <div className="mr-3 overflow-hidden">
-                <p className="text-sm font-medium text-gray-900 truncate">{session?.user?.name || 'مدیر سیستم'}</p>
-                <p className="text-xs text-gray-500 truncate">{session?.user?.email || ''}</p>
-              </div>
-            </div>
+          <div className="p-4 border-t border-gray-200">
             <button
               onClick={handleSignOut}
-              className="flex w-full items-center px-3 py-2.5 text-base font-medium rounded-md text-gray-700 hover:bg-gray-50 hover:text-gray-900"
+              className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
             >
-              <TbLogout className="ml-3 h-5 w-5 flex-shrink-0 text-gray-400" aria-hidden="true" />
-              خروج
+              <TbLogout className="ml-2 h-5 w-5 text-gray-400" aria-hidden="true" />
+              خروج از حساب کاربری
             </button>
           </div>
         </div>
       </aside>
 
-      {/* Desktop sidebar - fixed positioning with flex layout */}
+      {/* Desktop sidebar */}
       <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 md:z-10">
         <div className="flex-1 flex flex-col min-h-0 bg-white shadow">
           <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">
@@ -151,26 +235,7 @@ export default function AdminLayout({
             </div>
             
             <nav className="mt-5 flex-1 px-2 space-y-1">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`group flex items-center px-3 py-2.5 text-base font-medium rounded-md 
-                  ${pathname === item.href || pathname?.startsWith(item.href + '/') 
-                    ? 'bg-blue-50 text-blue-700' 
-                    : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'} 
-                  transition-colors duration-150 ease-in-out`}
-                >
-                  <item.icon
-                    className={`ml-3 h-5 w-5 flex-shrink-0 
-                    ${pathname === item.href || pathname?.startsWith(item.href + '/') 
-                      ? 'text-blue-700' 
-                      : 'text-gray-400 group-hover:text-gray-500'}`}
-                    aria-hidden="true"
-                  />
-                  {item.name}
-                </Link>
-              ))}
+              {navigation.map((item) => renderNavItem(item))}
             </nav>
           </div>
           

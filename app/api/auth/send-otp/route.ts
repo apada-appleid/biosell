@@ -1,10 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-
-// Function to generate a random 6-digit OTP
-const generateOTP = (): string => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-};
+import { sendOtpCode } from '@/utils/sms-service';
 
 export async function POST(request: Request) {
   try {
@@ -25,11 +21,6 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-
-    // Generate OTP
-    const otp = generateOTP();
-    const expiresAt = new Date();
-    expiresAt.setMinutes(expiresAt.getMinutes() + 2); // OTP expires in 2 minutes
 
     // Check if user exists
     let user = await prisma.customer.findFirst({
@@ -59,31 +50,59 @@ export async function POST(request: Request) {
       }
     }
 
-    // Save OTP to database (you might use a different table for OTPs)
+    // Send OTP using hybrid approach (local in development, Melipayamak in production)
+    const smsResult = await sendOtpCode(mobile);
+    
+    if (!smsResult.success) {
+      return NextResponse.json(
+        { error: smsResult.message || 'خطا در ارسال کد تأیید' },
+        { status: 500 }
+      );
+    }
+
+    // Get the OTP code from the result
+    const otpCode = smsResult.code;
+    
+    if (!otpCode) {
+      return NextResponse.json(
+        { error: 'کد تأیید تولید نشد' },
+        { status: 500 }
+      );
+    }
+
+    // Set expiration time (2 minutes from now)
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 2);
+
+    // Save OTP to database
     await prisma.otp.upsert({
       where: { mobile },
       update: { 
-        code: otp,
+        code: otpCode,
         expiresAt,
         verified: false,
       },
       create: {
         mobile,
-        code: otp,
+        code: otpCode,
         expiresAt,
         verified: false,
       },
     });
 
-    // TODO: Integrate with SMS service in the future
-    // For now, return the OTP in the response regardless of environment
-    console.log(`OTP for ${mobile}: ${otp}`);
+    // Log OTP for development
+    console.log(`OTP for ${mobile}: ${otpCode}`);
+
+    const isDevelopment = process.env.NODE_ENV === 'development';
 
     return NextResponse.json(
       { 
-        message: 'کد تأیید با موفقیت ارسال شد',
-        // Always return the OTP until the SMS service is implemented
-        otp: otp // Remove environment check to always show OTP
+        message: isDevelopment 
+          ? 'کد تأیید (محلی) با موفقیت تولید شد' 
+          : 'کد تأیید با موفقیت ارسال شد',
+        success: true,
+        // Return the OTP for development (and display in UI)
+        otp: isDevelopment ? otpCode : undefined
       },
       { status: 200 }
     );
